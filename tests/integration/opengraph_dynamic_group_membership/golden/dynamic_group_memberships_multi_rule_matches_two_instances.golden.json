@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.dynamicgroup.oc1..classicmulti",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "matching_rule": "RULE_MULTI_ID_A_B",
+          "name": "classic_multi"
+        }
+      },
+      {
+        "id": "ocid1.instance.oc1..insta",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "defined_tags": "{}",
+          "display_name": "inst-a",
+          "id": "ocid1.instance.oc1..insta",
+          "lifecycle_state": "RUNNING",
+          "name": "inst-a",
+          "node_type": "OCIComputeInstance",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant",
+          "workspace_id": "5252"
+        }
+      },
+      {
+        "id": "ocid1.instance.oc1..instb",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compb",
+          "defined_tags": "{}",
+          "display_name": "inst-b",
+          "id": "ocid1.instance.oc1..instb",
+          "lifecycle_state": "RUNNING",
+          "name": "inst-b",
+          "node_type": "OCIComputeInstance",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant",
+          "workspace_id": "5252"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "start": {
+          "value": "ocid1.instance.oc1..insta"
+        },
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..classicmulti"
+        },
+        "kind": "OCI_DYNAMIC_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "dynamic",
+          "matching_rule": "RULE_MULTI_ID_A_B",
+          "tables_matching_rules": [
+            "compute_instances"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.instance.oc1..instb"
+        },
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..classicmulti"
+        },
+        "kind": "OCI_DYNAMIC_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "dynamic",
+          "matching_rule": "RULE_MULTI_ID_A_B",
+          "tables_matching_rules": [
+            "compute_instances"
+          ]
+        }
+      }
+    ]
+  }
+}

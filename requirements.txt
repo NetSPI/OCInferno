@@ -1,0 +1,10 @@
+PyYAML==6.0.3 
+oci==2.169.0
+requests==2.33.1
+prettytable==3.17.0
+oci-lexer-parser==0.1.2
+# Excel export stack per pandas docs:
+# https://pandas.pydata.org/docs/getting_started/install.html#excel-files
+pandas==2.3.3; python_version < "3.11"
+pandas==3.0.1; python_version >= "3.11"
+xlsxwriter==3.2.9

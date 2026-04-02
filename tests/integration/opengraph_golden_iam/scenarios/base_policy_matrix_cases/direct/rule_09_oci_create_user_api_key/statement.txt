@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {USER_APIKEY_ADD, USER_UPDATE} users in compartment AppTeam

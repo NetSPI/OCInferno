@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..classicgroup01",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..testcompartment",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "classic_group_one",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..iddgroup01",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..testcompartment",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "name": "TestDomain/IDD Group One",
+          "scim_id": "idd-group-scim-01",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      }
+    ],
+    "edges": []
+  }
+}

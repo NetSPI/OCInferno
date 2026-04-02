@@ -1,0 +1,1 @@
+Allow dynamic-group WebServers to manage instances in compartment AppTeam

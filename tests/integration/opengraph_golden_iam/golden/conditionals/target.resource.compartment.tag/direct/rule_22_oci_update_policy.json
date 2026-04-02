@@ -1,0 +1,192 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {POLICY_UPDATE} policies in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_UPDATED_ACCESS_TO_ALL_RESOURCES",
+        "properties": {
+          "derived_shortcut": true,
+          "description": "Derived shortcut: this policy is reachable via UPDATE_POLICY in this scope and can be modified to grant all-resources.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "policy_update_scope_id": "policies@ocid1.compartment.oc1..app",
+          "requires_update_policy": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {POLICY_UPDATE} policies in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "trace_statement_node_ids": [
+            "policy_stmt:ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy:0"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to concrete resources.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "policies@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "policies@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_UPDATE_POLICY",
+        "properties": {
+          "description": "Update IAM policies in scope (can modify existing policy statements to escalate).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {POLICY_UPDATE} policies in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all-resources@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "location": "ocid1.compartment.oc1..app",
+          "name": "all-resources@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..securityadmins",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "SecurityAdmins",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy",
+        "kinds": [
+          "OCIPolicy",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "display_name": "CondDirect_target.resource.compartment.tag_22_OCI_UPDATE_POLICY",
+          "id": "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy",
+          "lifecycle_state": "ACTIVE",
+          "name": "CondDirect_target.resource.compartment.tag_22_OCI_UPDATE_POLICY",
+          "statements": [
+            "Allow group SecurityAdmins to {POLICY_UPDATE} policies in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant",
+          "workspace_id": "10231"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "CondDirect_target.resource.compartment.tag_22_OCI_UPDATE_POLICY:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..cond_direct_target.resource.compartment.tag_22_oci_update_policy",
+          "policy_name": "CondDirect_target.resource.compartment.tag_22_OCI_UPDATE_POLICY",
+          "raw_statement": "Allow group SecurityAdmins to {POLICY_UPDATE} policies in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policies@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "policies@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

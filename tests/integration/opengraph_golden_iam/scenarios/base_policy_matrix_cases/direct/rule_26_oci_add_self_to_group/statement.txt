@@ -1,0 +1,1 @@
+Allow group ProdGroup to {USER_UPDATE, GROUP_UPDATE} in compartment AppTeam

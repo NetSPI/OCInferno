@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT} {instance-agent-command-execution-family, instance-agent-command-executions, instance-agent-command-family, instance-agent-commands} in compartment AppTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'

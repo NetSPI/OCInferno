@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to manage users in compartment RootTeam where target.compartment.id = 'ocid1.compartment.oc1..app'

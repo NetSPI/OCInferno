@@ -1,0 +1,1 @@
+Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }

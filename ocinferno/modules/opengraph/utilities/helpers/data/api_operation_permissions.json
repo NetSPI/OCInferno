@@ -1,0 +1,3821 @@
+{
+  "API_GATEWAY_API_OPERATION_PERMISSIONS": {
+    "api_gateway": {
+      "CancelWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_WORK_REQUEST_CANCEL"
+        ],
+        "permissions_any": []
+      },
+      "ChangeApiCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeCertificateCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_CERTIFICATE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeDeploymentCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEPLOYMENT_READ",
+          "API_DEPLOYMENT_UPDATE",
+          "API_DEPLOYMENT_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeGatewayCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_GATEWAY_READ",
+          "API_GATEWAY_UPDATE",
+          "API_GATEWAY_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateApi": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateCertificate": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_CERTIFICATE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDeployment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEPLOYMENT_CREATE",
+          "API_GATEWAY_READ",
+          "API_GATEWAY_ADD_DEPLOYMENT"
+        ],
+        "permissions_any": []
+      },
+      "CreateGateway": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_GATEWAY_CREATE",
+          "API_CERTIFICATE_APPLY_TO_GATEWAY"
+        ],
+        "permissions_any": []
+      },
+      "CreateSdk": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SDK_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateSubscriber": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SUBSCRIBER_CREATE",
+          "API_USAGE_PLAN_READ"
+        ],
+        "permissions_any": []
+      },
+      "CreateUsagePlan": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_USAGE_PLAN_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteApi": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteCertificate": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_CERTIFICATE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDeployment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEPLOYMENT_DELETE",
+          "API_GATEWAY_READ",
+          "API_GATEWAY_REMOVE_DEPLOYMENT"
+        ],
+        "permissions_any": []
+      },
+      "DeleteGateway": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_GATEWAY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSdk": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SDK_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSubscriber": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SUBSCRIBER_DELETE",
+          "API_USAGE_PLAN_READ"
+        ],
+        "permissions_any": []
+      },
+      "DeleteUsagePlan": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_USAGE_PLAN_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetApi": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetApiContent": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetApiDeploymentSpecification": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetApiValidations": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetCertificate": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_CERTIFICATE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDeployment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEPLOYMENT_READ",
+          "API_GATEWAY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetGateway": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_GATEWAY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetSdk": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SDK_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetSubscriber": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SUBSCRIBER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetUsagePlan": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_USAGE_PLAN_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_WORK_REQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListApis": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListCertificates": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_CERTIFICATE_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListDeployments": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEPLOYMENT_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListGateways": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_GATEWAY_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListSdkLanguageTypes": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SDK_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "ListSdks": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SDK_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListSubscribers": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SUBSCRIBER_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListUsagePlans": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_USAGE_PLAN_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestErrors": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_WORK_REQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestLogs": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_WORK_REQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequests": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_WORK_REQUEST_LIST"
+        ],
+        "permissions_any": []
+      },
+      "UpdateApi": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEFINITION_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateCertificate": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_CERTIFICATE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDeployment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_DEPLOYMENT_UPDATE",
+          "API_GATEWAY_READ",
+          "API_GATEWAY_ADD_DEPLOYMENT"
+        ],
+        "permissions_any": []
+      },
+      "UpdateGateway": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_GATEWAY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateSdk": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SDK_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateSubscriber": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_SUBSCRIBER_UPDATE",
+          "API_USAGE_PLAN_READ"
+        ],
+        "permissions_any": []
+      },
+      "UpdateUsagePlan": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "API_USAGE_PLAN_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "BASTION_API_OPERATION_PERMISSIONS": {
+    "bastion": {
+      "ChangeBastionCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateBastion": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_CREATE",
+          "VCN_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateSession": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "INSTANCE_AGENT_PLUGIN_READ"
+            ],
+            "requires_any": [],
+            "when": "creating a session targeting an OCI instance with Bastion plugin support"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_USE",
+          "INSTANCE_READ",
+          "INSTANCE_INSPECT",
+          "VCN_READ",
+          "VNIC_ATTACHMENT_READ",
+          "VNIC_READ",
+          "BASTION_SESSION_CREATE",
+          "SUBNET_READ"
+        ],
+        "permissions_any": []
+      },
+      "DeleteBastion": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_DELETE",
+          "VCN_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSession": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_USE",
+          "BASTION_SESSION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetBastion": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetSession": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_SESSION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "Inferred from Bastion read verb semantics in policy reference.",
+        "permissions_all": [
+          "BASTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListBastions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListSessions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_READ",
+          "BASTION_SESSION_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestErrors": {
+        "conditional_permissions": [],
+        "notes": "Inferred from Bastion read verb semantics in policy reference.",
+        "permissions_all": [
+          "BASTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestLogs": {
+        "conditional_permissions": [],
+        "notes": "Inferred from Bastion read verb semantics in policy reference.",
+        "permissions_all": [
+          "BASTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequests": {
+        "conditional_permissions": [],
+        "notes": "Inferred from Bastion read verb semantics in policy reference.",
+        "permissions_all": [
+          "BASTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "UpdateBastion": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateSession": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BASTION_USE",
+          "BASTION_SESSION_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "CONTAINER_REGISTRY_API_OPERATION_PERMISSIONS": {
+    "container_registry": {
+      "ChangeContainerRepositoryCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_MANAGE"
+        ],
+        "permissions_any": []
+      },
+      "CreateContainerImageSignature": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateContainerRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteContainerImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteContainerImageSignature": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteContainerRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetContainerConfiguration": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "GetContainerImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetContainerImageSignature": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetContainerRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListContainerImageSignatures": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListContainerImages": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListContainerRepositories": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "LookupContainerImageByUri": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_READ"
+        ],
+        "permissions_any": []
+      },
+      "RemoveContainerVersion": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "RestoreContainerImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateContainerConfiguration": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_MANAGE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateContainerImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateContainerImageSignature": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateContainerRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPOSITORY_MANAGE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "CORE_API_OPERATION_PERMISSIONS": {
+    "core": {
+      "AddDrgRouteDistributionStatements": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_STATEMENT_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "AddDrgRouteRules": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_RULE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CaptureConsoleHistory": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CONSOLE_HISTORY_CREATE",
+          "INSTANCE_READ",
+          "INSTANCE_IMAGE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ChangeClusterNetworkCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeComputeClusterCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CLUSTER_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeCpeCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CPE_RESOURCE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeCrossConnectCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_RESOURCE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeCrossConnectGroupCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_GROUP_RESOURCE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeDhcpOptionsCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DHCP_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeDrgCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeImageCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_IMAGE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeInstanceCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateClusterNetwork": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_CREATE",
+          "INSTANCE_POOL_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateComputeCapacityReport": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CAPACITY_REPORT_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateComputeCluster": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CLUSTER_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateComputeImageCapabilitySchema": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_IMAGE_CAPABILITY_SCHEMA_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateCpe": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CPE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateCrossConnect": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "CROSS_CONNECT_CREATE"
+            ],
+            "requires_any": [],
+            "when": "not creating cross-connect in a cross-connect group"
+          },
+          {
+            "requires_all": [
+              "CROSS_CONNECT_CREATE",
+              "CROSS_CONNECT_ATTACH"
+            ],
+            "requires_any": [],
+            "when": "creating cross-connect in a cross-connect group"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "CreateCrossConnectGroup": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_GROUP_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDhcpOptions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DHCP_CREATE",
+          "VCN_ATTACH"
+        ],
+        "permissions_any": []
+      },
+      "CreateDrg": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDrgAttachment": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "ROUTE_TABLE_ATTACH"
+            ],
+            "requires_any": [],
+            "when": "associating a route table with the DRG attachment during creation"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ATTACH",
+          "VCN_ATTACH"
+        ],
+        "permissions_any": []
+      },
+      "CreateDrgRouteDistribution": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDrgRouteTable": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_TABLE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateImage": {
+        "conditional_permissions": [],
+        "notes": "First permission relates to instance-image; second relates to the instance.",
+        "permissions_all": [
+          "INSTANCE_IMAGE_CREATE",
+          "INSTANCE_CREATE_IMAGE"
+        ],
+        "permissions_any": []
+      },
+      "CreateInstanceConsoleConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_CONSOLE_CONNECTION_CREATE",
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "CreateVolumeBackupPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICIES_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateVolumeBackupPolicyAssignment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICY_ASSIGNMENT_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteClusterNetwork": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_DELETE",
+          "INSTANCE_POOL_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteComputeCluster": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CLUSTER_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteConsoleHistory": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CONSOLE_HISTORY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteCpe": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CPE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteCrossConnect": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "CROSS_CONNECT_DELETE"
+            ],
+            "requires_any": [],
+            "when": "cross-connect is not in a cross-connect group"
+          },
+          {
+            "requires_all": [
+              "CROSS_CONNECT_DELETE",
+              "CROSS_CONNECT_DETACH"
+            ],
+            "requires_any": [],
+            "when": "cross-connect is in a cross-connect group"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "DeleteCrossConnectGroup": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_GROUP_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDhcpOptions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DHCP_DELETE",
+          "VCN_DETACH"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDrg": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDrgAttachment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [],
+        "permissions_any": [
+          "DRG_DETACH",
+          "VCN_DETACH"
+        ]
+      },
+      "DeleteDrgRouteDistribution": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDrgRouteTable": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_TABLE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_IMAGE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteInstanceConsoleConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_CONSOLE_CONNECTION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteVolumeBackupPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICIES_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteVolumeBackupPolicyAssignment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICY_ASSIGNMENT_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetAllDrgAttachments": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetClusterNetwork": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_READ",
+          "INSTANCE_POOL_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetComputeCluster": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CLUSTER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetComputeGlobalImageCapabilitySchema": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_GLOBAL_IMAGE_CAPABILITY_SCHEMA_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetComputeGlobalImageCapabilitySchemaVersion": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_GLOBAL_IMAGE_CAPABILITY_SCHEMA_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetComputeImageCapabilitySchema": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_IMAGE_CAPABILITY_SCHEMA_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetConsoleHistory": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CONSOLE_HISTORY_READ",
+          "INSTANCE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "GetCpe": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CPE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetCrossConnect": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetCrossConnectGroup": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_GROUP_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDhcpOptions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DHCP_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDrg": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDrgAttachment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ATTACHMENT_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDrgRouteDistribution": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDrgRouteTable": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_TABLE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_IMAGE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "GetInstance": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetInstanceConsoleConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_CONSOLE_CONNECTION_READ",
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetInstanceMaintenanceReboot": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetIpsecCpeDeviceTemplateContent": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "IPSEC_CONNECTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetTunnelCpeDeviceConfig": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "IPSEC_CONNECTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetTunnelCpeDeviceTemplateContent": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "IPSEC_CONNECTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetVolumeBackupPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICIES_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "GetVolumeBackupPolicyAssetAssignment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICY_ASSIGNMENT_INSPECT",
+          "VOLUME_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "GetVolumeBackupPolicyAssignment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICY_ASSIGNMENT_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "InstanceAction": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_POWER_ACTIONS"
+        ],
+        "permissions_any": []
+      },
+      "LaunchInstance": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "NETWORK_SECURITY_GROUP_UPDATE_MEMBERS",
+              "VNIC_ASSOCIATE_NETWORK_SECURITY_GROUP"
+            ],
+            "requires_any": [],
+            "when": "putting the instance in a network security group during creation"
+          },
+          {
+            "requires_all": [
+              "COMPUTE_CLUSTER_LAUNCH_INSTANCE"
+            ],
+            "requires_any": [],
+            "when": "creating an instance in a compute cluster"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_CREATE",
+          "INSTANCE_IMAGE_READ",
+          "VNIC_CREATE",
+          "VNIC_ATTACH",
+          "SUBNET_ATTACH"
+        ],
+        "permissions_any": []
+      },
+      "ListAttachmentsToDrg": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListClusterNetworkInstances": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_READ",
+          "INSTANCE_POOL_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListClusterNetworks": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_INSPECT",
+          "INSTANCE_POOL_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListComputeClusters": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CLUSTER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListComputeGlobalImageCapabilitySchemaVersions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_GLOBAL_IMAGE_CAPABILITY_SCHEMA_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListComputeGlobalImageCapabilitySchemas": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_GLOBAL_IMAGE_CAPABILITY_SCHEMA_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListComputeImageCapabilitySchemas": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_IMAGE_CAPABILITY_SCHEMA_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListConsoleHistories": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CONSOLE_HISTORY_READ",
+          "INSTANCE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListCpes": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CPE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListCrossConnectGroups": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_GROUP_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListCrossConnects": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDhcpOptions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DHCP_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDrgAttachments": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ATTACHMENT_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDrgRouteDistributionStatements": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_STATEMENT_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDrgRouteDistributions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDrgRouteRules": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_RULE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDrgRouteTables": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_TABLE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDrgs": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListImages": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_IMAGE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListInstanceConsoleConnections": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_CONSOLE_CONNECTION_INSPECT",
+          "INSTANCE_INSPECT",
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListInstanceDevices": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListInstances": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "COMPUTE_CLUSTER_READ"
+            ],
+            "requires_any": [],
+            "when": "listing instances in a compute cluster"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListVolumeBackupPolicies": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "BACKUP_POLICIES_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "RemoveDrgRouteDistributionStatements": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_STATEMENT_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveDrgRouteRules": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_RULE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveExportDrgRouteDistribution": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_ASSIGN"
+        ],
+        "permissions_any": []
+      },
+      "RemoveImportDrgRouteDistribution": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_ASSIGN"
+        ],
+        "permissions_any": []
+      },
+      "ShowConsoleHistoryData": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CONSOLE_HISTORY_READ",
+          "INSTANCE_READ",
+          "INSTANCE_IMAGE_READ"
+        ],
+        "permissions_any": []
+      },
+      "TerminateClusterNetwork": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_DELETE",
+          "INSTANCE_POOL_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "TerminateInstance": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "VOLUME_ATTACHMENT_DELETE",
+              "VOLUME_WRITE",
+              "INSTANCE_DETACH_VOLUME"
+            ],
+            "requires_any": [],
+            "when": "volumes are attached"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_DELETE",
+          "VNIC_DELETE",
+          "SUBNET_DETACH"
+        ],
+        "permissions_any": []
+      },
+      "UpdateClusterNetwork": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CLUSTER_NETWORK_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateComputeCluster": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_CLUSTER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateComputeImageCapabilitySchema": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "COMPUTE_IMAGE_CAPABILITY_SCHEMA_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateCpe": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CPE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateCrossConnect": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateCrossConnectGroup": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "CROSS_CONNECT_GROUP_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDhcpOptions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DHCP_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDrg": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDrgAttachment": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "ROUTE_TABLE_ATTACH"
+            ],
+            "requires_any": [],
+            "when": "associating a route table with the DRG attachment during update"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ATTACHMENT_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDrgRouteDistribution": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDrgRouteDistributionStatements": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_DISTRIBUTION_STATEMENT_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDrgRouteRules": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_RULE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDrgRouteTable": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_ROUTE_TABLE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateImage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_IMAGE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateInstance": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateInstanceConsoleConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "INSTANCE_CONSOLE_CONNECTION_CREATE",
+          "INSTANCE_CONSOLE_CONNECTION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateTunnelCpeDeviceConfig": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "IPSEC_CONNECTION_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpgradeDrg": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DRG_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    },
+    "dedicated_vm_host": {
+      "ChangeDedicatedVmHostCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEDICATED_VM_HOST_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDedicatedVmHost": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEDICATED_VM_HOST_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDedicatedVmHost": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEDICATED_VM_HOST_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetDedicatedVmHost": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEDICATED_VM_HOST_READ"
+        ],
+        "permissions_any": []
+      },
+      "LaunchInstance": {
+        "conditional_permissions": [
+          {
+            "requires_all": [
+              "DEDICATED_VM_HOST_LAUNCH_INSTANCE"
+            ],
+            "requires_any": [],
+            "when": "launching into a dedicated VM host compartment"
+          },
+          {
+            "requires_all": [
+              "INSTANCE_CREATE"
+            ],
+            "requires_any": [],
+            "when": "launching instance on dedicated VM host (instance compartment)"
+          }
+        ],
+        "notes": "",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "ListDedicatedVmHostInstanceShapes": {
+        "conditional_permissions": [],
+        "notes": "No permissions required (per table).",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "ListDedicatedVmHostInstances": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEDICATED_VM_HOST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDedicatedVmHostShapes": {
+        "conditional_permissions": [],
+        "notes": "No permissions required (per table).",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "ListDedicatedVmHosts": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEDICATED_VM_HOST_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDedicatedVmHost": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "AUTO_SCALING_CONFIGURATION_CREATE",
+          "INSTANCE_POOL_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "DESKTOPS_API_OPERATION_PERMISSIONS": {
+    "desktops": {
+      "CancelWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "Inferred from OCI work-request permission naming conventions.",
+        "permissions_all": [
+          "DESKTOP_WORKREQUEST_CANCEL"
+        ],
+        "permissions_any": []
+      },
+      "ChangeDesktopPoolCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDesktopPool": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDesktop": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDesktopPool": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetDesktop": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDesktopPool": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "Inferred from OCI work-request permission naming conventions.",
+        "permissions_all": [
+          "DESKTOP_WORKREQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDesktopPoolDesktops": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_DESKTOP_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDesktopPoolVolumes": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_VOLUME_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListDesktopPools": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListDesktops": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestErrors": {
+        "conditional_permissions": [],
+        "notes": "Inferred from OCI work-request permission naming conventions.",
+        "permissions_all": [
+          "DESKTOP_WORKREQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestLogs": {
+        "conditional_permissions": [],
+        "notes": "Inferred from OCI work-request permission naming conventions.",
+        "permissions_all": [
+          "DESKTOP_WORKREQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequests": {
+        "conditional_permissions": [],
+        "notes": "Inferred from OCI work-request permission naming conventions.",
+        "permissions_all": [
+          "DESKTOP_WORKREQUEST_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "StartDesktop": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "StartDesktopPool": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "StopDesktop": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "StopDesktopPool": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDesktop": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDesktopPool": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DESKTOP_POOL_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "DEVOPS_API_OPERATION_PERMISSIONS": {
+    "devops": {
+      "CancelBuildRun": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_RUN_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateBuildPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateBuildPipelineStage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_STAGE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateBuildRun": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_RUN_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_CONNECTION_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateDeployPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_DEPLOY_PIPELINE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_REPOSITORY_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteBuildPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteBuildPipelineStage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_STAGE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteBuildRun": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_RUN_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_CONNECTION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteDeployPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_DEPLOY_PIPELINE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_REPOSITORY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetBuildPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetBuildPipelineStage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_STAGE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetBuildRun": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_RUN_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_CONNECTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetDeployPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_DEPLOY_PIPELINE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_REPOSITORY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_WORK_REQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListBuildPipelineStages": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_STAGE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListBuildPipelines": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListBuildRuns": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_RUN_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListConnections": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_CONNECTION_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListDeployPipelines": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_DEPLOY_PIPELINE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListRepositories": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_REPOSITORY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequests": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_WORK_REQUEST_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "UpdateBuildPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateBuildPipelineStage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_BUILD_PIPELINE_STAGE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_CONNECTION_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDeployPipeline": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_DEPLOY_PIPELINE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateRepository": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_REPOSITORY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "ValidateConnection": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DEVOPS_CONNECTION_VALIDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "DNS_API_OPERATION_PERMISSIONS": {
+    "dns": {
+      "ChangeResolverCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeSteeringPolicyCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_POLICY_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeTsigKeyCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_TSIG_KEY_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeViewCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_VIEW_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeZoneCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateChildZone": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_CREATE",
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateResolverEndpoint": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_UPDATE",
+          "DNS_RESOLVER_ENDPOINT_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateSteeringPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_POLICY_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateSteeringPolicyAttachment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_UPDATE",
+          "DNS_STEERING_POLICY_READ"
+        ],
+        "permissions_any": []
+      },
+      "CreateTsigKey": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_TSIG_KEY_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateView": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_VIEW_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateZone": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteRRSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteResolverEndpoint": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_UPDATE",
+          "DNS_RESOLVER_ENDPOINT_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSteeringPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_POLICY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSteeringPolicyAttachment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_UPDATE",
+          "DNS_STEERING_POLICY_READ"
+        ],
+        "permissions_any": []
+      },
+      "DeleteTsigKey": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_TSIG_KEY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteView": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_VIEW_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteZone": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetDomainRecords": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetRRSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetResolver": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetResolverEndpoint": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_ENDPOINT_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetSteeringPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_POLICY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetSteeringPolicyAttachment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_ATTACHMENT_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetTsigKey": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_TSIG_KEY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetView": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_VIEW_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetZone": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetZoneRecords": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_READ",
+          "DNS_RECORD_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListResolverEndpoints": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_ENDPOINT_INSPECT",
+          "DNS_RESOLVER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListResolvers": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListSteeringPolicies": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_POLICY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListSteeringPolicyAttachments": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_ATTACHMENT_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListTsigKeys": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_TSIG_KEY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListViews": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_VIEW_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListZones": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "PatchDomainRecords": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "PatchRRSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "PatchZoneRecords": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_UPDATE",
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateDomainRecords": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateRRSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateResolver": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateResolverEndpoint": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_RESOLVER_UPDATE",
+          "DNS_RESOLVER_ENDPOINT_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateSteeringPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_STEERING_POLICY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateSteeringPolicyAttachment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_UPDATE",
+          "DNS_STEERING_POLICY_READ"
+        ],
+        "permissions_any": []
+      },
+      "UpdateTsigKey": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_TSIG_KEY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateView": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_VIEW_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateZone": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateZoneRecords": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "DNS_ZONE_UPDATE",
+          "DNS_RECORD_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "FILE_STORAGE_API_OPERATION_PERMISSIONS": {
+    "file_storage": {
+      "AddExportLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_UPDATE",
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "AddFileSystemLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE",
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "AddFilesystemSnapshotPolicyLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_UPDATE",
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "AddMountTargetLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_UPDATE",
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "AddOutboundConnectorLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_UPDATE",
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "AddReplicationLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_UPDATE",
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "ChangeFileSystemCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeMountTargetCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeOutboundConnectorCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeReplicationCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CloneFileSystem": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_CLONE"
+        ],
+        "permissions_any": []
+      },
+      "CreateExport": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_UPDATE",
+          "FILE_SYSTEM_NFSv3_EXPORT"
+        ],
+        "permissions_any": []
+      },
+      "CreateExportSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateFileSystem": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateFilesystemSnapshotPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateMountTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateOutboundConnector": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateQuotaRule": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateReplication": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateSnapshot": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_CREATE_SNAPSHOT"
+        ],
+        "permissions_any": []
+      },
+      "DeleteExport": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_UPDATE",
+          "FILE_SYSTEM_NFSv3_UNEXPORT"
+        ],
+        "permissions_any": []
+      },
+      "DeleteExportSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteFileSystem": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteFilesystemSnapshotPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteMountTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteOutboundConnector": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteQuotaRule": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteReplication": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteReplicationTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSnapshot": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_DELETE_SNAPSHOT"
+        ],
+        "permissions_any": []
+      },
+      "DowngradeMountTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_SHAPE_DOWNGRADE"
+        ],
+        "permissions_any": []
+      },
+      "GetExport": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetExportSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetFileSystem": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetFilesystemSnapshotPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetMountTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetOutboundConnector": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetQuotaRule": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetReplication": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetSnapshot": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FSS_WORK_REQUEST_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListExportSets": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListExports": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListFileSystems": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListFilesystemSnapshotPolicies": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListMountTargets": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListOutboundConnectors": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListQuotaRules": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListReplications": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListSnapshots": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequests": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FSS_WORK_REQUEST_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "MoveFilesystemSnapshotPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveExportLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_UPDATE",
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveFileSystemLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE",
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveFilesystemSnapshotPolicyLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_UPDATE",
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveMountTargetLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_UPDATE",
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveOutboundConnectorLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_UPDATE",
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "RemoveReplicationLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_UPDATE",
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "ToggleQuotaRules": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateExportSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "EXPORT_SET_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateFileSystem": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateFilesystemSnapshotPolicy": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILESYSTEM_SNAPSHOT_POLICY_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateMountTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateOutboundConnector": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "OUTBOUND_CONNECTOR_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateQuotaRule": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FILE_SYSTEM_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateReplication": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "REPLICATION_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpgradeMountTarget": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "MOUNT_TARGET_SHAPE_UPGRADE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "FUNCTIONS_API_OPERATION_PERMISSIONS": {
+    "functions": {
+      "CreateApp": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_APP_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateFunction": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_FUNCTION_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteApp": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_APP_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteFunction": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_FUNCTION_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetApp": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_APP_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetFunction": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_FUNCTION_READ"
+        ],
+        "permissions_any": []
+      },
+      "InvokeFunction": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_INVOCATION"
+        ],
+        "permissions_any": []
+      },
+      "ListApp": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_APP_LIST"
+        ],
+        "permissions_any": []
+      },
+      "ListFunctions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_FUNCTION_LIST"
+        ],
+        "permissions_any": []
+      },
+      "UpdateApp": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_APP_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateFunction": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "FN_FUNCTION_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "NETWORK_LOAD_BALANCER_API_OPERATION_PERMISSIONS": {
+    "network_load_balancer": {
+      "ChangeNetworkLoadBalancerCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateBackend": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateBackendSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateListener": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "CreateNetworkLoadBalancer": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteBackend": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteBackendSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteListener": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteNetworkLoadBalancer": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetBackend": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetBackendHealth": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetBackendSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetBackendSetHealth": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetHealthChecker": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetListener": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetNetworkLoadBalancer": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetNetworkLoadBalancerHealth": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetNetworkLoadBalancersHealth": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetWorkRequest": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListBackendSets": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListBackends": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListHealthCheckers": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListListeners": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListNetworkLoadBalancerHealths": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListNetworkLoadBalancers": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListNetworkLoadBalancersHealth": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListNetworkLoadBalancersHealths": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListNetworkLoadBalancersPolicies": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListNetworkLoadBalancersProtocols": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListPolicies": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListProtocols": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestErrors": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequestLogs": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "ListWorkRequests": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_READ"
+        ],
+        "permissions_any": []
+      },
+      "UpdateBackend": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateBackendSet": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateHealthChecker": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateListener": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateNetworkLoadBalancer": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateNetworkSecurityGroups": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "NETWORK_LOAD_BALANCER_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  },
+  "NOTIFICATIONS_API_OPERATION_PERMISSIONS": {
+    "notifications": {
+      "AddTopicLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "RESOURCE_LOCK_ADD"
+        ],
+        "permissions_any": []
+      },
+      "ChangeSubscriptionCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_SUBSCRIPTION_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "ChangeTopicCompartment": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_MOVE"
+        ],
+        "permissions_any": []
+      },
+      "CreateSubscription": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_SUBSCRIBE"
+        ],
+        "permissions_any": []
+      },
+      "CreateTopic": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_CREATE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteSubscription": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_SUBSCRIBE"
+        ],
+        "permissions_any": []
+      },
+      "DeleteTopic": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_DELETE"
+        ],
+        "permissions_any": []
+      },
+      "GetConfirmSubscription": {
+        "conditional_permissions": [],
+        "notes": "No permissions required.",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "GetSubscription": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_SUBSCRIBE"
+        ],
+        "permissions_any": []
+      },
+      "GetTopic": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_READ"
+        ],
+        "permissions_any": []
+      },
+      "GetUnsubscription": {
+        "conditional_permissions": [],
+        "notes": "No permissions required.",
+        "permissions_all": [],
+        "permissions_any": []
+      },
+      "ListSubscriptions": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_SUBSCRIPTION_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "ListTopics": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_INSPECT"
+        ],
+        "permissions_any": []
+      },
+      "PublishMessage": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_PUBLISH"
+        ],
+        "permissions_any": []
+      },
+      "RemoveTopicLock": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "RESOURCE_LOCK_REMOVE"
+        ],
+        "permissions_any": []
+      },
+      "ResendSubscriptionConfirmation": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_SUBSCRIBE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateSubscription": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_SUBSCRIBE"
+        ],
+        "permissions_any": []
+      },
+      "UpdateTopic": {
+        "conditional_permissions": [],
+        "notes": "",
+        "permissions_all": [
+          "ONS_TOPIC_UPDATE"
+        ],
+        "permissions_any": []
+      }
+    }
+  }
+}

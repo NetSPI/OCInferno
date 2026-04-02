@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {SECRET_BUNDLE_READ} secret-bundles in compartment AppTeam

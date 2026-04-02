@@ -1,0 +1,1084 @@
+{
+  "_comment": "Tuple key format: (resource_iam_name, ocid_resource_type_hint). The second value is derived directly from resource_iam_name using a consistent transform (hyphen-joined token collapsed and plural suffix trimmed), without special-case overrides.",
+  "(api-apis,apiapi)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIAPIApi",
+    "table": "apigw_apis",
+    "tenant_col": null
+  },
+  "(api-deployments,apideployment)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIAPIDeployment",
+    "table": "apigw_deployments",
+    "tenant_col": null
+  },
+  "(api-gateways,apigateway)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIAPIGateway",
+    "table": "apigw_gateways",
+    "tenant_col": null
+  },
+  "(ar-generic-artifacts,argenericartifact)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIArtifactRegistryArtifact",
+    "table": "ar_generic_artifact",
+    "tenant_col": null
+  },
+  "(authentication-policies,authenticationpolicy)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIdentityDomainSignOnPolicy",
+    "table": "identity_domain_sign_on_policies",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(bastion,bastion)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIBastion",
+    "table": "bastion_bastions",
+    "tenant_col": null
+  },
+  "(bastion-session,bastionsession)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIBastionSession",
+    "table": "bastion_sessions",
+    "tenant_col": null
+  },
+  "(bastion-workrequests,bastionworkrequest)": {
+    "compartment_col": "compartment_id",
+    "display_col": "id",
+    "id_col": "id",
+    "name_col": "id",
+    "node_type": "OCIBastionWorkRequest",
+    "table": "bastion_work_requests",
+    "tenant_col": null
+  },
+  "(buckets,bucket)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIOSBucket",
+    "table": "object_storage_buckets",
+    "tenant_col": null
+  },
+  "(cache-clusters,cachecluster)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCICacheCluster",
+    "table": "cache_clusters",
+    "tenant_col": null
+  },
+  "(cache-config-sets,cacheconfigset)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCICacheConfigSet",
+    "table": "cache_config_sets",
+    "tenant_col": null
+  },
+  "(cache-users,cacheuser)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCICacheUser",
+    "table": "cache_users",
+    "tenant_col": null
+  },
+  "(cluster-node-pools,clusternodepool)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIKubernetesNodePool",
+    "table": "containerengine_node_pools",
+    "tenant_col": null
+  },
+  "(cluster-virtual-nodes,clustervirtualnode)": {
+    "compartment_col": null,
+    "compartment_lookup": {
+      "compartment_col": "compartment_id",
+      "fk_col": "virtual_node_pool_id",
+      "id_col": "id",
+      "table": "containerengine_virtual_node_pools"
+    },
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIKubernetesVirtualNode",
+    "table": "containerengine_virtual_nodes",
+    "tenant_col": null
+  },
+  "(cluster-virtualnode-pools,clustervirtualnodepool)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIKubernetesVirtualNodePool",
+    "table": "containerengine_virtual_node_pools",
+    "tenant_col": null
+  },
+  "(clusters,cluster)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIKubernetesCluster",
+    "table": "containerengine_clusters",
+    "tenant_col": null
+  },
+  "(compartments,compartment)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "name",
+    "id_col": "compartment_id",
+    "name_col": "name",
+    "node_type": "OCICompartment",
+    "table": "resource_compartments",
+    "tenant_col": null
+  },
+  "(computecontainerinstance,computecontainerinstance)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIContainerInstance",
+    "table": "container_instances",
+    "tenant_col": null
+  },
+  "(cr-images,crimage)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIContainerRegistryImage",
+    "table": "cr_images",
+    "tenant_col": null
+  },
+  "(cr-repositories,crrepository)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIContainerRegistryRepository",
+    "table": "cr_repositories",
+    "tenant_col": null
+  },
+  "(credentials,credential)": {
+    "node_type": "OCIIdentityDomainUserCredential",
+    "tables": [
+      {
+        "compartment_col": "compartment_ocid",
+        "display_col": "user_name",
+        "id_col": "ocid",
+        "name_col": "user_name",
+        "table": "identity_domain_user_smtp_credentials",
+        "tenant_col": "tenancy_ocid"
+      },
+      {
+        "compartment_col": "compartment_ocid",
+        "display_col": "fingerprint",
+        "id_col": "ocid",
+        "name_col": "fingerprint",
+        "table": "identity_domain_user_api_keys",
+        "tenant_col": "tenancy_ocid"
+      },
+      {
+        "compartment_col": "compartment_ocid",
+        "display_col": "description",
+        "id_col": "id",
+        "name_col": "description",
+        "table": "identity_domain_user_db_credentials",
+        "tenant_col": "tenancy_ocid"
+      }
+    ]
+  },
+  "(dataflowrun,dataflowrun)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataFlowRun",
+    "table": "dataflow_runs",
+    "tenant_col": null
+  },
+  "(desktop,desktop)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDesktop",
+    "table": "desktops_desktops",
+    "tenant_col": null
+  },
+  "(desktop-pool,desktoppool)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDesktopPool",
+    "table": "desktops_pools",
+    "tenant_col": null
+  },
+  "(desktop-pool-desktops,desktoppooldesktop)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDesktopPoolDesktop",
+    "table": "desktops_pool_desktops",
+    "tenant_col": null
+  },
+  "(desktop-pool-volumes,desktoppoolvolume)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "record_hash",
+    "name_col": "display_name",
+    "node_type": "OCIDesktopPoolVolume",
+    "table": "desktops_pool_volumes",
+    "tenant_col": null
+  },
+  "(desktop-workrequests,desktopworkrequest)": {
+    "compartment_col": "compartment_id",
+    "display_col": "id",
+    "id_col": "id",
+    "name_col": "id",
+    "node_type": "OCIDesktopWorkRequest",
+    "table": "desktops_work_requests",
+    "tenant_col": null
+  },
+  "(devopsbuildpipeline,devopsbuildpipeline)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDevOpsBuildPipeline",
+    "table": "devops_build_pipelines",
+    "tenant_col": null
+  },
+  "(devopsconnection,devopsconnection)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDevOpsConnection",
+    "table": "devops_connections",
+    "tenant_col": null
+  },
+  "(devopsdeploypipeline,devopsdeploypipeline)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDevOpsDeployPipeline",
+    "table": "devops_deploy_pipelines",
+    "tenant_col": null
+  },
+  "(devopsproject,devopsproject)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDevOpsProject",
+    "table": "devops_projects",
+    "tenant_col": null
+  },
+  "(devopsrepository,devopsrepository)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDevOpsRepository",
+    "table": "devops_repositories",
+    "tenant_col": null
+  },
+  "(dns-records,dnsrecord)": {
+    "compartment_col": "compartment_id",
+    "display_col": "domain",
+    "id_col": "record_hash",
+    "name_col": "domain",
+    "node_type": "OCIDnsZoneRecord",
+    "table": "dns_zone_records",
+    "tenant_col": null
+  },
+  "(dns-resolvers,dnsresolver)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "name",
+    "name_col": "name",
+    "node_type": "OCIDnsPrivateResolver",
+    "table": "dns_private_resolvers",
+    "tenant_col": null
+  },
+  "(dns-zones,dnszone)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIDnsZone",
+    "table": "dns_zones",
+    "tenant_col": null
+  },
+  "(domains,domain)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIIdentityDomain",
+    "table": "identity_domains",
+    "tenant_col": null
+  },
+  "(dynamic-groups,dynamicgroup)": {
+    "node_type": "OCIDynamicGroup",
+    "tables": [
+      {
+        "compartment_col": "compartment_ocid",
+        "display_col": "display_name",
+        "id_col": "ocid",
+        "name_col": "display_name",
+        "table": "identity_domain_dynamic_groups",
+        "tenant_col": "tenancy_ocid"
+      },
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "name",
+        "id_col": "id",
+        "name_col": "name",
+        "table": "identity_dynamic_groups",
+        "tenant_col": null
+      }
+    ]
+  },
+  "(export-sets,exportset)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIFileStorageExportSets",
+    "table": "file_storage_export_sets",
+    "tenant_col": null
+  },
+  "(exports,export)": {
+    "compartment_col": null,
+    "compartment_lookup": {
+      "compartment_col": "compartment_id",
+      "fk_col": "file_system_id",
+      "id_col": "id",
+      "table": "file_storage_file_systems"
+    },
+    "display_col": "path",
+    "id_col": "id",
+    "name_col": "path",
+    "node_type": "OCIFileStorageExport",
+    "table": "file_storage_exports",
+    "tenant_col": null
+  },
+  "(file-systems,filesystem)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIFileStorageFileSystem",
+    "table": "file_storage_file_systems",
+    "tenant_col": null
+  },
+  "(filesystem-snapshots,filesystemsnapshot)": {
+    "compartment_col": null,
+    "compartment_lookup": {
+      "compartment_col": "compartment_id",
+      "fk_col": "file_system_id",
+      "id_col": "id",
+      "table": "file_storage_file_systems"
+    },
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCIFileStorageSnapshot",
+    "table": "file_storage_snapshots",
+    "tenant_col": null
+  },
+  "(fn-app,fnapp)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIFunctionApp",
+    "table": "functions_apps",
+    "tenant_col": null
+  },
+  "(fn-function,fnfunction)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIFunctionFunction",
+    "table": "functions_functions",
+    "tenant_col": null
+  },
+  "(groups,group)": {
+    "node_type": "OCIGroup",
+    "tables": [
+      {
+        "compartment_col": "compartment_ocid",
+        "display_col": "display_name",
+        "id_col": "ocid",
+        "name_col": "display_name",
+        "table": "identity_domain_groups",
+        "tenant_col": "tenancy_ocid"
+      },
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "name",
+        "id_col": "id",
+        "name_col": "name",
+        "table": "identity_groups",
+        "tenant_col": null
+      }
+    ]
+  },
+  "(hsm-cluster,hsmcluster)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIVaultHsmCluster",
+    "table": "vault_hsm_cluster",
+    "tenant_col": null
+  },
+  "(identity-domain-app-roles,identitydomainapprole)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIDDAppRole",
+    "table": "identity_domain_app_roles",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-apps,identitydomainapp)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIDDApplication",
+    "table": "identity_domain_apps",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-auth-factor-settings,identitydomainauthfactorsetting)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "id",
+    "id_col": "ocid",
+    "name_col": "id",
+    "node_type": "OCIIdentityDomainAuthFactorSettings",
+    "table": "identity_domain_authentication_factor_settings",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-grants,identitydomaingrant)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "id",
+    "id_col": "id",
+    "name_col": "id",
+    "node_type": "OCIIdentityDomainGrant",
+    "table": "identity_domain_grants",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-identity-providers,identitydomainidentityprovider)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "partner_name",
+    "id_col": "id",
+    "name_col": "partner_name",
+    "node_type": "OCIIdentityDomainIdentityProvider",
+    "table": "identity_domain_identity_providers",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-lockout-policies,identitydomainlockoutpolicy)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIdentityDomainLockoutPolicy",
+    "table": "identity_domain_lockout_policies",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-password-policies,identitydomainpasswordpolicy)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "name",
+    "id_col": "ocid",
+    "name_col": "name",
+    "node_type": "OCIIdentityDomainPasswordPolicy",
+    "table": "identity_domain_password_policies",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-user-api-keys,identitydomainuserapikey)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "fingerprint",
+    "id_col": "ocid",
+    "name_col": "fingerprint",
+    "node_type": "OCIIdentityDomainUserApiKey",
+    "table": "identity_domain_user_api_keys",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-user-db-credentials,identitydomainuserdbcredential)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "description",
+    "id_col": "id",
+    "name_col": "description",
+    "node_type": "OCIIdentityDomainUserDbCredential",
+    "table": "identity_domain_user_db_credentials",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(identity-domain-user-smtp-credentials,identitydomainusersmtpcredential)": {
+    "compartment_col": "compartment_ocid",
+    "display_col": "user_name",
+    "id_col": "ocid",
+    "name_col": "user_name",
+    "node_type": "OCIIdentityDomainUserSmtpCredential",
+    "table": "identity_domain_user_smtp_credentials",
+    "tenant_col": "tenancy_ocid"
+  },
+  "(images,image)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIComputeImage",
+    "table": "compute_images",
+    "tenant_col": null
+  },
+  "(instance-agent-command-executions,instanceagentcommandexecution)": {
+    "compartment_col": "compartment_id",
+    "display_col": "execution_key",
+    "id_col": "execution_key",
+    "name_col": "execution_key",
+    "node_type": "OCIInstanceAgentCommandExecution",
+    "table": "compute_instance_agent_command_executions",
+    "tenant_col": null
+  },
+  "(instance-agent-commands,instanceagentcommand)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIInstanceAgentCommand",
+    "table": "compute_instance_agent_commands",
+    "tenant_col": null
+  },
+  "(instance-agent-plugins,instanceagentplugin)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "plugin_key",
+    "name_col": "name",
+    "node_type": "OCIInstanceAgentPlugin",
+    "table": "compute_instance_agent_plugins",
+    "tenant_col": null
+  },
+  "(instances,instance)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIComputeInstance",
+    "table": "compute_instances",
+    "tenant_col": null
+  },
+  "(iot-digital-twin-adapter,iotdigitaltwinadapter)": {
+    "compartment_col": null,
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIoTDigitalTwinAdapter",
+    "table": "iot_digital_twin_adapters",
+    "tenant_col": null
+  },
+  "(iot-digital-twin-instance,iotdigitaltwininstance)": {
+    "compartment_col": null,
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIoTDigitalTwinInstance",
+    "table": "iot_digital_twin_instances",
+    "tenant_col": null
+  },
+  "(iot-digital-twin-model,iotdigitaltwinmodel)": {
+    "compartment_col": null,
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIoTDigitalTwinModel",
+    "table": "iot_digital_twin_models",
+    "tenant_col": null
+  },
+  "(iot-digital-twin-relationship,iotdigitaltwinrelationship)": {
+    "compartment_col": null,
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIoTDigitalTwinRelationship",
+    "table": "iot_digital_twin_relationships",
+    "tenant_col": null
+  },
+  "(iot-domain,iotdomain)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIoTDomain",
+    "table": "iot_domains",
+    "tenant_col": null
+  },
+  "(iot-domain-group,iotdomaingroup)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIoTDomainGroup",
+    "table": "iot_domain_groups",
+    "tenant_col": null
+  },
+  "(kafka-cluster-config-versions,kafkaclusterconfigversion)": {
+    "compartment_col": "compartment_id",
+    "display_col": "config_id",
+    "id_col": [
+      "config_id",
+      "version_number"
+    ],
+    "name_col": "config_id",
+    "node_type": "OCIKafkaClusterConfigVersion",
+    "table": "kafka_cluster_config_versions",
+    "tenant_col": null
+  },
+  "(kafka-cluster-configs,kafkaclusterconfig)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIKafkaClusterConfig",
+    "table": "kafka_cluster_configs",
+    "tenant_col": null
+  },
+  "(kafka-clusters,kafkacluster)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIKafkaCluster",
+    "table": "kafka_clusters",
+    "tenant_col": null
+  },
+  "(key-versions,keyversion)": {
+    "compartment_col": "compartment_id",
+    "display_col": "id",
+    "id_col": "id",
+    "name_col": "id",
+    "node_type": "OCIVaultKeyVersion",
+    "table": "vault_key_versions",
+    "tenant_col": null
+  },
+  "(keys,key)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIVaultKey",
+    "table": "vault_keys",
+    "tenant_col": null
+  },
+  "(log-content,logcontent)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCILoggingLog",
+    "table": "logging_logs",
+    "tenant_col": null
+  },
+  "(log-groups,loggroup)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCILogsLogGroup",
+    "table": "logging_log_groups",
+    "tenant_col": null
+  },
+  "(mount-targets,mounttarget)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIFileStorageMountTargets",
+    "table": "file_storage_mount_targets",
+    "tenant_col": null
+  },
+  "(mysql-db-systems,mysqldbsystem)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIMySqlDbSystem",
+    "table": "db_mysql_db_systems",
+    "tenant_col": null
+  },
+  "(network-firewall-policies,networkfirewallpolicy)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCINetworkFirewallPolicy",
+    "table": "network_firewall_policies",
+    "tenant_col": null
+  },
+  "(network-firewall-security-rules,networkfirewallsecurityrule)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": [
+      "network_firewall_policy_id",
+      "name"
+    ],
+    "name_col": "name",
+    "node_type": "OCINetworkFirewallSecurityRule",
+    "table": "network_firewall_security_rules",
+    "tenant_col": null
+  },
+  "(network-firewalls,networkfirewall)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCINetworkFirewall",
+    "table": "network_firewall_firewalls",
+    "tenant_col": null
+  },
+  "(network-load-balancers,networkloadbalancer)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCINetworkLoadBalancer",
+    "table": "network_load_balancers",
+    "tenant_col": null
+  },
+  "(objects,object)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": [
+      "namespace",
+      "bucket_name",
+      "name"
+    ],
+    "name_col": "name",
+    "node_type": "OCIOSBucketObject",
+    "table": "object_storage_bucket_objects",
+    "tenant_col": null
+  },
+  "(objectstorage-namespaces,objectstoragenamespace)": {
+    "compartment_col": "compartment_id",
+    "display_col": "namespace",
+    "id_col": "namespace",
+    "name_col": "namespace",
+    "node_type": "OCIOSNamespaces",
+    "table": "object_storage_namespaces",
+    "tenant_col": null
+  },
+  "(ons-subscriptions,onssubscription)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "endpoint",
+    "id_col": "id",
+    "name_col": "endpoint",
+    "node_type": "OCINotificationSubscription",
+    "table": "notification_subscriptions",
+    "tenant_col": null
+  },
+  "(ons-topics,onstopic)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "name",
+    "id_col": "topic_id",
+    "name_col": "name",
+    "node_type": "OCINotificationTopic",
+    "table": "notification_topics",
+    "tenant_col": null
+  },
+  "(oracle-db-systems,oracledbsystem)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIOracleDbSystem",
+    "table": "db_oracle_db_systems",
+    "tenant_col": null
+  },
+  "(orm-config-source-providers,ormconfigsourceprovider)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIResourceManagerConfigSourceProvider",
+    "table": "resource_configuration_source_provider",
+    "tenant_col": null
+  },
+  "(orm-jobs,ormjob)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIResourceManagerJobs",
+    "table": "resource_manager_jobs",
+    "tenant_col": null
+  },
+  "(orm-private-endpoints,ormprivateendpoint)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIResourceManagerPrivateEndpoints",
+    "table": "resource_manager_private_endpoints",
+    "tenant_col": null
+  },
+  "(orm-stacks,ormstack)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIResourceManagerStack",
+    "table": "resource_manager_stacks",
+    "tenant_col": null
+  },
+  "(orm-template,ormtemplate)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIResourceManagerTemplates",
+    "table": "resource_manager_templates",
+    "tenant_col": null
+  },
+  "(policies,policy)": {
+    "node_type": "OCIPolicy",
+    "tables": [
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "name",
+        "id_col": "id",
+        "name_col": "name",
+        "table": "identity_policies",
+        "tenant_col": null
+      },
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "name",
+        "id_col": "id",
+        "name_col": "name",
+        "table": "identity_domain_policies",
+        "tenant_col": null
+      }
+    ]
+  },
+  "(postgres-db-systems,postgresdbsystem)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIPostgreSqlDbSystem",
+    "table": "db_psql_db_systems",
+    "tenant_col": null
+  },
+  "(repos,repo)": {
+    "node_type": "OCIRegistryRepo",
+    "tables": [
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "display_name",
+        "id_col": "id",
+        "name_col": "display_name",
+        "table": "ar_repositories",
+        "tenant_col": null
+      },
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "display_name",
+        "id_col": "id",
+        "name_col": "display_name",
+        "table": "cr_repositories",
+        "tenant_col": null
+      }
+    ]
+  },
+  "(resourceschedule,resourceschedule)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIResourceSchedule",
+    "table": "resource_schedules",
+    "tenant_col": null
+  },
+  "(secret-bundles,secretbundle)": {
+    "compartment_col": null,
+    "compartment_lookup": {
+      "compartment_col": "compartment_id",
+      "fk_col": "secret_id",
+      "id_col": "id",
+      "table": "vault_secret"
+    },
+    "display_col": "version_name",
+    "id_col": [
+      "secret_id",
+      "version_number"
+    ],
+    "name_col": "version_name",
+    "node_type": "OCIVaultSecretBundle",
+    "table": "vault_secret_bundle",
+    "tenant_col": null
+  },
+  "(secret-versions,secretversion)": {
+    "compartment_col": null,
+    "compartment_lookup": {
+      "compartment_col": "compartment_id",
+      "fk_col": "secret_id",
+      "id_col": "id",
+      "table": "vault_secret"
+    },
+    "display_col": "name",
+    "id_col": [
+      "secret_id",
+      "version_number"
+    ],
+    "name_col": "name",
+    "node_type": "OCIVaultSecretVersion",
+    "table": "vault_secret_versions",
+    "tenant_col": null
+  },
+  "(secrets,secret)": {
+    "compartment_col": "compartment_id",
+    "display_col": "secret_name",
+    "id_col": "id",
+    "name_col": "secret_name",
+    "node_type": "OCIVaultSecret",
+    "table": "vault_secret",
+    "tenant_col": null
+  },
+  "(tag-defaults,tagdefault)": {
+    "compartment_col": "compartment_id",
+    "display_col": "tag_definition_name",
+    "id_col": "id",
+    "name_col": "tag_definition_name",
+    "node_type": "OCITagDefault",
+    "table": "tag_defaults",
+    "tenant_col": null
+  },
+  "(tag-definitions,tagdefinition)": {
+    "compartment_col": "compartment_id",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCITagDefinition",
+    "table": "tag_definitions",
+    "tenant_col": null
+  },
+  "(tag-namespaces,tagnamespace)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "name",
+    "id_col": "id",
+    "name_col": "name",
+    "node_type": "OCITagNamespace",
+    "table": "tag_namespaces",
+    "tenant_col": null
+  },
+  "(users,user)": {
+    "node_type": "OCIUser",
+    "tables": [
+      {
+        "compartment_col": "compartment_ocid",
+        "display_col": "display_name",
+        "id_col": "ocid",
+        "name_col": "display_name",
+        "table": "identity_domain_users",
+        "tenant_col": "tenancy_ocid"
+      },
+      {
+        "compartment_col": "compartment_id",
+        "defined_tags_col": "defined_tags",
+        "display_col": "name",
+        "id_col": "id",
+        "name_col": "name",
+        "table": "identity_users",
+        "tenant_col": null
+      }
+    ]
+  },
+  "(vaults,vault)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIVault",
+    "table": "vault_vaults",
+    "tenant_col": null
+  }
+}

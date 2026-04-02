@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ocinferno"
+version = "0.5.65"
+description = "OCI offensive security assessment and enumeration framework."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+  { name = "NetSPI" }
+]
+dependencies = [
+  "PyYAML==6.0.3",
+  "oci==2.169.0",
+  "requests==2.33.1",
+  "prettytable==3.17.0",
+  "oci-lexer-parser==0.1.2",
+  "pandas==2.3.3; python_version < '3.11'",
+  "pandas==3.0.1; python_version >= '3.11'",
+  "xlsxwriter==3.2.9"
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Information Technology",
+  "Topic :: Security",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0"
+]
+
+[project.scripts]
+ocinferno = "ocinferno.cli.main:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ocinferno*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"ocinferno.mappings" = ["*.json", "*.yaml"]

@@ -1,0 +1,186 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "ocid1.instance.oc1..insta"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to concrete resources.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "instances@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..base_direct_01_oci_manage:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..base_direct_01_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage instances in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
+          "value": "new-compute-instance@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_INSTANCE",
+        "properties": {
+          "description": "Launch compute instances in scope (instances prerequisite).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..base_direct_01_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage instances in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..base_direct_01_oci_manage:0"
+        }
+      },
+      {
+        "end": {
+          "value": "instances@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing Compute Instances in scope (e.g., modify/attach/move/create/delete depending on permissions).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..base_direct_01_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage instances in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..base_direct_01_oci_manage:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.instance.oc1..insta",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "display_name": "app-a",
+          "id": "ocid1.instance.oc1..insta",
+          "lifecycle_state": "RUNNING",
+          "name": "app-a",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant",
+          "workspace_id": "10013"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..securityadmins",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "SecurityAdmins",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..base_direct_01_oci_manage:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "BaseDirect_01_OCI_MANAGE:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..base_direct_01_oci_manage",
+          "policy_name": "BaseDirect_01_OCI_MANAGE",
+          "raw_statement": "Allow group SecurityAdmins to manage instances in compartment AppTeam",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "instances@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "instances@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-compute-instance@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "new-compute-instance@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

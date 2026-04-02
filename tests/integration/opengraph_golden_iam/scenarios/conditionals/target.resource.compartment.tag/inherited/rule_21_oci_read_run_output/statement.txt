@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT} {instance-agent-command-execution-family, instance-agent-command-executions, instance-agent-command-family, instance-agent-commands} in compartment RootTeam where target.resource.compartment.tag.team.env = 'prod'

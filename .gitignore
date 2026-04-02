@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+oci_env/
+wiki/
+
+# Runtime output
+ocinferno_output/
+/ocinferno/databases/
+
+# Databases and artifacts
+*.sqlite
+*.db-shm
+*.db-wal
+*.zip
+
+# Secrets / keys / tokens
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+*.jwt
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.dynamicgroup.oc1..classic_no_rule",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "classic_no_rule",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      }
+    ],
+    "edges": []
+  }
+}

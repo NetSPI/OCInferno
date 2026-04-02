@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.dynamicgroup.oc1..idddg_tag_exists",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "matching_rule": "RULE_TAG_TEAM_EXISTS",
+          "name": "TestDomain/IDD DG TagExists",
+          "scim_id": "scim::IDD DG TagExists",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      },
+      {
+        "id": "ocid1.instance.oc1..insta",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "defined_tags": "{\"team\":{\"env\":\"prod\"}}",
+          "display_name": "inst-a",
+          "id": "ocid1.instance.oc1..insta",
+          "lifecycle_state": "RUNNING",
+          "name": "inst-a",
+          "node_type": "OCIComputeInstance",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant",
+          "workspace_id": "5252"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "start": {
+          "value": "ocid1.instance.oc1..insta"
+        },
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..idddg_tag_exists"
+        },
+        "kind": "OCI_DYNAMIC_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "dynamic",
+          "matching_rule": "RULE_TAG_TEAM_EXISTS",
+          "tables_matching_rules": [
+            "compute_instances"
+          ]
+        }
+      }
+    ]
+  }
+}

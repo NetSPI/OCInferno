@@ -1,0 +1,157 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_CREATE} {instance-agent-command-family, instance-agent-commands} in compartment RootTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
+          "value": "NEW_AGENT_COMMAND@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_INSTANCE_AGENT_COMMAND",
+        "properties": {
+          "derived_shortcut": true,
+          "description": "Derived from raw IAM edges: this policy statement grants create/run command capability in this location.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_CREATE} {instance-agent-command-family, instance-agent-commands} in compartment RootTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "scope_location": "ocid1.compartment.oc1..app",
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command:0"
+        }
+      },
+      {
+        "end": {
+          "value": "instance-agent-commands@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_INSTANCE_AGENT_COMMAND",
+        "properties": {
+          "description": "Create/run compute instance-agent commands in scope (can execute arbitrary commands on target instances).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_CREATE} {instance-agent-command-family, instance-agent-commands} in compartment RootTeam where target.resource.compartment.tag.team.env = 'prod'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..securityadmins",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "SecurityAdmins",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "NEW_AGENT_COMMAND@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCINewInstanceAgentCommand",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "derived_from": "OCI_CREATE_INSTANCE_AGENT_COMMAND",
+          "location": "ocid1.compartment.oc1..app",
+          "name": "NEW_AGENT_COMMAND@app-team",
+          "resource_type": "instance-agent-command",
+          "synthetic": true,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "CondInherited_target.resource.compartment.tag_17_OCI_CREATE_INSTANCE_AGENT_COMMAND:Statement_1@root-team",
+          "policy_id": "ocid1.policy.oc1..cond_inherited_target.resource.compartment.tag_17_oci_create_instance_agent_command",
+          "policy_name": "CondInherited_target.resource.compartment.tag_17_OCI_CREATE_INSTANCE_AGENT_COMMAND",
+          "raw_statement": "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_CREATE} {instance-agent-command-family, instance-agent-commands} in compartment RootTeam where target.resource.compartment.tag.team.env = 'prod'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "instance-agent-commands@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "instance-agent-commands@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

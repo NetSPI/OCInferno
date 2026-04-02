@@ -1,0 +1,112 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.compartment.id_13_oci_create_instance:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_target.compartment.id_13_oci_create_instance"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_CREATE} instances in compartment RootTeam where target.compartment.id = 'ocid1.compartment.oc1..app'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
+          "value": "new-compute-instance@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_INSTANCE",
+        "properties": {
+          "description": "Launch compute instances in scope (instances prerequisite).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_target.compartment.id_13_oci_create_instance"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_CREATE} instances in compartment RootTeam where target.compartment.id = 'ocid1.compartment.oc1..app'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.compartment.id_13_oci_create_instance:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..securityadmins",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "SecurityAdmins",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_inherited_target.compartment.id_13_oci_create_instance:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "CondInherited_target.compartment.id_13_OCI_CREATE_INSTANCE:Statement_1@root-team",
+          "policy_id": "ocid1.policy.oc1..cond_inherited_target.compartment.id_13_oci_create_instance",
+          "policy_name": "CondInherited_target.compartment.id_13_OCI_CREATE_INSTANCE",
+          "raw_statement": "Allow group SecurityAdmins to {INSTANCE_CREATE} instances in compartment RootTeam where target.compartment.id = 'ocid1.compartment.oc1..app'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-compute-instance@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "new-compute-instance@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

@@ -1,0 +1,827 @@
+{
+  "ALLOW_MANAGE_SUMMARIES": {
+    "all-resources": "Grants broad access to ALL RESOURCES in the target scope.",
+    "bastion": "Allows managing OCI Bastion resources (create/update/delete/move bastions and control session capability).",
+    "bastion-session": "Allows managing OCI Bastion sessions (create/update/delete session access to target resources).",
+    "dynamic-groups": "Allows managing dynamic-groups (editing matching rules can grant workloads/user-controlled resources powerful access).",
+    "groups": "Allows managing groups (can enable privilege changes by controlling group membership / lifecycle).",
+    "instances": "Allows managing Compute Instances in scope (e.g., modify/attach/move/create/delete depending on permissions).",
+    "policies": "Allows managing policies (create/update policies to grant escalation paths).",
+    "secret-bundles": "Allows managing secret bundles (often equivalent to secret material access depending on environment).",
+    "users": "Allows managing users (high impact: password resets, API keys, auth tokens, etc.)."
+  },
+  "ALLOW_RULE_DEFS": [
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "all-resources"
+      },
+      "edge": {
+        "description": "Grants broad access to ALL RESOURCES in the target scope.",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_ALL_RESOURCES",
+      "match": {
+        "resource_tokens": [
+          "all-resources"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "instances"
+      },
+      "edge": {
+        "description": "Allows managing Compute Instances in scope (e.g., modify/attach/move/create/delete depending on permissions).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_INSTANCES",
+      "match": {
+        "resource_tokens": [
+          "instances"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "users"
+      },
+      "edge": {
+        "description": "Allows managing users (high impact: password resets, API keys, auth tokens, etc.).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_USERS",
+      "match": {
+        "resource_tokens": [
+          "users"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "groups"
+      },
+      "edge": {
+        "description": "Allows managing groups (can enable privilege changes by controlling group membership / lifecycle).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_GROUPS",
+      "match": {
+        "resource_tokens": [
+          "groups"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "dynamic-groups"
+      },
+      "edge": {
+        "description": "Allows managing dynamic-groups (editing matching rules can grant workloads/user-controlled resources powerful access).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_DYNAMIC_GROUPS",
+      "match": {
+        "resource_tokens": [
+          "dynamic-groups"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "policies"
+      },
+      "edge": {
+        "description": "Allows managing policies (create/update policies to grant escalation paths).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_POLICIES",
+      "match": {
+        "resource_tokens": [
+          "policies"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "secret-bundles"
+      },
+      "edge": {
+        "description": "Allows managing secret bundles (often equivalent to secret material access depending on environment).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_SECRET_BUNDLES",
+      "match": {
+        "resource_tokens": [
+          "secret-bundles"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "bastion"
+      },
+      "edge": {
+        "description": "Allows managing OCI Bastion resources (create/update/delete/move bastions and control session capability).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_BASTION",
+      "match": {
+        "resource_tokens": [
+          "bastion"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "bastion-session"
+      },
+      "edge": {
+        "description": "Allows managing OCI Bastion sessions (create/update/delete session access to target resources).",
+        "label": "OCI_MANAGE"
+      },
+      "id": "MANAGE_BASTION_SESSION",
+      "match": {
+        "resource_tokens": [
+          "bastion-session"
+        ],
+        "verbs_all": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "users"
+      },
+      "edge": {
+        "description": "Create an API key for another user (requires USER_UPDATE + USER_APIKEY_ADD and enables API access as that user).",
+        "label": "OCI_CREATE_USER_API_KEY"
+      },
+      "id": "CREATE_USER_API_KEY",
+      "match": {
+        "permissions_all": [
+          "USER_UPDATE",
+          "USER_APIKEY_ADD"
+        ],
+        "resource_tokens": [
+          "users"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "tag-namespaces"
+      },
+      "edge": {
+        "description": "Use tag namespaces in scope (TAG_NAMESPACE_USE; enables applying defined tags at resource creation/update time).",
+        "label": "OCI_USE_TAG_NAMESPACE"
+      },
+      "id": "USE_TAG_NAMESPACE",
+      "match": {
+        "permissions_all": [
+          "TAG_NAMESPACE_USE"
+        ],
+        "resource_tokens": [
+          "tag-namespaces"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-users"
+      },
+      "edge": {
+        "description": "Create IAM users in scope (persistence/pivot capability; follow-on credential rights are needed for direct user impersonation).",
+        "label": "OCI_CREATE_USER"
+      },
+      "id": "CREATE_USER",
+      "match": {
+        "permissions_all": [
+          "USER_CREATE"
+        ],
+        "resource_tokens": [
+          "users"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-policies"
+      },
+      "edge": {
+        "description": "Create IAM policies in scope (can grant yourself/admin-equivalent permissions).",
+        "label": "OCI_CREATE_POLICY"
+      },
+      "id": "CREATE_POLICY",
+      "match": {
+        "permissions_all": [
+          "POLICY_CREATE"
+        ],
+        "resource_tokens": [
+          "policies"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-compute-instance"
+      },
+      "edge": {
+        "description": "Launch compute instances in scope (instances prerequisite).",
+        "label": "OCI_CREATE_INSTANCE"
+      },
+      "id": "CREATE_INSTANCE_PREREQ_INSTANCES",
+      "match": {
+        "permissions_all": [
+          "INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "instances"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-compute-instance"
+      },
+      "edge": {
+        "description": "Launch compute instances in scope (VNIC prerequisites).",
+        "label": "OCI_CREATE_INSTANCE"
+      },
+      "id": "CREATE_INSTANCE_PREREQ_VNICS",
+      "match": {
+        "permissions_all": [
+          "VNIC_CREATE",
+          "VNIC_ATTACH"
+        ],
+        "resource_tokens": [
+          "vnics"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-compute-instance"
+      },
+      "edge": {
+        "description": "Launch compute instances in scope (subnet prerequisites).",
+        "label": "OCI_CREATE_INSTANCE"
+      },
+      "id": "CREATE_INSTANCE_PREREQ_SUBNETS",
+      "match": {
+        "permissions_all": [
+          "SUBNET_READ",
+          "SUBNET_ATTACH"
+        ],
+        "resource_tokens": [
+          "subnets"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "instance-agent-commands"
+      },
+      "edge": {
+        "description": "Create/run compute instance-agent commands in scope (can execute arbitrary commands on target instances).",
+        "label": "OCI_CREATE_INSTANCE_AGENT_COMMAND"
+      },
+      "id": "CREATE_INSTANCE_AGENT_COMMAND_VERB",
+      "match": {
+        "resource_tokens": [
+          "instance-agent-command-family",
+          "instance-agent-commands"
+        ],
+        "verbs_any": [
+          "use",
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "instance-agent-commands"
+      },
+      "edge": {
+        "description": "Create/run compute instance-agent commands in scope (can execute arbitrary commands on target instances).",
+        "label": "OCI_CREATE_INSTANCE_AGENT_COMMAND"
+      },
+      "id": "CREATE_INSTANCE_AGENT_COMMAND_PERMISSION",
+      "match": {
+        "permissions_all": [
+          "INSTANCE_AGENT_COMMAND_CREATE"
+        ],
+        "resource_tokens": [
+          "instance-agent-command-family",
+          "instance-agent-commands"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "instance-agent-commands"
+      },
+      "edge": {
+        "description": "Read Run Command input payloads in scope (command text/parameters can contain secrets/tokens).",
+        "label": "OCI_READ_RUN_INPUT"
+      },
+      "id": "READ_RUN_INPUT_VERB",
+      "match": {
+        "resource_tokens": [
+          "instance-agent-command-family",
+          "instance-agent-commands"
+        ],
+        "verbs_any": [
+          "read",
+          "use",
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "instance-agent-commands"
+      },
+      "edge": {
+        "description": "Read Run Command input payloads in scope (command text/parameters can contain secrets/tokens).",
+        "label": "OCI_READ_RUN_INPUT"
+      },
+      "id": "READ_RUN_INPUT_PERMISSION",
+      "match": {
+        "permissions_all": [
+          "INSTANCE_AGENT_COMMAND_READ"
+        ],
+        "resource_tokens": [
+          "instance-agent-command-family",
+          "instance-agent-commands"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "instance-agent-commands"
+      },
+      "edge": {
+        "description": "Read Run Command output metadata/results in scope (plaintext output can expose credentials and tokens).",
+        "label": "OCI_READ_RUN_OUTPUT"
+      },
+      "id": "READ_RUN_OUTPUT_VERB",
+      "match": {
+        "resource_tokens": [
+          "instance-agent-command-family",
+          "instance-agent-command-execution-family",
+          "instance-agent-commands",
+          "instance-agent-command-executions"
+        ],
+        "verbs_any": [
+          "read",
+          "use",
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "instance-agent-commands"
+      },
+      "edge": {
+        "description": "Read Run Command output metadata/results in scope (plaintext output can expose credentials and tokens).",
+        "label": "OCI_READ_RUN_OUTPUT"
+      },
+      "id": "READ_RUN_OUTPUT_PERMISSION",
+      "match": {
+        "permissions_all": [
+          "INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT"
+        ],
+        "resource_tokens": [
+          "instance-agent-command-family",
+          "instance-agent-command-execution-family",
+          "instance-agent-commands",
+          "instance-agent-command-executions"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "policies"
+      },
+      "edge": {
+        "description": "Update IAM policies in scope (can modify existing policy statements to escalate).",
+        "label": "OCI_UPDATE_POLICY"
+      },
+      "id": "UPDATE_POLICY",
+      "match": {
+        "permissions_all": [
+          "POLICY_UPDATE"
+        ],
+        "resource_tokens": [
+          "policies"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "dynamic-groups"
+      },
+      "edge": {
+        "description": "Update dynamic-group rules (can target attacker-controlled resources and inherit the group's permissions).",
+        "label": "OCI_UPDATE_DYNAMIC_GROUP_RULES"
+      },
+      "id": "UPDATE_DYNAMIC_GROUP",
+      "match": {
+        "permissions_all": [
+          "DYNAMIC_GROUP_UPDATE"
+        ],
+        "resource_tokens": [
+          "dynamic-groups"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceGroup",
+        "token": "secret-bundles"
+      },
+      "edge": {
+        "description": "Read secret material from secret bundles (passwords/API keys/tokens \u2192 lateral movement).",
+        "label": "OCI_DUMP_SECRETS"
+      },
+      "id": "DUMP_SECRETS",
+      "match": {
+        "permissions_all": [
+          "SECRET_BUNDLE_READ"
+        ],
+        "resource_tokens": [
+          "secret-bundles"
+        ]
+      }
+    }
+  ],
+  "DEFAULT_RESOURCE_FAMILIES": {
+    "api-gateway-family": [
+      "api-certificates",
+      "api-definitions",
+      "api-deployments",
+      "api-gateways",
+      "api-sdks",
+      "api-subscribers",
+      "api-usage-plans",
+      "api-workrequests"
+    ],
+    "bastion-family": [
+      "bastion",
+      "bastion-session",
+      "bastion-sessions",
+      "bastions"
+    ],
+    "cluster-family": [
+      "cluster-node-pools",
+      "cluster-pod-shapes",
+      "cluster-virtualnode-pools",
+      "cluster-work-requests",
+      "cluster-workload-mappings",
+      "clusters"
+    ],
+    "compute-management-family": [
+      "cluster-networks",
+      "instance-configurations",
+      "instance-pools"
+    ],
+    "dbmgmt-dblm-family": [
+      "dbmgmt-dblm-patch-mgmt",
+      "dbmgmt-dblm-patch-operations",
+      "dbmgmt-dblm-vulnerability",
+      "dbmgmt-dblm-workrequest"
+    ],
+    "dbmgmt-family": [
+      "dbmgmt-cloud-dbsystem-discoveries",
+      "dbmgmt-cloud-dbsystems",
+      "dbmgmt-cloud-exadata",
+      "dbmgmt-external-dbsystem-discoveries",
+      "dbmgmt-external-dbsystems",
+      "dbmgmt-external-exadata",
+      "dbmgmt-jobs",
+      "dbmgmt-managed-database-groups",
+      "dbmgmt-managed-databases",
+      "dbmgmt-named-credentials",
+      "dbmgmt-private-endpoints",
+      "dbmgmt-work-requests"
+    ],
+    "dbmgmt-mysql-family": [
+      "dbmgmt-external-mysql-database-connectors",
+      "dbmgmt-external-mysql-databases",
+      "dbmgmt-managed-mysql-databases"
+    ],
+    "desktop-pool-family": [
+      "desktop",
+      "desktop-pool",
+      "desktop-pool-desktops",
+      "desktop-pool-volumes",
+      "desktop-pools",
+      "desktop-work-requests",
+      "desktop-workrequests",
+      "desktops",
+      "published-desktops"
+    ],
+    "devops-build-family": [
+      "devops-build-pipeline",
+      "devops-build-pipeline-stage",
+      "devops-build-run"
+    ],
+    "devops-deploy-family": [
+      "devops-deploy-artifact",
+      "devops-deploy-environment",
+      "devops-deploy-pipeline",
+      "devops-deploy-stage",
+      "devops-deployment"
+    ],
+    "devops-family": [
+      "devops-build-pipeline",
+      "devops-build-pipeline-stage",
+      "devops-build-run",
+      "devops-connection",
+      "devops-deploy-artifact",
+      "devops-deploy-environment",
+      "devops-deploy-pipeline",
+      "devops-deploy-stage",
+      "devops-deployment",
+      "devops-project",
+      "devops-protected-branch",
+      "devops-pull-request",
+      "devops-pull-request-comment",
+      "devops-repository",
+      "devops-trigger",
+      "devops-work-requests"
+    ],
+    "devops-repository-family": [
+      "devops-protected-branch",
+      "devops-pull-request",
+      "devops-pull-request-comment",
+      "devops-repository"
+    ],
+    "dns": [
+      "dns-records",
+      "dns-resolver-endpoint",
+      "dns-resolver-endpoints",
+      "dns-resolvers",
+      "dns-steering-policies",
+      "dns-steering-policy-attachments",
+      "dns-tsig-keys",
+      "dns-views",
+      "dns-zones"
+    ],
+    "dns-family": [
+      "dns-records",
+      "dns-resolver-endpoint",
+      "dns-resolver-endpoints",
+      "dns-resolvers",
+      "dns-steering-policies",
+      "dns-steering-policy-attachments",
+      "dns-tsig-keys",
+      "dns-views",
+      "dns-zones"
+    ],
+    "file-family": [
+      "cluster-work-requests",
+      "export-sets",
+      "file-systems",
+      "filesystem-snapshot-policies",
+      "fss-work-requests",
+      "mount-targets",
+      "outbound-connectors",
+      "replication-targets",
+      "replications"
+    ],
+    "functions-family": [
+      "fn-app",
+      "fn-function",
+      "fn-invocation"
+    ],
+    "instance-agent-command-execution-family": [
+      "instance-agent-commands"
+    ],
+    "instance-agent-command-family": [
+      "instance-agent-commands"
+    ],
+    "instance-agent-family": [
+      "instance-agent-plugins"
+    ],
+    "instance-family": [
+      "app-catalog-listing",
+      "console-histories",
+      "instance-console-connection",
+      "instance-images",
+      "instances"
+    ],
+    "iot-digital-twin-family": [
+      "iot-digital-twin-adapter",
+      "iot-digital-twin-instance",
+      "iot-digital-twin-model",
+      "iot-digital-twin-relationship"
+    ],
+    "iot-domain-family": [
+      "iot-domain",
+      "iot-domain-group",
+      "iot-work-request"
+    ],
+    "iot-family": [
+      "iot-digital-twin-family",
+      "iot-domain-family"
+    ],
+    "logging-family": [
+      "log-content",
+      "log-groups",
+      "unified-configuration"
+    ],
+    "network-load-balancer-family": [
+      "network-load-balancers"
+    ],
+    "object-family": [
+      "buckets",
+      "objects",
+      "objectstorage-namespaces"
+    ],
+    "ons-family": [
+      "ons-subscriptions",
+      "ons-topics"
+    ],
+    "orm-family": [
+      "orm-config-source-providers",
+      "orm-jobs",
+      "orm-private-endpoints",
+      "orm-stacks",
+      "orm-template",
+      "orm-work-requests"
+    ],
+    "secret-family": [
+      "hsm-cluster",
+      "key-delegate",
+      "keys",
+      "secret-bundles",
+      "secret-versions",
+      "secrets",
+      "vaults"
+    ],
+    "tagging-family": [
+      "tag-defaults",
+      "tag-namespaces"
+    ]
+  },
+  "SUPPORTED_VARIABLES": {
+    "bastion": {
+      "target.bastion-session.username": "[String] Use this variable to control access to sessions by OS username.",
+      "target.bastion.name": "[String] Use this variable to control access to bastions by bastion name.",
+      "target.bastion.ocid": "[Entity (OCID)] Use this variable to control access to a specific bastion by OCID.",
+      "target.resource.ocid": "[Entity (OCID)] Use this variable to control access to sessions targeting a specific OCI resource (for example an instance)."
+    },
+    "container_registry": {
+      "target.repo.name": "[String] Use this variable to control access to specific Container Registry repositories by name."
+    },
+    "core": {
+      "target.boot-volume.kms-key.id": "[String] Controls whether Compute instances can be launched with boot volumes created without a Vault master encryption key.",
+      "target.image.id": "[Entity(OCID)] The specific image OCID allowed by the policy."
+    },
+    "dns": {
+      "target.dns-domain.name": "[List[String]] Use this variable to control access to specific domain names.",
+      "target.dns-record.type": "[List[String]] Use this variable to control access to specific DNS record types (A, AAAA, TXT, etc.).",
+      "target.dns-zone.apex-label": "[String] Most significant DNS label for the target zone (e.g., zone name 'service.example.com' => 'service').",
+      "target.dns-zone.destination-compartment.id": "[Entity (OCID)] Use this variable to control access to the destination compartment of the DNS zone by OCID.",
+      "target.dns-zone.id": "[Entity (OCID)] Use this variable to control access to specific DNS zones by OCID.",
+      "target.dns-zone.name": "[String] Use this variable to control access to specific DNS zones by name.",
+      "target.dns-zone.parent-domain": "[String] Domain name of the target zone's parent zone.",
+      "target.dns-zone.source-compartment.id": "[Entity (OCID)] Use this variable to control access to the current compartment of the DNS zone by OCID.",
+      "target.dns.scope": "[String] Valid values: 'public' or 'private'."
+    },
+    "general": {
+      "request.ad": "[String] The availability domain name the request is made in (see ListAvailabilityDomains).",
+      "request.groups.id": "[List[Entity(OCID)]] The OCIDs of the groups the requesting user is in.",
+      "request.instance.compartment.id": "[Entity(OCID)] Compartment OCID of the requested instance.",
+      "request.networkSource.name": "[String] The name of the network source group that specifies allowed source IPs.",
+      "request.operation": "[String] The API operation name being requested (e.g., ListUsers).",
+      "request.permission": "[String] The underlying permission being requested.",
+      "request.principal.compartment.tag": "[String] Tags applied to the compartment that the requesting resource belongs to.",
+      "request.principal.group.tag": "[String] Tags applied to the groups that the requesting user belongs to.",
+      "request.region": "[String] The 3-letter region key the request is made in (e.g., IAD, PHX, ORD, LHR, ...).",
+      "request.user.id": "[Entity(OCID)] The OCID of the requesting user.",
+      "request.user.mfaTotpVerified": "[Boolean] Whether the requesting user has been verified by MFA (TOTP).",
+      "request.user.name": "[String] Name of the requesting user.",
+      "request.utc-timestamp": "[String] UTC time the request is submitted (ISO 8601).",
+      "request.utc-timestamp.day-of-month": "[String] Day-of-month the request is submitted in, numeric '1'..'31'.",
+      "request.utc-timestamp.day-of-week": "[String] Day-of-week the request is submitted in English (Monday..Sunday).",
+      "request.utc-timestamp.month-of-year": "[String] Month-of-year the request is submitted in, numeric '1'..'12'.",
+      "request.utc-timestamp.time-of-day": "[String] UTC time interval the request is submitted during (ISO 8601 time(s), e.g. '01:00:00Z').",
+      "target.compartment.id": "[Entity(OCID)] OCID of the compartment containing the primary resource.",
+      "target.compartment.name": "[String] Name of the compartment specified in target.compartment.id.",
+      "target.resource.compartment.tag": "[String] Tag applied to the target compartment of the request.",
+      "target.resource.tag": "[String] Tag applied to the target resource of the request."
+    },
+    "iam": {
+      "target.credential.type": "[String] The credential type being targeted (for example smtp/api-key/db-credential).",
+      "target.domain.id": "[Entity(OCID)] Identity domain OCID.",
+      "target.domain.name": "[String] Identity domain name.",
+      "target.dynamic-group.id": "[Entity(OCID)] The OCID of the target dynamic-group.",
+      "target.dynamic-group.name": "[String] The name/display of the target dynamic-group.",
+      "target.group.id": "[Entity(OCID)] The OCID of the target group.",
+      "target.group.member": "[Boolean] True if request.user is a member of target.group.",
+      "target.group.name": "[String] The name/display of the target group.",
+      "target.policy.autoupdate": "[Boolean] Whether policy auto-update is enabled.",
+      "target.policy.id": "[Entity(OCID)] The OCID of the target policy.",
+      "target.policy.name": "[String] The name of the target policy.",
+      "target.resource.domain.id": "[Entity(OCID)] Identity domain OCID for the target resource.",
+      "target.resource.domain.name": "[String] Identity domain name for the target resource.",
+      "target.tag-namespace.id": "[Entity(OCID)] Tag namespace OCID.",
+      "target.tag-namespace.name": "[String] Tag namespace name.",
+      "target.user.id": "[Entity(OCID)] The OCID of the target user.",
+      "target.user.name": "[String] The display/name of the target user."
+    },
+    "orm": {
+      "target.job.operation": "[String] Use this variable to control access for running specified job types. For example, to limit access to PLAN and APPLY jobs, use the following phrase: where any {target.job.operation = 'PLAN', target.job.operation = 'APPLY'}",
+      "target.stack.id": "[Entity (OCID)] Use this variable to limit access to specified stacks. For example, use the following phrase: where any {target.stack.id = ocid1.ormstack.uniqueid1, target.stack.id = ocid1.ormstack.uniqueid2}"
+    },
+    "secure_desktops": {
+      "target.desktop.id": "[Entity (OCID)] Use this variable to control access to specific desktops by OCID.",
+      "target.desktopPool.id": "[Entity (OCID)] Use this variable to control access to a specific desktop pool by OCID.",
+      "target.desktoppool.id": "[Entity (OCID)] Lower-case alias of target.desktopPool.id for compatibility with policy examples.",
+      "target.desktoppool.name": "[String] Use this variable to control access to desktop pools by display name."
+    },
+    "vault": {
+      "target.key.id": "[Entity (OCID)] Use this variable to control access to specific keys by OCID.",
+      "target.secret.id": "[Entity (OCID)] Use this variable to control access to specific secrets, secret versions, and secret bundles by OCID.",
+      "target.secret.name": "[String] Use this variable to control access to specific secrets, secret versions, and secret bundles by name.",
+      "target.vault.id": "[Entity (OCID)] Use this variable to control access to specific vaults by OCID."
+    }
+  }
+}

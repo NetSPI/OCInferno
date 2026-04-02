@@ -1,0 +1,128 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_10_oci_use_tag_namespace:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_10_oci_use_tag_namespace"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {TAG_NAMESPACE_USE} tag-namespaces in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      },
+      {
+        "end": {
+          "value": "tag-namespaces@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_USE_TAG_NAMESPACE",
+        "properties": {
+          "description": "Use tag namespaces in scope (TAG_NAMESPACE_USE; enables applying defined tags at resource creation/update time).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_10_oci_use_tag_namespace"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {TAG_NAMESPACE_USE} tag-namespaces in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_10_oci_use_tag_namespace:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_10_oci_use_tag_namespace:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "CondDirect_request.user.id_10_OCI_USE_TAG_NAMESPACE:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..cond_direct_request.user.id_10_oci_use_tag_namespace",
+          "policy_name": "CondDirect_request.user.id_10_OCI_USE_TAG_NAMESPACE",
+          "raw_statement": "Allow any-user to {TAG_NAMESPACE_USE} tag-namespaces in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..alice",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "email": "alice@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "alice",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..bob",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "email": "bob@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "bob",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "tag-namespaces@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "tag-namespaces@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

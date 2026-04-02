@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {TAG_NAMESPACE_USE} tag-namespaces in compartment RootTeam

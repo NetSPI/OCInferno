@@ -1,0 +1,93 @@
+{
+  "description": "Identity Domain baseline user-to-group membership emission.",
+  "workspace": {
+    "workspace_id": 10001,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset",
+    "--groups"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "shared"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "prod"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "dev-team",
+          "display_name": "DevTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "dev"
+            }
+          }
+        }
+      ],
+      "identity_domains": [
+        {
+          "id": "ocid1.domain.oc1..golddomain",
+          "display_name": "GoldenDomain",
+          "compartment_id": "ocid1.compartment.oc1..root"
+        }
+      ],
+      "identity_domain_users": [
+        {
+          "id": "scim-user-alice",
+          "ocid": "ocid1.user.oc1..alice",
+          "user_name": "alice",
+          "display_name": "alice",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "compartment_ocid": "ocid1.compartment.oc1..app",
+          "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+          "groups": "[{\"ocid\": \"ocid1.group.oc1..blue\", \"display_name\": \"BlueTeam\", \"membership_ocid\": \"ocid1.groupmembership.oc1..blue1\"}]"
+        }
+      ],
+      "identity_domain_groups": [
+        {
+          "id": "scim-group-blue",
+          "ocid": "ocid1.group.oc1..blue",
+          "display_name": "BlueTeam",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "compartment_ocid": "ocid1.compartment.oc1..app",
+          "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+          "users": "[]"
+        }
+      ]
+    },
+    "parser_stubs": {}
+  }
+}

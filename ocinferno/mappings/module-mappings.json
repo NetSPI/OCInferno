@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "modules": [
+    {
+      "module_name": "enum_all",
+      "module_category": "Enumeration",
+      "info_blurb": "Run cross-service enumeration in dependency order",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.everything.enumeration.enum_all",
+      "service": "AllCoverage"
+    },
+    {
+      "module_name": "enum_config_check",
+      "module_category": "Enumeration",
+      "info_blurb": "Run saved-data configuration audits",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.everything.enumeration.enum_config_check",
+      "service": "AllCoverage"
+    },
+    {
+      "module_name": "enum_apigateway",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate API Gateway resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.apigateway.enumeration.enum_apigateway",
+      "service": "ApiGateway"
+    },
+    {
+      "module_name": "enum_artifactregistry",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Artifact Registry resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.artifactregistry.enumeration.enum_artifactregistry",
+      "service": "ArtifactRegistry"
+    },
+    {
+      "module_name": "enum_blockchain",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Blockchain resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.blockchain.enumeration.enum_blockchain",
+      "service": "Blockchain"
+    },
+    {
+      "module_name": "enum_cloudguard",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Cloud Guard resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.cloudguard.enumeration.enum_cloudguard",
+      "service": "CloudGuard"
+    },
+    {
+      "module_name": "enum_container_instances",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Container Instances",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.containerinstances.enumeration.enum_container_instances",
+      "service": "ContainerInstances"
+    },
+    {
+      "module_name": "enum_containerregistry",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Container Registry resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.containerregistry.enumeration.enum_containerregistry",
+      "service": "ContainerRegistry"
+    },
+    {
+      "module_name": "enum_core_block_storage",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Core Block Storage resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.core.enumeration.enum_core_block_storage",
+      "service": "Core"
+    },
+    {
+      "module_name": "enum_core_compute",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Core Compute resources (instances/images/compute management + instance-agent plugins)",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.core.enumeration.enum_core_compute",
+      "service": "Core"
+    },
+    {
+      "module_name": "enum_core_network",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Core Networking resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.core.enumeration.enum_core_network",
+      "service": "Core"
+    },
+    {
+      "module_name": "enum_databases",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Database resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.databases.enumeration.enum_databases",
+      "service": "Databases"
+    },
+    {
+      "module_name": "enum_dataflow",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Data Flow resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.dataflow.enumeration.enum_dataflow",
+      "service": "DataFlow"
+    },
+    {
+      "module_name": "enum_datascience",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Data Science resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.datascience.enumeration.enum_datascience",
+      "service": "DataScience"
+    },
+    {
+      "module_name": "enum_desktops",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Desktops resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.desktops.enumeration.enum_desktops",
+      "service": "Desktops"
+    },
+    {
+      "module_name": "enum_devops",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate DevOps resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.devops.enumeration.enum_devops",
+      "service": "DevOps"
+    },
+    {
+      "module_name": "enum_dns",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate DNS resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.dns.enumeration.enum_dns",
+      "service": "DNS"
+    },
+    {
+      "module_name": "enum_email",
+      "module_category": "Enumeration",
+      "info_blurb": "Create SMTP creds and send mail via OCI Email Delivery",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.email.enumeration.enum_email",
+      "service": "EmailDelivery"
+    },
+    {
+      "module_name": "enum_filestorage",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate File Storage resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.filestorage.enumeration.enum_filestorage",
+      "service": "FileStorage"
+    },
+    {
+      "module_name": "enum_functions",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Functions resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.functions.enumeration.enum_functions",
+      "service": "Functions"
+    },
+    {
+      "module_name": "enum_comp",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI compartments",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.identityclient.enumeration.enum_comp",
+      "service": "IdentityClient"
+    },
+    {
+      "module_name": "enum_identity",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Identity (IAM + IDD) resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.identityclient.enumeration.enum_identity",
+      "service": "IdentityClient"
+    },
+    {
+      "module_name": "enum_iot",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate IoT resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.iot.enumeration.enum_iot",
+      "service": "IoT"
+    },
+    {
+      "module_name": "enum_kubernetes",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Kubernetes resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.kubernetes.enumeration.enum_kubernetes",
+      "service": "Kubernetes"
+    },
+    {
+      "module_name": "enum_logs",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate all buckets and corresponding blobs",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.logging.enumeration.enum_logs",
+      "service": "Logging"
+    },
+    {
+      "module_name": "enum_managedkafka",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Managed Kafka resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.managedkafka.enumeration.enum_managedkafka",
+      "service": "ManagedKafka"
+    },
+    {
+      "module_name": "enum_networkfirewall",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Network Firewall resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.networkfirewall.enumeration.enum_networkfirewall",
+      "service": "NetworkFirewall"
+    },
+    {
+      "module_name": "enum_notifications",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Notifications resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.notifications.enumeration.enum_notifications",
+      "service": "Notifications"
+    },
+    {
+      "module_name": "enum_objectstorage",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Object Storage resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.objectstorage.enumeration.enum_objectstorage",
+      "service": "ObjectStorage"
+    },
+    {
+      "module_name": "enum_oracle_cloud_hound_data",
+      "module_category": "Enumeration",
+      "info_blurb": "Build OpenGraph nodes/edges and export OCI CloudHound JSON",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data",
+      "service": "OpenGraph"
+    },
+    {
+      "module_name": "enum_resourcemanager",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Resource Manager resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.resourcemanager.enumeration.enum_resourcemanager",
+      "service": "ResourceManager"
+    },
+    {
+      "module_name": "enum_resource_schedules",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Resource Scheduler schedules",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.resourcescheduler.enumeration.enum_resource_schedules",
+      "service": "ResourceScheduler"
+    },
+    {
+      "module_name": "enum_tagging",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Tagging resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.tagging.enumeration.enum_tagging",
+      "service": "Tagging"
+    },
+    {
+      "module_name": "enum_vault",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate Vault resources",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.vault.enumeration.enum_vault",
+      "service": "Vault"
+    }
+  ]
+}

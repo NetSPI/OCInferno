@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {DYNAMIC_GROUP_UPDATE} dynamic-groups in compartment AppTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'

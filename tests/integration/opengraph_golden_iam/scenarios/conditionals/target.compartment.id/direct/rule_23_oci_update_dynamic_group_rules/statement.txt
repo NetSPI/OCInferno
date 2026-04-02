@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {DYNAMIC_GROUP_UPDATE} dynamic-groups in compartment AppTeam where target.compartment.id = 'ocid1.compartment.oc1..app'

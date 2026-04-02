@@ -1,0 +1,295 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_POLICY_CAN_GRANT_ALL_RESOURCES",
+        "properties": {
+          "description": "Derived from raw IAM edges: newly created policies in this scope can grant access to all-resources.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "NEW_POLICY@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_UPDATED_ACCESS_TO_ALL_RESOURCES",
+        "properties": {
+          "derived_shortcut": true,
+          "description": "Derived shortcut: this policy is reachable via UPDATE_POLICY in this scope and can be modified to grant all-resources.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "policy_update_scope_id": "policies@ocid1.compartment.oc1..app",
+          "requires_update_policy": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "trace_statement_node_ids": [
+            "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage:0"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+        }
+      },
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to concrete resources.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "policies@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "NEW_POLICY@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CAN_CREATE_POLICY",
+        "properties": {
+          "description": "Derived from raw IAM edges: this policy statement grants CREATE_POLICY in compatible scope, enabling creation of new policy statements.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage:0"
+        }
+      },
+      {
+        "end": {
+          "value": "policies@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing policies (create/update policies to grant escalation paths).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [
+            "OCI_UPDATE_POLICY"
+          ],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all-resources@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "location": "ocid1.compartment.oc1..app",
+          "name": "all-resources@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "NEW_POLICY@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCINewPolicy",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "derived_from": "OCI_CREATE_POLICY",
+          "location": "ocid1.compartment.oc1..app",
+          "name": "NEW_POLICY@app-team",
+          "resource_type": "policy",
+          "synthetic": true,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage",
+        "kinds": [
+          "OCIPolicy",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "display_name": "CondDirect_request.user.id_05_OCI_MANAGE",
+          "id": "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage",
+          "lifecycle_state": "ACTIVE",
+          "name": "CondDirect_request.user.id_05_OCI_MANAGE",
+          "statements": [
+            "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant",
+          "workspace_id": "10057"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "CondDirect_request.user.id_05_OCI_MANAGE:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..cond_direct_request.user.id_05_oci_manage",
+          "policy_name": "CondDirect_request.user.id_05_OCI_MANAGE",
+          "raw_statement": "Allow any-user to manage policies in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..alice",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "email": "alice@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "alice",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..bob",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "email": "bob@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "bob",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-policies@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "new-policies@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policies@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "policies@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

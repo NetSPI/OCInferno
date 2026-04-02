@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_CREATE} {instance-agent-command-family, instance-agent-commands} in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'

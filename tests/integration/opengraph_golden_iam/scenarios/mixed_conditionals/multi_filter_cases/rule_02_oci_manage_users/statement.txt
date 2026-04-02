@@ -1,0 +1,1 @@
+Allow any-user to manage users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice' and target.resource.compartment.tag.team.env = 'prod'

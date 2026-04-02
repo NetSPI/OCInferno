@@ -1,0 +1,242 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {USER_APIKEY_ADD, USER_UPDATE} users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      },
+      {
+        "end": {
+          "value": "users@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_USER_API_KEY",
+        "properties": {
+          "description": "Create an API key for another user (requires USER_UPDATE + USER_APIKEY_ADD and enables API access as that user).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {USER_APIKEY_ADD, USER_UPDATE} users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key:0"
+        }
+      },
+      {
+        "end": {
+          "value": "users@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_CREATE_USER_API_KEY",
+        "properties": {
+          "description": "Create an API key for another user (requires USER_UPDATE + USER_APIKEY_ADD and enables API access as that user).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {USER_APIKEY_ADD, USER_UPDATE} users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key:0"
+        }
+      },
+      {
+        "end": {
+          "value": "users@ocid1.compartment.oc1..root"
+        },
+        "kind": "OCI_CREATE_USER_API_KEY",
+        "properties": {
+          "description": "Create an API key for another user (requires USER_UPDATE + USER_APIKEY_ADD and enables API access as that user).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {USER_APIKEY_ADD, USER_UPDATE} users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key:0"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.user.oc1..alice"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to principals.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "users@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.user.oc1..bob"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to principals.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "users@ocid1.compartment.oc1..dev"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "CondInherited_request.user.id_09_OCI_CREATE_USER_API_KEY:Statement_1@root-team",
+          "policy_id": "ocid1.policy.oc1..cond_inherited_request.user.id_09_oci_create_user_api_key",
+          "policy_name": "CondInherited_request.user.id_09_OCI_CREATE_USER_API_KEY",
+          "raw_statement": "Allow any-user to {USER_APIKEY_ADD, USER_UPDATE} users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..alice",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "email": "alice@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "alice",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..bob",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "email": "bob@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "bob",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "users@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "users@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "users@ocid1.compartment.oc1..dev",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..dev",
+          "name": "users@dev-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "users@ocid1.compartment.oc1..root",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..root",
+          "name": "users@root-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

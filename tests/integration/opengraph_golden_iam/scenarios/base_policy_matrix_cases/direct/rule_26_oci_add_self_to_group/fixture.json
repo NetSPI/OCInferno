@@ -1,0 +1,124 @@
+{
+  "description": "Derived add-self-to-group edge from USER_UPDATE + GROUP_UPDATE permission pair in the same scope.",
+  "workspace": {
+    "workspace_id": 10096,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..base_direct_26_oci_add_self_to_group",
+          "name": "BaseDirect_26_OCI_ADD_SELF_TO_GROUP",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_domains": [
+        {
+          "id": "ocid1.domain.oc1..golddomain",
+          "display_name": "GoldenDomain",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "url": "https://example.identity.oraclecloud.invalid"
+        }
+      ],
+      "identity_domain_users": [
+        {
+          "id": "scim-user-alice",
+          "ocid": "ocid1.user.oc1..alice",
+          "user_name": "alice",
+          "display_name": "Alice",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "compartment_ocid": "ocid1.compartment.oc1..app",
+          "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+          "groups": "[{\"ocid\": \"ocid1.group.oc1..prodgroup\", \"display_name\": \"ProdGroup\", \"membership_ocid\": \"ocid1.groupmembership.oc1..prodgroup1\"}]"
+        }
+      ],
+      "identity_domain_groups": [
+        {
+          "id": "scim-group-prod",
+          "ocid": "ocid1.group.oc1..prodgroup",
+          "display_name": "ProdGroup",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "compartment_ocid": "ocid1.compartment.oc1..app",
+          "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+          "users": "[]"
+        },
+        {
+          "id": "scim-group-target",
+          "ocid": "ocid1.group.oc1..targetgroup",
+          "display_name": "TargetGroup",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "compartment_ocid": "ocid1.compartment.oc1..app",
+          "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+          "users": "[]"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "kind": "allow",
+          "subject": {
+            "type": "group",
+            "values": [
+              {
+                "ocid": "ocid1.group.oc1..prodgroup",
+                "name": "ProdGroup"
+              }
+            ]
+          },
+          "actions": {
+            "type": "permissions",
+            "values": [
+              "USER_UPDATE",
+              "GROUP_UPDATE"
+            ]
+          },
+          "resources": {
+            "type": "specific",
+            "values": [
+              "users",
+              "groups"
+            ]
+          },
+          "location": {
+            "type": "compartment_id",
+            "values": [
+              "ocid1.compartment.oc1..app"
+            ]
+          },
+          "conditions": {}
+        }
+      ]
+    }
+  }
+}

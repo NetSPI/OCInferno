@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to manage {instance-agent-command-family, instance-agent-commands} in compartment RootTeam where target.compartment.id = 'ocid1.compartment.oc1..app'

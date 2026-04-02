@@ -1,0 +1,1 @@
+Allow any-user to {USER_CREATE} users in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'

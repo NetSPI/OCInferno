@@ -1,0 +1,489 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "ANY_USER@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_SCOPE_MEMBER_OF",
+        "properties": {
+          "description": "Synthetic scope inclusion link.",
+          "edge_category": "GROUP_MEMBERSHIP",
+          "resource_family": false,
+          "resource_used": false
+        },
+        "start": {
+          "value": "ANYDOMAIN/new_user@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "ANY_USER@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_SCOPE_MEMBER_OF",
+        "properties": {
+          "description": "Synthetic scope inclusion link.",
+          "edge_category": "GROUP_MEMBERSHIP",
+          "resource_family": false,
+          "resource_used": false
+        },
+        "start": {
+          "value": "ANYDOMAIN/new_user@ocid1.compartment.oc1..dev"
+        }
+      },
+      {
+        "end": {
+          "value": "ANY_USER@ocid1.compartment.oc1..root"
+        },
+        "kind": "OCI_SCOPE_MEMBER_OF",
+        "properties": {
+          "description": "Synthetic scope inclusion link.",
+          "edge_category": "GROUP_MEMBERSHIP",
+          "resource_family": false,
+          "resource_used": false
+        },
+        "start": {
+          "value": "ANYDOMAIN/new_user@ocid1.compartment.oc1..root"
+        }
+      },
+      {
+        "end": {
+          "value": "ANY_USER@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_ANY_USER_MEMBER_OF",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Wildcard principal expansion."
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      },
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      },
+      {
+        "end": {
+          "value": "ANY_USER@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_ANY_USER_MEMBER_OF",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Wildcard principal expansion."
+        },
+        "start": {
+          "value": "ocid1.user.oc1..bob"
+        }
+      },
+      {
+        "end": {
+          "value": "ANYDOMAIN/new_user@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_USER",
+        "properties": {
+          "description": "Create IAM users in scope (persistence/pivot capability; follow-on credential rights are needed for direct user impersonation).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        }
+      },
+      {
+        "end": {
+          "value": "ANYDOMAIN/new_user@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_CREATE_USER",
+        "properties": {
+          "description": "Create IAM users in scope (persistence/pivot capability; follow-on credential rights are needed for direct user impersonation).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        }
+      },
+      {
+        "end": {
+          "value": "ANYDOMAIN/new_user@ocid1.compartment.oc1..root"
+        },
+        "kind": "OCI_CREATE_USER",
+        "properties": {
+          "description": "Create IAM users in scope (persistence/pivot capability; follow-on credential rights are needed for direct user impersonation).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        }
+      },
+      {
+        "end": {
+          "value": "users@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing users (high impact: password resets, API keys, auth tokens, etc.).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [
+            "OCI_CREATE_USER_API_KEY"
+          ],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        }
+      },
+      {
+        "end": {
+          "value": "users@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing users (high impact: password resets, API keys, auth tokens, etc.).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [
+            "OCI_CREATE_USER_API_KEY"
+          ],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        }
+      },
+      {
+        "end": {
+          "value": "users@ocid1.compartment.oc1..root"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing users (high impact: password resets, API keys, auth tokens, etc.).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [
+            "OCI_CREATE_USER_API_KEY"
+          ],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..mixed_nested_any_all"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.user.oc1..alice"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to principals.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "users@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.user.oc1..bob"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to principals.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "users@ocid1.compartment.oc1..dev"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ANY_USER@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIAnyUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "ANY_USER@app-team",
+          "principal_kind": "any-user",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ANY_USER@ocid1.compartment.oc1..dev",
+        "kinds": [
+          "OCIAnyUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "name": "ANY_USER@dev-team",
+          "principal_kind": "any-user",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ANY_USER@ocid1.compartment.oc1..root",
+        "kinds": [
+          "OCIAnyUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "ANY_USER@root-team",
+          "principal_kind": "any-user",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..mixed_nested_any_all:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "MixedNestedAnyAllPolicy:Statement_1@root-team",
+          "policy_id": "ocid1.policy.oc1..mixed_nested_any_all",
+          "policy_name": "MixedNestedAnyAllPolicy",
+          "raw_statement": "Allow any-user to manage users in compartment RootTeam where any { request.user.id = 'ocid1.user.oc1..alice', all { target.compartment.id = 'ocid1.compartment.oc1..app', request.utc-timestamp before '2099-01-01T00:00:00Z' } }",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..alice",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "email": "alice@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "alice",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..bob",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "email": "bob@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "bob",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ANYDOMAIN/new_user@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "ANYDOMAIN/new_user@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ANYDOMAIN/new_user@ocid1.compartment.oc1..dev",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..dev",
+          "name": "ANYDOMAIN/new_user@dev-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ANYDOMAIN/new_user@ocid1.compartment.oc1..root",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..root",
+          "name": "ANYDOMAIN/new_user@root-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "users@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "users@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "users@ocid1.compartment.oc1..dev",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..dev",
+          "name": "users@dev-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "users@ocid1.compartment.oc1..root",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..root",
+          "name": "users@root-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

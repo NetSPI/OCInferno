@@ -1,0 +1,131 @@
+{
+  "description": "Direct conditional target.compartment.id for OCI_READ_RUN_OUTPUT (rule 20).",
+  "workspace": {
+    "workspace_id": 10205,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset",
+    "--cond-eval"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "shared"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "prod"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "dev-team",
+          "display_name": "DevTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "dev"
+            }
+          }
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..cond_direct_target.compartment.id_20_oci_read_run_output",
+          "name": "CondDirect_target.compartment.id_20_OCI_READ_RUN_OUTPUT",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_groups": [
+        {
+          "id": "ocid1.group.oc1..securityadmins",
+          "name": "SecurityAdmins",
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "lifecycle_state": "ACTIVE"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "kind": "allow",
+          "subject": {
+            "type": "group",
+            "values": [
+              {
+                "ocid": "ocid1.group.oc1..securityadmins",
+                "name": "SecurityAdmins"
+              }
+            ]
+          },
+          "actions": {
+            "type": "verbs",
+            "values": [
+              "manage"
+            ]
+          },
+          "resources": {
+            "type": "specific",
+            "values": [
+              "instance-agent-command-execution-family",
+              "instance-agent-command-executions",
+              "instance-agent-command-family",
+              "instance-agent-commands"
+            ]
+          },
+          "location": {
+            "type": "compartment_id",
+            "values": [
+              "ocid1.compartment.oc1..app"
+            ]
+          },
+          "conditions": {
+            "mode": "all",
+            "clauses": [
+              {
+                "lhs": {
+                  "type": "attribute",
+                  "value": "target.compartment.id"
+                },
+                "op": "eq",
+                "rhs": {
+                  "type": "string",
+                  "value": "ocid1.compartment.oc1..app"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

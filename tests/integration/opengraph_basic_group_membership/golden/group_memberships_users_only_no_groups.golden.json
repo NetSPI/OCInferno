@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.user.oc1..classicuser01",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..testcompartment",
+          "email": "classic_user_one@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "classic_user_one",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..idduser01",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..testcompartment",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "name": "TestDomain/idd_user_one",
+          "scim_id": "idd-user-scim-01",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      }
+    ],
+    "edges": []
+  }
+}

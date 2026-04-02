@@ -1,0 +1,2433 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ANY_USER@ocid1.compartment.oc1..obf3a173d3be8",
+        "kinds": [
+          "OCIAnyUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf3a173d3be8",
+          "name": "ANY_USER@COMPARTMENT_ff7e7e",
+          "principal_kind": "any-user",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "Default/new_user@ocid1.tenancy.oc1..obfce29e37e14",
+        "kinds": [
+          "OCIResourceGroup",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "is_known_family": false,
+          "location": "ocid1.tenancy.oc1..obfce29e37e14",
+          "name": "Default/new_user@TENANT_7b6e83",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "PreProdDomain/new_user@ocid1.compartment.oc1..obf89f0b5a8eb",
+        "kinds": [
+          "OCIResourceGroup",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "name": "PreProdDomain/new_user@PreProd",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ProdDomain/new_user@ocid1.compartment.oc1..obf047a419e71",
+        "kinds": [
+          "OCIResourceGroup",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..obf047a419e71",
+          "name": "ProdDomain/new_user@Prod",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "all-resources@ocid1.compartment.oc1..obf3a173d3be8",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf3a173d3be8",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..obf3a173d3be8",
+          "name": "all-resources@COMPARTMENT_ff7e7e",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "all-resources@ocid1.compartment.oc1..obf047a419e71",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..obf047a419e71",
+          "name": "all-resources@Prod",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "all-resources@ocid1.tenancy.oc1..obfce29e37e14",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "is_known_family": false,
+          "location": "ocid1.tenancy.oc1..obfce29e37e14",
+          "name": "all-resources@TENANT_7b6e83",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "groups@ocid1.compartment.oc1..obf047a419e71",
+        "kinds": [
+          "OCIResourceGroup",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "location": "ocid1.compartment.oc1..obf047a419e71",
+          "name": "groups@Prod",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "iddapp::ocid1.domain.oc1..obf478d1f438a::IDCSAppId",
+        "kinds": [
+          "OCIIDDApplication",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "id": "IDCSAppId",
+          "name": "Default/IDCS Application",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "iddapp::ocid1.domain.oc1..obf1095fa5fe4::IDCSAppId",
+        "kinds": [
+          "OCIIDDApplication",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "compartment_ocid": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "id": "IDCSAppId",
+          "name": "PreProdDomain/IDCS Application",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.credential.oc1..obf619a4a5210",
+        "kinds": [
+          "OCIIdentityDomainUserApiKey",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "domain_url": "[URL_HERE]",
+          "fingerprint": "34:6d:b5:7e:0b:db:33:59:4a:f7:12:27:23:a9:df:c8",
+          "id": "id_22120ddd67",
+          "idcs_created_by": "{\"display\":\"Scott Weston\",\"ocid\":\"ocid1.user.oc1..obf94ed366140\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_7746b1a346\"}",
+          "idcs_last_modified_by": "{\"display\":\"Scott Weston\",\"ocid\":\"ocid1.user.oc1..obf94ed366140\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_7746b1a346\"}",
+          "key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8NeBij7+/XLYBdZU5ew3\nGa0V4cVOZI0g5lMw7cl7R+XPHZ+eR7jyFmKtLqtkuU+ut0MY0ZqzCJvK8Dsh8vbH\nTnYrPrulCQLgeuOFHE8eBJ1f0Zdnibk29dvBQv1sOhy7HUCgt19VbVTL4RgV7aZh\nrIVHfOqrMlp4DaYXMzdrabsyTGZRsx4xok9MBSRfUPkKTRepKgalwPJ7JFDOtsYC\nXzjvrpEYst3AQDqlJZKLaZUqYmhljRwv0NT1tIbG/4Xr35cbWwStLx4jPHl7V9jg\n/oNoEiTssKApyEv84lIPrzhE+HFQwkTmm7Zxp9LtThXR84tYjzvf0zsDj2dKO7xC\nkQIDAQAB\n-----END PUBLIC KEY-----",
+          "meta": "{\"created\":\"2026-03-30T07:51:33.515Z\",\"last_modified\":\"2026-03-30T07:51:33.515Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"ApiKey\",\"version\":\"id_2d9a0d56ff\"}",
+          "name": "34:6d:b5:7e:0b:db:33:59:4a:f7:12:27:23:a9:df:c8",
+          "ocid": "ocid1.credential.oc1..obf619a4a5210",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:apikey\"]",
+          "tenancy_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "user": "{\"display\":\"Scott Weston\",\"name\":\"user_8ac04c@example.invalid\",\"ocid\":\"ocid1.user.oc1..obf94ed366140\",\"ref\":\"[URL_HERE]\",\"value\":\"id_7746b1a346\"}",
+          "user_ref.display": "Scott Weston",
+          "user_ref.name": "user_8ac04c@example.invalid",
+          "user_ref.ocid": "ocid1.user.oc1..obf94ed366140",
+          "user_ref.ref": "[URL_HERE]",
+          "user_ref.value": "id_7746b1a346",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.credential.oc1..obf80becc4cb7",
+        "kinds": [
+          "OCIIdentityDomainUserApiKey",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "domain_url": "[URL_HERE]",
+          "fingerprint": "13:95:9d:6c:e6:10:12:e1:ab:31:50:ee:ff:33:06:c4",
+          "id": "id_d0f9ccd91f",
+          "idcs_created_by": "{\"display\":\"Scott Weston\",\"ocid\":\"ocid1.user.oc1..obf94ed366140\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_7746b1a346\"}",
+          "idcs_last_modified_by": "{\"display\":\"Scott Weston\",\"ocid\":\"ocid1.user.oc1..obf94ed366140\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_7746b1a346\"}",
+          "key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo6rYmBhOPwwBhGTvM1vQ\ntzGoP4ujb+NjJ4eRVQUDHeo3QYDVVqba2Qh3Lq6oMxaaGHS39oxTgn9RRk7uSH8C\ntv7pmfRH4umhmihVEfvvBqbDhswGBX6XcuGEW2Dnr9YKi9fYBQGziCzFpZpM+m88\n4viA54Ko4s7slO/4zaLYsGhCMRlba0/OibAufjoRWOSK7k4giyn185deG5dbPjTj\nVaLsylSrS0emM7NT+UwJgdMvysiT6H8njit1UDbDBK6MtNVtm1ckZicitF1tek2X\nRRzFPrQpdgQ1d9Rcrroj6+IOpyZbU7CfAVdLdMViD3BKRVjXp9PS/636glRRe2RR\nFQIDAQAB\n-----END PUBLIC KEY-----",
+          "meta": "{\"created\":\"2026-04-01T15:31:30.912Z\",\"last_modified\":\"2026-04-01T15:31:30.912Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"ApiKey\",\"version\":\"id_2b7de20fa1\"}",
+          "name": "13:95:9d:6c:e6:10:12:e1:ab:31:50:ee:ff:33:06:c4",
+          "ocid": "ocid1.credential.oc1..obf80becc4cb7",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:apikey\"]",
+          "tenancy_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "user": "{\"display\":\"Prod User\",\"name\":\"prod_user\",\"ocid\":\"ocid1.user.oc1..obfd34ab56ff3\",\"ref\":\"[URL_HERE]\",\"value\":\"id_b2184d6add\"}",
+          "user_ref.display": "Prod User",
+          "user_ref.name": "prod_user",
+          "user_ref.ocid": "ocid1.user.oc1..obfd34ab56ff3",
+          "user_ref.ref": "[URL_HERE]",
+          "user_ref.value": "id_b2184d6add",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapp.oc1..obf45544e4790",
+        "kinds": [
+          "OCIIDDApplication",
+          "OCIResource"
+        ],
+        "properties": {
+          "active": "1",
+          "all_url_schemes_allowed": "1",
+          "allow_access_control": "1",
+          "allow_offline": "1",
+          "based_on_template": "{\"last_modified\":\"2022-12-07T06:42:34.401Z\",\"ref\":\"[URL_HERE]\",\"value\":\"IDCSAppTemplateId\",\"well_known_id\":\"IDCSAppTemplateId\"}",
+          "bypass_consent": "1",
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "description": "IDCS as an Application",
+          "display_name": "IDCS Application",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "domain_url": "[URL_HERE]",
+          "id": "IDCSAppId",
+          "idcs_created_by": "{\"display\":\"idcssm\",\"ocid\":null,\"ref\":\"[URL_HERE]\",\"type\":\"App\",\"value\":\"id_b6edfad8ec\"}",
+          "idcs_last_modified_by": "{\"display\":\"idcssm\",\"ocid\":null,\"ref\":\"[URL_HERE]\",\"type\":\"App\",\"value\":\"id_b6edfad8ec\"}",
+          "infrastructure": "1",
+          "is_alias_app": "1",
+          "is_enterprise_app": "1",
+          "is_kerberos_realm": "1",
+          "is_login_target": "1",
+          "is_managed_app": "1",
+          "is_mobile_target": "1",
+          "is_o_auth_client": "1",
+          "is_o_auth_resource": "1",
+          "is_opc_service": "1",
+          "is_saml_service_provider": "1",
+          "is_unmanaged_app": "1",
+          "is_web_tier_policy": "1",
+          "meta": "{\"created\":\"2026-03-31T15:23:31.376Z\",\"last_modified\":\"2026-03-31T15:23:31.679Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"App\",\"version\":\"id_b1fba05f29\"}",
+          "migrated": "1",
+          "name": "IDCS Application",
+          "ocid": "ocid1.domainapp.oc1..obf45544e4790",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:App\"]",
+          "show_in_my_apps": "1",
+          "tenancy_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obf471b8d94da",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "display_name": "Identity Domain Administrator",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "id": "id_9dfd06e607",
+          "members": "[{\"display\":\"Prod Admin\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_7f27eef89c\"},{\"display\":\"Domain_Administrators\",\"ref\":\"[URL_HERE]\",\"type\":\"Group\",\"value\":\"id_23154a6e0a\"}]",
+          "meta": "{\"created\":\"2026-03-31T15:23:31.776Z\",\"last_modified\":\"2026-03-31T15:23:31.776Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_061661adcf\"}",
+          "name": "ProdDomain/Identity Domain Administrator",
+          "ocid": "ocid1.domainapprole.oc1..obf471b8d94da",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_Identity Domain Administrator",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obf7db1217146",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "display_name": "User Manager",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "id": "id_7482cc7563",
+          "members": "[{\"display\":\"Prod User\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_b2184d6add\"}]",
+          "meta": "{\"created\":\"2026-03-31T15:23:39.614Z\",\"last_modified\":\"2026-03-31T15:23:39.614Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_15f4cd9791\"}",
+          "name": "ProdDomain/User Manager",
+          "ocid": "ocid1.domainapprole.oc1..obf7db1217146",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_User Manager",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obf651354b9aa",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "display_name": "User Administrator",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "id": "id_9124323fe3",
+          "members": "[{\"display\":\"Prod User\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_18aae54992\"}]",
+          "meta": "{\"created\":\"2026-03-31T15:23:39.552Z\",\"last_modified\":\"2026-03-31T15:23:39.552Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_5a687961ac\"}",
+          "name": "ProdDomain/User Administrator",
+          "ocid": "ocid1.domainapprole.oc1..obf651354b9aa",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_User Administrator",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obf77690c35bb",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "display_name": "Identity Domain Administrator",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "id": "id_38a88d1494",
+          "members": "[{\"display\":\"Administrators\",\"ref\":\"[URL_HERE]\",\"type\":\"Group\",\"value\":\"id_53f2359e8c\"},{\"display\":\"Scott Weston\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_7746b1a346\"}]",
+          "meta": "{\"created\":\"2022-07-25T05:01:07.571Z\",\"last_modified\":\"2022-07-25T05:01:07.571Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_c71e1a1eb9\"}",
+          "name": "Default/Identity Domain Administrator",
+          "ocid": "ocid1.domainapprole.oc1..obf77690c35bb",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_Identity Domain Administrator",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obf2575e3ec56",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "display_name": "User Administrator",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "id": "id_619c3e839f",
+          "members": "[{\"display\":\"ReadOnly User\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_3e5943df56\"}]",
+          "meta": "{\"created\":\"2022-07-25T05:01:12.530Z\",\"last_modified\":\"2022-07-25T05:01:12.530Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_2143a622be\"}",
+          "name": "Default/User Administrator",
+          "ocid": "ocid1.domainapprole.oc1..obf2575e3ec56",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_User Administrator",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obff83e295c61",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "display_name": "User Manager",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "id": "id_f1452f351c",
+          "members": "[{\"display\":\"ReadOnly User\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_3e5943df56\"}]",
+          "meta": "{\"created\":\"2022-07-25T05:01:12.598Z\",\"last_modified\":\"2022-07-25T05:01:12.598Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_b183e33b7f\"}",
+          "name": "Default/User Manager",
+          "ocid": "ocid1.domainapprole.oc1..obff83e295c61",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_User Manager",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.domainapprole.oc1..obf6276ef0f30",
+        "kinds": [
+          "OCIIDDAppRole",
+          "OCIResource"
+        ],
+        "properties": {
+          "admin_role": "1",
+          "app": "IDCS Application",
+          "compartment_id": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "display_name": "Identity Domain Administrator",
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "id": "id_ce56a75211",
+          "members": "[{\"display\":\"Domain_Administrators\",\"ref\":\"[URL_HERE]\",\"type\":\"Group\",\"value\":\"id_efcc1974ab\"},{\"display\":\"PreProd Admin\",\"ref\":\"[URL_HERE]\",\"type\":\"User\",\"value\":\"id_9e65a62e0d\"}]",
+          "meta": "{\"created\":\"2026-03-31T15:22:51.820Z\",\"last_modified\":\"2026-03-31T15:22:51.820Z\",\"location\":\"[URL_HERE]\",\"resource_type\":\"AppRole\",\"version\":\"id_ad7d8b6124\"}",
+          "name": "PreProdDomain/Identity Domain Administrator",
+          "ocid": "ocid1.domainapprole.oc1..obf6276ef0f30",
+          "schemas": "[\"urn:ietf:params:scim:schemas:oracle:idcs:AppRole\"]",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "unique_name": "IDCSAppId_Identity Domain Administrator",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.dynamicgroup.oc1..obf057613912e",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "matching_rule": "ALL {resource.id = 'ocid1.fnfunc.oc1..obfac7ee1e291'}",
+          "name": "Default/pre-built-function_dg_1757280212653",
+          "scim_id": "id_19f989018e",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.dynamicgroup.oc1..obff3752a050c",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "matching_rule": "Any {All {instance.id = 'ocid1.instance.oc1..obf257a10d26c',instance.id = 'ocid1.instance.oc1..obf257a10d26c'},All {resource.id = 'ocid1.instance.oc1..obf37be2e669b'},tag.Oracle-Tags.CreatedBy.value,any{tag.department.operations.value = '45',resource.compartment.id = 'ocid1.tnancy.oc1..obf88824913ad'}}",
+          "name": "Default/DYNAMICGROPU",
+          "scim_id": "id_0cef7c37d7",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.dynamicgroup.oc1..obfe5801dcb81",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "matching_rule": "instance.id = 'ocid1.instance.oc1..obf552a27a5e5'",
+          "name": "Default/RUN_COMMAND_INSTANCES",
+          "scim_id": "id_869f4a1327",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.dynamicgroup.oc1..obf227d34a38d",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "matching_rule": "ALL {resource.id = 'ocid1.fnfunc.oc1..obf72c7702ac4'}",
+          "name": "Default/TestPremade_dg_1756951674477",
+          "scim_id": "id_ea9a20efaf",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obf49cbb7369f",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/Domain_Administrators",
+          "scim_id": "id_23154a6e0a",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obfd248fa20eb",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "name": "Default/Administrators",
+          "scim_id": "id_53f2359e8c",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obf1d7b7e2eb0",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/Private_Group",
+          "scim_id": "id_ceb7e92672",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obf7b5ea45bab",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "in_identity_domain": true,
+          "name": "PreProdDomain/Domain_Administrators",
+          "scim_id": "id_efcc1974ab",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obf805fe6bdd0",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/All Domain Users",
+          "scim_id": "AllUsersId",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obf750384e32d",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "name": "Default/tenant_group",
+          "scim_id": "id_4f23f7e49c",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..obfaf96204bbd",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/prod_group",
+          "scim_id": "id_fc65d5f0dc",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.tagdefinition.oc1..obf0fead7dfe4",
+        "kinds": [
+          "OCITagDefinition",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "defined_tags": "{\"Oracle-Tags\":{\"CreatedBy\":\"default/user_8ac04c@example.invalid\",\"CreatedOn\":\"2026-02-12T04:18:06.280Z\"}}",
+          "description": "Production",
+          "display_name": "Production",
+          "freeform_tags": "{}",
+          "id": "ocid1.tagdefinition.oc1..obf0fead7dfe4",
+          "is_cost_tracking": "1",
+          "is_retired": "1",
+          "lifecycle_state": "ACTIVE",
+          "name": "Production",
+          "tag_namespace_id": "ocid1.tagnamespace.oc1..obf2c3ae18aff",
+          "tag_namespace_name": "Operations",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "time_created": "2026-02-12T04:18:06.317000+00:00",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.tagdefinition.oc1..obfdbd8e1f837",
+        "kinds": [
+          "OCITagDefinition",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "defined_tags": "{}",
+          "description": "The date and time that the resource was created.",
+          "display_name": "CreatedOn",
+          "freeform_tags": "{}",
+          "id": "ocid1.tagdefinition.oc1..obfdbd8e1f837",
+          "is_cost_tracking": "1",
+          "is_retired": "1",
+          "lifecycle_state": "ACTIVE",
+          "name": "CreatedOn",
+          "tag_namespace_id": "ocid1.tagnamespace.oc1..obf1ec2363f90",
+          "tag_namespace_name": "Oracle-Tags",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "time_created": "2022-07-25T05:01:44.184000+00:00",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.tagdefinition.oc1..obf26063bd61e",
+        "kinds": [
+          "OCITagDefinition",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "defined_tags": "{\"Oracle-Tags\":{\"CreatedBy\":\"default/user_8ac04c@example.invalid\",\"CreatedOn\":\"2026-02-12T04:18:36.889Z\"}}",
+          "description": "Project",
+          "display_name": "Project",
+          "freeform_tags": "{}",
+          "id": "ocid1.tagdefinition.oc1..obf26063bd61e",
+          "is_cost_tracking": "1",
+          "is_retired": "1",
+          "lifecycle_state": "ACTIVE",
+          "name": "Project",
+          "tag_namespace_id": "ocid1.tagnamespace.oc1..obf2c3ae18aff",
+          "tag_namespace_name": "Operations",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "time_created": "2026-02-12T04:18:36.929000+00:00",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.tagdefinition.oc1..obf9cbbb64182",
+        "kinds": [
+          "OCITagDefinition",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "defined_tags": "{}",
+          "description": "The name of the principal that created the resource.",
+          "display_name": "CreatedBy",
+          "freeform_tags": "{}",
+          "id": "ocid1.tagdefinition.oc1..obf9cbbb64182",
+          "is_cost_tracking": "1",
+          "is_retired": "1",
+          "lifecycle_state": "ACTIVE",
+          "name": "CreatedBy",
+          "tag_namespace_id": "ocid1.tagnamespace.oc1..obf1ec2363f90",
+          "tag_namespace_name": "Oracle-Tags",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "time_created": "2022-07-25T05:01:43.768000+00:00",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.tagnamespace.oc1..obf2c3ae18aff",
+        "kinds": [
+          "OCITagNamespace",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "defined_tags": "{\"Oracle-Tags\":{\"CreatedBy\":\"default/user_8ac04c@example.invalid\",\"CreatedOn\":\"2026-02-12T04:17:31.290Z\"}}",
+          "description": "Operations",
+          "display_name": "Operations",
+          "freeform_tags": "{}",
+          "id": "ocid1.tagnamespace.oc1..obf2c3ae18aff",
+          "is_retired": "1",
+          "lifecycle_state": "ACTIVE",
+          "name": "Operations",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "time_created": "2026-02-12T04:17:31.327000+00:00",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.tagnamespace.oc1..obf1ec2363f90",
+        "kinds": [
+          "OCITagNamespace",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "defined_tags": "{}",
+          "description": "The namespace for the automatic tags.",
+          "display_name": "Oracle-Tags",
+          "freeform_tags": "{}",
+          "id": "ocid1.tagnamespace.oc1..obf1ec2363f90",
+          "is_retired": "1",
+          "lifecycle_state": "ACTIVE",
+          "name": "Oracle-Tags",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "time_created": "2022-07-25T05:01:43.520000+00:00",
+          "workspace_id": "1"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obfbca33efbc7",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "name": "Default/tenant_user",
+          "scim_id": "id_3e5943df56",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obfd34ab56ff3",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/prod_user",
+          "scim_id": "id_b2184d6add",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obff62f9a7437",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/a_non_idd_user",
+          "scim_id": "id_c63b63db5f",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obfa6fc193868",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "in_identity_domain": true,
+          "name": "PreProdDomain/preprod_admin",
+          "scim_id": "id_9e65a62e0d",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obf94ed366140",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "in_identity_domain": true,
+          "name": "Default/user_8ac04c@example.invalid",
+          "scim_id": "id_7746b1a346",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obf106dcbaddd",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/prod_admin",
+          "scim_id": "id_7f27eef89c",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obf1faa9e8f45",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "in_identity_domain": true,
+          "name": "PreProdDomain/preprod_user",
+          "scim_id": "id_cb0f28424e",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..obf51e5aa63ed",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "in_identity_domain": true,
+          "name": "ProdDomain/prod_user_2",
+          "scim_id": "id_18aae54992",
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..obf0a688238d5:1",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..obf047a419e71",
+          "name": "add_self_to_group:Statement_2@Prod",
+          "policy_id": "ocid1.policy.oc1..obf0a688238d5",
+          "policy_name": "add_self_to_group",
+          "raw_statement": "Allow group 'ProdDomain'/'prod_group' to manage all-resources in compartment Prod",
+          "statement_index": 1,
+          "statement_number": 2,
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..obf8d351f67f1:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "name": "Tenant Admin Policy:Statement_1@TENANT_7b6e83",
+          "policy_id": "ocid1.policy.oc1..obf8d351f67f1",
+          "policy_name": "Tenant Admin Policy",
+          "raw_statement": "ALLOW GROUP Administrators to manage all-resources IN TENANCY",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..obf38dc301e4d:3",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "name": "PSM-root-policy-compartments:Statement_4@TENANT_7b6e83",
+          "policy_id": "ocid1.policy.oc1..obf38dc301e4d",
+          "policy_name": "PSM-root-policy-compartments",
+          "raw_statement": "allow any-user to manage all-resources in compartment COMPARTMENT_ff7e7e where request.user.name = /__PSM*/",
+          "statement_index": 3,
+          "statement_number": 4,
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..obf38dc301e4d:4",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.tenancy.oc1..obfce29e37e14",
+          "name": "PSM-root-policy-compartments:Statement_5@TENANT_7b6e83",
+          "policy_id": "ocid1.policy.oc1..obf38dc301e4d",
+          "policy_name": "PSM-root-policy-compartments",
+          "raw_statement": "allow any-user to manage all-resources in compartment COMPARTMENT_ff7e7e where request.instance.compartment.id = 'ocid1.compartment.oc1..obf3a173d3be8'",
+          "statement_index": 4,
+          "statement_number": 5,
+          "tenant_id": "ocid1.tenancy.oc1..obfce29e37e14"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "start": {
+          "value": "ANY_USER@ocid1.compartment.oc1..obf3a173d3be8"
+        },
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf38dc301e4d:3"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Subject included in IAM policy statement.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf38dc301e4d"
+          ],
+          "resolved_statements": [
+            "allow any-user to manage all-resources in compartment COMPARTMENT_ff7e7e where request.user.name = /__PSM*/"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "ANY_USER@ocid1.compartment.oc1..obf3a173d3be8"
+        },
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf38dc301e4d:4"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Subject included in IAM policy statement.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf38dc301e4d"
+          ],
+          "resolved_statements": [
+            "allow any-user to manage all-resources in compartment COMPARTMENT_ff7e7e where request.instance.compartment.id = 'ocid1.compartment.oc1..obf3a173d3be8'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "groups@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf49cbb7369f"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Scope expansion to principals.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "groups@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf1d7b7e2eb0"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Scope expansion to principals.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "groups@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf805fe6bdd0"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Scope expansion to principals.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "groups@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obfaf96204bbd"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Scope expansion to principals.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.credential.oc1..obf619a4a5210"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obf94ed366140"
+        },
+        "kind": "USER_API_KEY",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "API key belongs to user."
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.credential.oc1..obf80becc4cb7"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "kind": "USER_API_KEY",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "API key belongs to user."
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ProdDomain/new_user@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "kind": "IDD_CREATE_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_ids": [
+            "IDCSAppId"
+          ],
+          "descriptions": [
+            "Principal can create IAM users in scope (modeled as principal -> <identity_domain>/new_user@location capability edge)."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "principal_id": "ocid1.group.oc1..obf49cbb7369f",
+          "principal_ids": [
+            "ocid1.group.oc1..obf49cbb7369f",
+            "ocid1.user.oc1..obf106dcbaddd"
+          ],
+          "principal_types": [
+            "OCIGroup",
+            "OCIUser"
+          ],
+          "role_id": "id_9dfd06e607",
+          "role_ids": [
+            "id_9dfd06e607"
+          ],
+          "role_name": "Identity Domain Administrator",
+          "role_names": [
+            "Identity Domain Administrator"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.domainapp.oc1..obf45544e4790"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_9dfd06e607",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf49cbb7369f"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf1d7b7e2eb0"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf805fe6bdd0"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obfaf96204bbd"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obff62f9a7437"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obf106dcbaddd"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obf51e5aa63ed"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "Identity Domain Administrator",
+          "role_name": "ProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf7db1217146"
+        },
+        "end": {
+          "value": "ocid1.domainapp.oc1..obf45544e4790"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_7482cc7563",
+          "role_name": "ProdDomain/User Manager"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf7db1217146"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "kind": "IDD_USER_MANAGER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "User Manager can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations.User Manager control might be constrained to specific users/groups within a given identity domain."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Manager",
+          "role_name": "ProdDomain/User Manager"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf7db1217146"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obff62f9a7437"
+        },
+        "kind": "IDD_USER_MANAGER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "User Manager can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations.User Manager control might be constrained to specific users/groups within a given identity domain."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Manager",
+          "role_name": "ProdDomain/User Manager"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ProdDomain/new_user@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "kind": "IDD_CREATE_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_ids": [
+            "IDCSAppId"
+          ],
+          "descriptions": [
+            "Principal can create IAM users in scope (modeled as principal -> <identity_domain>/new_user@location capability edge)."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "principal_id": "ocid1.user.oc1..obf51e5aa63ed",
+          "principal_ids": [
+            "ocid1.user.oc1..obf51e5aa63ed"
+          ],
+          "principal_types": [
+            "OCIUser"
+          ],
+          "role_id": "id_9124323fe3",
+          "role_ids": [
+            "id_9124323fe3"
+          ],
+          "role_name": "User Administrator",
+          "role_names": [
+            "User Administrator"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.domainapp.oc1..obf45544e4790"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_9124323fe3",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf1d7b7e2eb0"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Administrator",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf805fe6bdd0"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Administrator",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obfaf96204bbd"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Administrator",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "kind": "IDD_USER_ADMIN",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "User Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Administrator",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obff62f9a7437"
+        },
+        "kind": "IDD_USER_ADMIN",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "User Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Administrator",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obf51e5aa63ed"
+        },
+        "kind": "IDD_USER_ADMIN",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "ProdDomain/IDCS Application",
+          "descriptions": [
+            "User Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "handler": "User Administrator",
+          "role_name": "ProdDomain/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "end": {
+          "value": "Default/new_user@ocid1.tenancy.oc1..obfce29e37e14"
+        },
+        "kind": "IDD_CREATE_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_ids": [
+            "IDCSAppId"
+          ],
+          "descriptions": [
+            "Principal can create IAM users in scope (modeled as principal -> <identity_domain>/new_user@location capability edge)."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "principal_id": "ocid1.group.oc1..obfd248fa20eb",
+          "principal_ids": [
+            "ocid1.group.oc1..obfd248fa20eb",
+            "ocid1.user.oc1..obf94ed366140"
+          ],
+          "principal_types": [
+            "OCIGroup",
+            "OCIUser"
+          ],
+          "role_id": "id_38a88d1494",
+          "role_ids": [
+            "id_38a88d1494"
+          ],
+          "role_name": "Identity Domain Administrator",
+          "role_names": [
+            "Identity Domain Administrator"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "end": {
+          "value": "iddapp::ocid1.domain.oc1..obf478d1f438a::IDCSAppId"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_38a88d1494",
+          "role_name": "Default/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obfd248fa20eb"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "Default/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "handler": "Identity Domain Administrator",
+          "role_name": "Default/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf750384e32d"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "Default/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "handler": "Identity Domain Administrator",
+          "role_name": "Default/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfbca33efbc7"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "Default/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "handler": "Identity Domain Administrator",
+          "role_name": "Default/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obf94ed366140"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "Default/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "handler": "Identity Domain Administrator",
+          "role_name": "Default/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf2575e3ec56"
+        },
+        "end": {
+          "value": "Default/new_user@ocid1.tenancy.oc1..obfce29e37e14"
+        },
+        "kind": "IDD_CREATE_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_ids": [
+            "IDCSAppId"
+          ],
+          "descriptions": [
+            "Principal can create IAM users in scope (modeled as principal -> <identity_domain>/new_user@location capability edge)."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "principal_id": "ocid1.user.oc1..obfbca33efbc7",
+          "principal_ids": [
+            "ocid1.user.oc1..obfbca33efbc7"
+          ],
+          "principal_types": [
+            "OCIUser"
+          ],
+          "role_id": "id_619c3e839f",
+          "role_ids": [
+            "id_619c3e839f"
+          ],
+          "role_name": "User Administrator",
+          "role_names": [
+            "User Administrator"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf2575e3ec56"
+        },
+        "end": {
+          "value": "iddapp::ocid1.domain.oc1..obf478d1f438a::IDCSAppId"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_619c3e839f",
+          "role_name": "Default/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf2575e3ec56"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf750384e32d"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "Default/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "handler": "User Administrator",
+          "role_name": "Default/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf2575e3ec56"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfbca33efbc7"
+        },
+        "kind": "IDD_USER_ADMIN",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "Default/IDCS Application",
+          "descriptions": [
+            "User Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "handler": "User Administrator",
+          "role_name": "Default/User Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obff83e295c61"
+        },
+        "end": {
+          "value": "iddapp::ocid1.domain.oc1..obf478d1f438a::IDCSAppId"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_f1452f351c",
+          "role_name": "Default/User Manager"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "end": {
+          "value": "PreProdDomain/new_user@ocid1.compartment.oc1..obf89f0b5a8eb"
+        },
+        "kind": "IDD_CREATE_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_ids": [
+            "IDCSAppId"
+          ],
+          "descriptions": [
+            "Principal can create IAM users in scope (modeled as principal -> <identity_domain>/new_user@location capability edge)."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "principal_id": "ocid1.group.oc1..obf7b5ea45bab",
+          "principal_ids": [
+            "ocid1.group.oc1..obf7b5ea45bab",
+            "ocid1.user.oc1..obfa6fc193868"
+          ],
+          "principal_types": [
+            "OCIGroup",
+            "OCIUser"
+          ],
+          "role_id": "id_ce56a75211",
+          "role_ids": [
+            "id_ce56a75211"
+          ],
+          "role_name": "Identity Domain Administrator",
+          "role_names": [
+            "Identity Domain Administrator"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "end": {
+          "value": "iddapp::ocid1.domain.oc1..obf1095fa5fe4::IDCSAppId"
+        },
+        "kind": "ROLE_IN_APPLICATION",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "This role is defined by the referenced Identity Domain application."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "role_id": "id_ce56a75211",
+          "role_name": "PreProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf7b5ea45bab"
+        },
+        "kind": "IDD_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "PreProdDomain/IDCS Application",
+          "descriptions": [
+            "The role assignee can add itself to eligible OCI groups in the same identity domain"
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "handler": "Identity Domain Administrator",
+          "role_name": "PreProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obfa6fc193868"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "PreProdDomain/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "handler": "Identity Domain Administrator",
+          "role_name": "PreProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "end": {
+          "value": "ocid1.user.oc1..obf1faa9e8f45"
+        },
+        "kind": "IDD_IDENTITY_ADMIN_USER",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "app_name": "PreProdDomain/IDCS Application",
+          "descriptions": [
+            "Identity Domain Administrator can administer users in the same identity domain.\nThis includes high-impact account-control actions such as credential resets, MFA reset/bypass operations,  and moving users between groups."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "handler": "Identity Domain Administrator",
+          "role_name": "PreProdDomain/Identity Domain Administrator"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.group.oc1..obf49cbb7369f"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_9dfd06e607",
+          "role_name": "ProdDomain/Identity Domain Administrator",
+          "scim_id": "id_23154a6e0a"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.group.oc1..obfd248fa20eb"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_38a88d1494",
+          "role_name": "Default/Identity Domain Administrator",
+          "scim_id": "id_53f2359e8c"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.group.oc1..obfd248fa20eb"
+        },
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf8d351f67f1:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Subject included in IAM policy statement.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf8d351f67f1"
+          ],
+          "resolved_statements": [
+            "ALLOW GROUP Administrators to manage all-resources IN TENANCY"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.group.oc1..obf7b5ea45bab"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "role_id": "id_ce56a75211",
+          "role_name": "PreProdDomain/Identity Domain Administrator",
+          "scim_id": "id_efcc1974ab"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.group.oc1..obfaf96204bbd"
+        },
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf0a688238d5:1"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Subject included in IAM policy statement.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf0a688238d5"
+          ],
+          "resolved_statements": [
+            "Allow group 'ProdDomain'/'prod_group' to manage all-resources in compartment Prod"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.tagnamespace.oc1..obf2c3ae18aff"
+        },
+        "end": {
+          "value": "ocid1.tagdefinition.oc1..obf0fead7dfe4"
+        },
+        "kind": "OCI_INCLUDES",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Tag namespace includes this tag definition.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.tagnamespace.oc1..obf2c3ae18aff"
+        },
+        "end": {
+          "value": "ocid1.tagdefinition.oc1..obf26063bd61e"
+        },
+        "kind": "OCI_INCLUDES",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Tag namespace includes this tag definition.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.tagnamespace.oc1..obf1ec2363f90"
+        },
+        "end": {
+          "value": "ocid1.tagdefinition.oc1..obfdbd8e1f837"
+        },
+        "kind": "OCI_INCLUDES",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Tag namespace includes this tag definition.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.tagnamespace.oc1..obf1ec2363f90"
+        },
+        "end": {
+          "value": "ocid1.tagdefinition.oc1..obf9cbbb64182"
+        },
+        "kind": "OCI_INCLUDES",
+        "properties": {
+          "edge_category": "RESOURCE",
+          "description": "Tag namespace includes this tag definition.",
+          "resource_family": false,
+          "resource_used": true
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfbca33efbc7"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf2575e3ec56"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_619c3e839f",
+          "role_name": "Default/User Administrator",
+          "scim_id": "id_3e5943df56"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfbca33efbc7"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obff83e295c61"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_f1452f351c",
+          "role_name": "Default/User Manager",
+          "scim_id": "id_3e5943df56"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfbca33efbc7"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf750384e32d"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: user.groups expansion (membership_id=ocid1.groupmembership.oc1..obfea49238ff2). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..obfea49238ff2"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "end": {
+          "value": "groups@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "kind": "OCI_ADD_SELF_TO_GROUP",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "derived_from_group_principal": true,
+          "derived_shortcut": true,
+          "description": "Derived from raw IAM edges: user can update self and update/manage groups in this location, so self-add/group-membership placement is possible for reachable group targets.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "origin_principal_id": "ocid1.group.oc1..obfaf96204bbd",
+          "requires_group_update": true,
+          "requires_user_update_self": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf0a688238d5"
+          ],
+          "resolved_statements": [
+            "Allow group 'ProdDomain'/'prod_group' to {USER_UPDATE,GROUP_UPDATE} in compartment Prod",
+            "Allow group 'ProdDomain'/'prod_group' to manage all-resources in compartment Prod"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf7db1217146"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_7482cc7563",
+          "role_name": "ProdDomain/User Manager",
+          "scim_id": "id_b2184d6add"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfd34ab56ff3"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obfaf96204bbd"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: user.groups expansion (membership_id=ocid1.groupmembership.oc1..obf786071c2e9). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..obf786071c2e9"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfa6fc193868"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf6276ef0f30"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf1095fa5fe4",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf89f0b5a8eb",
+          "role_id": "id_ce56a75211",
+          "role_name": "PreProdDomain/Identity Domain Administrator",
+          "scim_id": "id_9e65a62e0d"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obfa6fc193868"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf7b5ea45bab"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: user.groups expansion (membership_id=ocid1.groupmembership.oc1..obfdb7819a807). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..obfdb7819a807"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obf94ed366140"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf77690c35bb"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf478d1f438a",
+          "grant_compartment_ocid": "ocid1.tenancy.oc1..obfce29e37e14",
+          "role_id": "id_38a88d1494",
+          "role_name": "Default/Identity Domain Administrator",
+          "scim_id": "id_7746b1a346"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obf94ed366140"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obfd248fa20eb"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: user.groups expansion (membership_id=ocid1.groupmembership.oc1..obf210dc315c3). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..obf210dc315c3"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obf106dcbaddd"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf471b8d94da"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_9dfd06e607",
+          "role_name": "ProdDomain/Identity Domain Administrator",
+          "scim_id": "id_7f27eef89c"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obf106dcbaddd"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..obf49cbb7369f"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: user.groups expansion (membership_id=ocid1.groupmembership.oc1..obfda6f2b403a). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..obfda6f2b403a"
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.user.oc1..obf51e5aa63ed"
+        },
+        "end": {
+          "value": "ocid1.domainapprole.oc1..obf651354b9aa"
+        },
+        "kind": "APP_ROLE_GRANTED",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "app_id": "IDCSAppId",
+          "descriptions": [
+            "A principal (user, group, or dynamic group) has been granted an Identity Domain application role."
+          ],
+          "domain_ocid": "ocid1.domain.oc1..obf7e3371c5c2",
+          "grant_compartment_ocid": "ocid1.compartment.oc1..obf047a419e71",
+          "role_id": "id_9124323fe3",
+          "role_name": "ProdDomain/User Administrator",
+          "scim_id": "id_18aae54992"
+        }
+      },
+      {
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf0a688238d5:1"
+        },
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..obf047a419e71"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Grants broad access to ALL RESOURCES in the target scope.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf0a688238d5"
+          ],
+          "resolved_statements": [
+            "Allow group 'ProdDomain'/'prod_group' to manage all-resources in compartment Prod"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf8d351f67f1:0"
+        },
+        "end": {
+          "value": "all-resources@ocid1.tenancy.oc1..obfce29e37e14"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Grants broad access to ALL RESOURCES in the target scope.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf8d351f67f1"
+          ],
+          "resolved_statements": [
+            "ALLOW GROUP Administrators to manage all-resources IN TENANCY"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf38dc301e4d:3"
+        },
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..obf3a173d3be8"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Grants broad access to ALL RESOURCES in the target scope.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf38dc301e4d"
+          ],
+          "resolved_statements": [
+            "allow any-user to manage all-resources in compartment COMPARTMENT_ff7e7e where request.user.name = /__PSM*/"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      },
+      {
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..obf38dc301e4d:4"
+        },
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..obf3a173d3be8"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "edge_category": "PERMISSION",
+          "description": "Grants broad access to ALL RESOURCES in the target scope.",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..obf38dc301e4d"
+          ],
+          "resolved_statements": [
+            "allow any-user to manage all-resources in compartment COMPARTMENT_ff7e7e where request.instance.compartment.id = 'ocid1.compartment.oc1..obf3a173d3be8'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        }
+      }
+    ]
+  }
+}

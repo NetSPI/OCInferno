@@ -1,0 +1,133 @@
+{
+  "description": "Inherited conditional request.user.id for OCI_CREATE_INSTANCE_AGENT_COMMAND (rule 16).",
+  "workspace": {
+    "workspace_id": 10168,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset",
+    "--cond-eval",
+    "--expand-inherited"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "shared"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "prod"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "dev-team",
+          "display_name": "DevTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "dev"
+            }
+          }
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..cond_inherited_request.user.id_16_oci_create_instance_agent_command",
+          "name": "CondInherited_request.user.id_16_OCI_CREATE_INSTANCE_AGENT_COMMAND",
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_users": [
+        {
+          "id": "ocid1.user.oc1..alice",
+          "name": "alice",
+          "email": "alice@example.com",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "id": "ocid1.user.oc1..bob",
+          "name": "bob",
+          "email": "bob@example.com",
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "lifecycle_state": "ACTIVE"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "kind": "allow",
+          "subject": {
+            "type": "any-user",
+            "values": []
+          },
+          "actions": {
+            "type": "verbs",
+            "values": [
+              "manage"
+            ]
+          },
+          "resources": {
+            "type": "specific",
+            "values": [
+              "instance-agent-command-family",
+              "instance-agent-commands"
+            ]
+          },
+          "location": {
+            "type": "compartment_id",
+            "values": [
+              "ocid1.compartment.oc1..root"
+            ]
+          },
+          "conditions": {
+            "mode": "all",
+            "clauses": [
+              {
+                "lhs": {
+                  "type": "attribute",
+                  "value": "request.user.id"
+                },
+                "op": "eq",
+                "rhs": {
+                  "type": "string",
+                  "value": "ocid1.user.oc1..alice"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

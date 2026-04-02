@@ -1,0 +1,1 @@
+Allow any-user to {TAG_NAMESPACE_USE} tag-namespaces in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'

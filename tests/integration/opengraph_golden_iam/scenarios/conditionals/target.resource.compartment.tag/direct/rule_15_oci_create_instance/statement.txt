@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment AppTeam where target.resource.compartment.tag.team.env = 'prod'

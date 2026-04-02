@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {VNIC_ATTACH, VNIC_CREATE} vnics in compartment AppTeam

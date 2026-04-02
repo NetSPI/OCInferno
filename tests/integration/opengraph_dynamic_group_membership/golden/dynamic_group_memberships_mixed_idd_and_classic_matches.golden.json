@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.dynamicgroup.oc1..classicdg01",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "matching_rule": "RULE_TAG_ENV_PROD",
+          "name": "classic_dg_one",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      },
+      {
+        "id": "ocid1.dynamicgroup.oc1..idddg01",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "matching_rule": "RULE_INSTANCE_ID_A",
+          "name": "TestDomain/IDD DG One",
+          "scim_id": "scim::IDD DG One",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      },
+      {
+        "id": "ocid1.instance.oc1..insta",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "defined_tags": "{\"department\":{\"operations\":\"yes\"},\"team\":{\"env\":\"prod\"}}",
+          "display_name": "inst-a",
+          "id": "ocid1.instance.oc1..insta",
+          "lifecycle_state": "RUNNING",
+          "name": "inst-a",
+          "node_type": "OCIComputeInstance",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant",
+          "workspace_id": "5252"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "start": {
+          "value": "ocid1.instance.oc1..insta"
+        },
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..classicdg01"
+        },
+        "kind": "OCI_DYNAMIC_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "dynamic",
+          "matching_rule": "RULE_TAG_ENV_PROD",
+          "tables_matching_rules": [
+            "compute_instances"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.instance.oc1..insta"
+        },
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..idddg01"
+        },
+        "kind": "OCI_DYNAMIC_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "dynamic",
+          "matching_rule": "RULE_INSTANCE_ID_A",
+          "tables_matching_rules": [
+            "compute_instances"
+          ]
+        }
+      }
+    ]
+  }
+}

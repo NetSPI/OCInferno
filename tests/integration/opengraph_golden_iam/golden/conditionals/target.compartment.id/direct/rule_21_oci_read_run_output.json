@@ -1,0 +1,112 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_target.compartment.id_21_oci_read_run_output:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_target.compartment.id_21_oci_read_run_output"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT} {instance-agent-command-execution-family, instance-agent-command-executions, instance-agent-command-family, instance-agent-commands} in compartment AppTeam where target.compartment.id = 'ocid1.compartment.oc1..app'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
+          "value": "instance-agent-commands@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_READ_RUN_OUTPUT",
+        "properties": {
+          "description": "Read Run Command output metadata/results in scope (plaintext output can expose credentials and tokens).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_direct_target.compartment.id_21_oci_read_run_output"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT} {instance-agent-command-execution-family, instance-agent-command-executions, instance-agent-command-family, instance-agent-commands} in compartment AppTeam where target.compartment.id = 'ocid1.compartment.oc1..app'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_direct_target.compartment.id_21_oci_read_run_output:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..securityadmins",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "SecurityAdmins",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_direct_target.compartment.id_21_oci_read_run_output:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "CondDirect_target.compartment.id_21_OCI_READ_RUN_OUTPUT:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..cond_direct_target.compartment.id_21_oci_read_run_output",
+          "policy_name": "CondDirect_target.compartment.id_21_OCI_READ_RUN_OUTPUT",
+          "raw_statement": "Allow group SecurityAdmins to {INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT} {instance-agent-command-execution-family, instance-agent-command-executions, instance-agent-command-family, instance-agent-commands} in compartment AppTeam where target.compartment.id = 'ocid1.compartment.oc1..app'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "instance-agent-commands@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "instance-agent-commands@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

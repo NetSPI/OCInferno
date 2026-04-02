@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to manage bastion-session in compartment RootTeam

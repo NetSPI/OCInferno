@@ -1,0 +1,1 @@
+Allow any-user to {INSTANCE_AGENT_COMMAND_CREATE} {instance-agent-command-family, instance-agent-commands} in compartment AppTeam where request.user.id = 'ocid1.user.oc1..alice'

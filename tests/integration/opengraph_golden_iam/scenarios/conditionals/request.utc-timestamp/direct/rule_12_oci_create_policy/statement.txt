@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to {POLICY_CREATE} policies in compartment AppTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'

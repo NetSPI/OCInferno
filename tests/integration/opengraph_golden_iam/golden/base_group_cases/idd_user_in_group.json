@@ -1,0 +1,56 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "ocid1.group.oc1..blue"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: user.groups expansion (membership_id=ocid1.groupmembership.oc1..blue1). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..blue1"
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..blue",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "in_identity_domain": true,
+          "name": "GoldenDomain/BlueTeam",
+          "scim_id": "scim-group-blue",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..alice",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "domain_ocid": "ocid1.domain.oc1..golddomain",
+          "in_identity_domain": true,
+          "name": "GoldenDomain/alice",
+          "scim_id": "scim-user-alice",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

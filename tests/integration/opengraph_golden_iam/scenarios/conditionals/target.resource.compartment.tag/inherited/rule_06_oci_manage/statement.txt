@@ -1,0 +1,1 @@
+Allow group SecurityAdmins to manage secret-bundles in compartment RootTeam where target.resource.compartment.tag.team.env = 'prod'

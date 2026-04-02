@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.dynamicgroup.oc1..idddg_nomatch",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compa",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "matching_rule": "RULE_INSTANCE_ID_MISSING",
+          "name": "TestDomain/IDD DG NoMatch",
+          "scim_id": "scim::IDD DG NoMatch",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      }
+    ],
+    "edges": []
+  }
+}

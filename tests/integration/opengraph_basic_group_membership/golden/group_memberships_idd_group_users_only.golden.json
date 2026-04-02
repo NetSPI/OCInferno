@@ -1,0 +1,56 @@
+{
+  "metadata": {
+    "source_kind": "OCIBase"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..iddgroup01",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..testcompartment",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "name": "TestDomain/IDD Group One",
+          "scim_id": "idd-group-scim-01",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..idduser01",
+        "kinds": [
+          "OCIUser",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..testcompartment",
+          "domain_ocid": "ocid1.domain.oc1..testdomain",
+          "in_identity_domain": true,
+          "name": "TestDomain/idd_user_one",
+          "scim_id": "idd-user-scim-01",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "start": {
+          "value": "ocid1.user.oc1..idduser01"
+        },
+        "end": {
+          "value": "ocid1.group.oc1..iddgroup01"
+        },
+        "kind": "OCI_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Group membership edge derived from: Identity Domains: group.users expansion (membership_id=ocid1.groupmembership.oc1..iddmembership01). Impact: group membership grants the group's IAM permissions.",
+          "membership_id": "ocid1.groupmembership.oc1..iddmembership01"
+        }
+      }
+    ]
+  }
+}

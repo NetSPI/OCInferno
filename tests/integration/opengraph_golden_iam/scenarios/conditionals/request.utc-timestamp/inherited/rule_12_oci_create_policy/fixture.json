@@ -1,0 +1,129 @@
+{
+  "description": "Inherited conditional request.utc-timestamp for OCI_CREATE_POLICY (rule 12).",
+  "workspace": {
+    "workspace_id": 10130,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset",
+    "--cond-eval",
+    "--expand-inherited"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "shared"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "prod"
+            }
+          }
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "dev-team",
+          "display_name": "DevTeam",
+          "lifecycle_state": "ACTIVE",
+          "defined_tags": {
+            "team": {
+              "env": "dev"
+            }
+          }
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..cond_inherited_request.utc-timestamp_12_oci_create_policy",
+          "name": "CondInherited_request.utc-timestamp_12_OCI_CREATE_POLICY",
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_groups": [
+        {
+          "id": "ocid1.group.oc1..securityadmins",
+          "name": "SecurityAdmins",
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "lifecycle_state": "ACTIVE"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "kind": "allow",
+          "subject": {
+            "type": "group",
+            "values": [
+              {
+                "ocid": "ocid1.group.oc1..securityadmins",
+                "name": "SecurityAdmins"
+              }
+            ]
+          },
+          "actions": {
+            "type": "permissions",
+            "values": [
+              "POLICY_CREATE"
+            ]
+          },
+          "resources": {
+            "type": "specific",
+            "values": [
+              "policies"
+            ]
+          },
+          "location": {
+            "type": "compartment_id",
+            "values": [
+              "ocid1.compartment.oc1..root"
+            ]
+          },
+          "conditions": {
+            "mode": "all",
+            "clauses": [
+              {
+                "lhs": {
+                  "type": "attribute",
+                  "value": "request.utc-timestamp"
+                },
+                "op": "before",
+                "rhs": {
+                  "type": "string",
+                  "value": "2099-01-01T00:00:00Z"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

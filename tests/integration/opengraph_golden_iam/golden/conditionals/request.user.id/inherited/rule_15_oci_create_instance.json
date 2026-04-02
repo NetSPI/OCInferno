@@ -1,0 +1,212 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.user.oc1..alice"
+        }
+      },
+      {
+        "end": {
+          "value": "new-compute-instance@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_INSTANCE",
+        "properties": {
+          "description": "Launch compute instances in scope (subnet prerequisites).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance:0"
+        }
+      },
+      {
+        "end": {
+          "value": "new-compute-instance@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_CREATE_INSTANCE",
+        "properties": {
+          "description": "Launch compute instances in scope (subnet prerequisites).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance:0"
+        }
+      },
+      {
+        "end": {
+          "value": "new-compute-instance@ocid1.compartment.oc1..root"
+        },
+        "kind": "OCI_CREATE_INSTANCE",
+        "properties": {
+          "description": "Launch compute instances in scope (subnet prerequisites).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance"
+          ],
+          "resolved_statements": [
+            "Allow any-user to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "CondInherited_request.user.id_15_OCI_CREATE_INSTANCE:Statement_1@root-team",
+          "policy_id": "ocid1.policy.oc1..cond_inherited_request.user.id_15_oci_create_instance",
+          "policy_name": "CondInherited_request.user.id_15_OCI_CREATE_INSTANCE",
+          "raw_statement": "Allow any-user to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..alice",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "email": "alice@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "alice",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.user.oc1..bob",
+        "kinds": [
+          "OCIPrincipal",
+          "OCIUser"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "email": "bob@example.com",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "bob",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-compute-instance@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "new-compute-instance@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-compute-instance@ocid1.compartment.oc1..dev",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..dev",
+          "name": "new-compute-instance@dev-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-compute-instance@ocid1.compartment.oc1..root",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..root",
+          "name": "new-compute-instance@root-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

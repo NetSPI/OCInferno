@@ -1,0 +1,3313 @@
+# database_info.yaml
+# OCI compartment ID has "tenancy" in it if its a tenant, it get stored in oci_compartments
+
+databases:
+  - database_name: service_info
+    tables:
+      # -----------------------------
+      # Core org / compartment model
+      # -----------------------------
+      - table_name: resource_compartments
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - freeform_tags
+          - parent_compartment_id
+          - inactive_status
+          - is_accessible
+          - lifecycle_state
+          - name
+          - time_created
+          - service_namespace
+        primary_keys:
+          - compartment_id
+
+      # -----------------------------
+      # Identity Domains discovery
+      # -----------------------------
+      - table_name: identity_domains
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - url
+          - home_region_url
+          - type
+          - license_type
+          - is_hidden_on_login
+          - page
+          - limit
+          - name
+          - sort_by
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Principals: Classic OCI IAM principals
+      # -----------------------------
+      - table_name: identity_users
+        columns:
+          - id
+          - compartment_id
+          - name
+          - email
+          - description
+          - time_created
+          - lifecycle_state
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+
+      - table_name: identity_groups
+        columns:
+          - id
+          - compartment_id
+          - name
+          - description
+          - time_created
+          - lifecycle_state
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+
+      - table_name: identity_dynamic_groups
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - freeform_tags
+          - id
+          - inactive_status
+          - lifecycle_state
+          - matching_rule
+          - name
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Tagging (IAM)
+      # -----------------------------
+      - table_name: tag_namespaces
+        columns:
+          - id
+          - compartment_id
+          - name
+          - description
+          - is_retired
+          - lifecycle_state
+          - time_created
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+
+      - table_name: tag_defaults
+        columns:
+          - id
+          - compartment_id
+          - tag_definition_id
+          - tag_definition_name
+          - tag_namespace_id
+          - value
+          - is_required
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: tag_definitions
+        columns:
+          - id
+          - compartment_id
+          - tag_namespace_id
+          - tag_namespace_name
+          - name
+          - description
+          - is_cost_tracking
+          - is_retired
+          - lifecycle_state
+          - time_created
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+
+      - table_name: identity_user_group_memberships
+        columns:
+          - id
+          - membership_id
+          - membership_ocid
+          - user_id
+          - group_id
+          - user_name
+          - group_name
+          - domain_ocid
+          - tenancy_ocid
+          - compartment_id
+          - inactive_status
+        primary_keys:
+          - id
+
+      - table_name: identity_user_api_keys
+        columns:
+          - key_id
+          - key_value
+          - fingerprint
+          - user_id
+          - time_created
+          - lifecycle_state
+          - inactive_status
+          - compartment_id
+          - credname
+          - private_key_path
+          - public_key_path
+          - created_at_utc
+          - source
+        primary_keys:
+          - key_id
+
+      - table_name: identity_user_ui_password_resets
+        columns:
+          - event_id
+          - user_id
+          - user_name
+          - user_source
+          - domain_ocid
+          - compartment_id
+          - password
+          - time_created
+          - lifecycle_state
+          - inactive_status
+          - created_at_utc
+          - source
+        primary_keys:
+          - event_id
+
+      # -----------------------------
+      # Principals: Idenity Domain OCI IAM principals
+      # NOTE: `id` is SCIM id; `ocid` is the OCI OCID join key.
+      # -----------------------------
+      - table_name: identity_domain_users
+        columns:
+          - active
+          - addresses
+          - compartment_ocid
+          - delete_in_progress
+          - description
+          - display_name
+          - domain_ocid
+          - emails
+          - entitlements
+          - external_id
+          - groups
+          - id
+          - password
+          - ocid
+          - phone_numbers
+          - roles
+          - schemas
+          - tags
+          - tenancy_ocid
+          - user_name
+          - user_type
+          - app_role_ids
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_groups
+        columns:
+          - compartment_ocid
+          - delete_in_progress
+          - display_name
+          - domain_ocid
+          - external_id
+          - id
+          - members
+          - meta
+          - ocid
+          - schemas
+          - tags
+          - tenancy_ocid
+          - app_role_ids
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_dynamic_groups
+        columns:
+          - compartment_ocid
+          - delete_in_progress
+          - description
+          - display_name
+          - domain_ocid
+          - dynamic_group_app_roles
+          - grants
+          - id
+          - matching_rule
+          - ocid
+          - schemas
+          - tags
+          - tenancy_ocid
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_user_group_memberships
+        columns:
+          - id
+          - membership_id
+          - membership_ocid
+          - user_id
+          - user_ocid
+          - user_scim_id
+          - user_name
+          - group_id
+          - group_ocid
+          - group_scim_id
+          - group_name
+          - domain_ocid
+          - identity_domain_name
+          - identity_domain_url
+          - compartment_id
+          - compartment_ocid
+          - tenancy_ocid
+          - inactive_status
+          - source
+        primary_keys:
+          - id
+      # -----------------------------
+      # Identity Domain AppRoles/Grants --> _app_roles in dynamic and normalg roup
+      # -----------------------------
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/identity_domains/models/oci.identity_domains.models.AppRole.html#oci.identity_domains.models.AppRole.members
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/identity_domains/models/oci.identity_domains.models.Grant.html#oci.identity_domains.models.Grant.entitlement
+      # Tiers https://www.ateam-oracle.com/manage-identity-domain-roles-using-groups
+
+      - table_name: identity_domain_app_roles
+        columns:
+          - admin_role
+          - app
+          - available_to_clients
+          - available_to_groups
+          - available_to_users
+          - compartment_ocid
+          - delete_in_progress
+          - description
+          - display_name
+          - domain_ocid
+          - id
+          - idcs_created_by
+          - idcs_last_modified_by
+          - idcs_last_upgraded_in_release
+          - idcs_prevented_operations
+          - legacy_group_name
+          - limited_to_one_or_more_groups
+          - localized_display_name
+          - members
+          - meta
+          - ocid
+          - public
+          - schemas
+          - tags
+          - tenancy_ocid
+          - unique_name
+        primary_keys:
+          - id
+      - table_name: identity_domain_apps
+        columns:
+          - access_token_expiry 
+          - accounts 
+          - active
+          - admin_roles
+          - alias_apps
+          - all_url_schemes_allowed
+          - allow_access_control
+          - allow_offline
+          - allowed_grants
+          - allowed_operations
+          - allowed_scopes
+          - allowed_tags
+          - app_icon
+          - app_signon_policy
+          - app_thumbnail
+          - apps_network_perimeters
+          - as_opc_service
+          - attr_rendering_metadata
+          - audience
+          - based_on_template
+          - bypass_consent
+          - callback_service_url
+          - certificates
+          - client_ip_checking
+          - client_secret
+          - client_type
+          - cloud_control_properties
+          - compartment_ocid
+          - contact_email_address
+          - delegated_service_names
+          - delete_in_progress
+          - description
+          - disable_kmsi_token_authentication
+          - display_name
+          - domain_ocid
+          - editable_attributes
+          - error_page_url
+          - granted_app_roles
+          - grants
+          - hashed_client_secret
+          - home_page_url
+          - icon
+          - id
+          - id_token_enc_algo
+          - idcs_created_by
+          - idcs_last_modified_by
+          - idcs_last_upgraded_in_release
+          - idcs_prevented_operations
+          - identity_providers
+          - idp_policy
+          - infrastructure
+          - is_alias_app
+          - is_database_service
+          - is_enterprise_app
+          - is_form_fill
+          - is_kerberos_realm
+          - is_login_target
+          - is_managed_app
+          - is_mobile_target
+          - is_multicloud_service_app
+          - is_o_auth_client
+          - is_o_auth_resource
+          - is_obligation_capable
+          - is_opc_service
+          - is_radius_app
+          - is_saml_service_provider
+          - is_unmanaged_app
+          - is_web_tier_policy
+          - landing_page_url
+          - linking_callback_url
+          - login_mechanism
+          - login_page_url
+          - logout_page_url
+          - logout_uri
+          - meta
+          - meter_as_opc_service
+          - migrated
+          - name
+          - ocid
+          - post_logout_redirect_uris
+          - privacy_policy_url
+          - product_logo_url
+          - product_name
+          - protectable_secondary_audiences
+          - radius_policy
+          - ready_to_upgrade
+          - redirect_uris
+          - refresh_token_expiry
+          - saml_service_provider
+          - schemas
+          - scopes
+          - secondary_audiences
+          - service_params
+          - service_type_urn
+          - service_type_version
+          - show_in_my_apps
+          - signon_policy
+          - tags
+          - tenancy_ocid
+          - terms_of_service_url
+          - terms_of_use
+          - trust_policies
+          - trust_scope
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_dbcs_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_enterprise_app_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_form_fill_app_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_form_fill_app_template_app_template
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_kerberos_realm_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_managedapp_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_multicloud_service_app_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_oci_tags
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_opc_service_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_radius_app_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_requestable_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_saml_service_provider_app
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_web_tier_policy_app
+          - user_roles
+        primary_keys:
+          - id
+      - table_name: identity_domain_grants
+        columns:
+          - active
+          - app
+          - app_id
+          - app_name
+          - app_ref
+          - app_entitlement_collection
+          - app_entitlement_id
+          - app_raw_json
+          - app_role
+          - app_role_id
+          - app_role_name
+          - app_role_raw_json
+          - app_role_ref
+          - compartment_ocid
+          - composite_key
+          - delete_in_progress
+          - domain_ocid
+          - entitlement
+          - entitlement_attribute_name
+          - entitlement_attribute_value
+          - entitlement_id
+          - entitlement_name
+          - entitlement_raw_json
+          - entitlement_ref
+          - grant_mechanism
+          - granted_attribute_values_json
+          - grantee
+          - grantee_id
+          - grantee_name
+          - grantee_raw_json
+          - grantee_ref
+          - grantee_type
+          - grantor
+          - grantor_id
+          - grantor_name
+          - grantor_raw_json
+          - grantor_ref
+          - grantor_type
+          - id
+          - idcs_created_by
+          - idcs_last_modified_by
+          - idcs_last_upgraded_in_release
+          - idcs_prevented_operations
+          - is_fulfilled
+          - meta
+          - ocid
+          - schemas
+          - tags
+          - tenancy_ocid
+        primary_keys:
+          - id
+      # -----------------------------
+      # Identity Domain policies
+      # -----------------------------
+      - table_name: identity_domain_policies
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - freeform_tags
+          - id
+          - inactive_status
+          - lifecycle_state
+          - name
+          - statements
+          - serialized_statements
+          - time_created
+          - version_date
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Identity Domain credential-ish artifacts
+      # -----------------------------
+      - table_name: identity_domain_user_db_credentials
+        columns:
+          - compartment_ocid
+          - db_password
+          - delete_in_progress
+          - description
+          - domain_ocid
+          - expired
+          - id
+          - meta
+          - tags
+          - tenancy_ocid
+          - user
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_user_smtp_credentials
+        columns:
+          - compartment_ocid
+          - db_password
+          - delete_in_progress
+          - description
+          - domain_ocid
+          - expires_on
+          - ocid
+          - password
+          - tags
+          - tenancy_ocid
+          - user
+          - user_name
+        primary_keys:
+          - domain_ocid
+          - ocid
+
+      - table_name: identity_domain_user_api_keys
+        columns:
+          - compartment_ocid
+          - delete_in_progress
+          - description
+          - domain_ocid
+          - fingerprint
+          - id
+          - idcs_created_by
+          - idcs_last_modified_by
+          - idcs_last_upgraded_in_release
+          - idcs_prevented_operations
+          - key
+          - meta
+          - ocid
+          - schemas
+          - tags
+          - tenancy_ocid
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_self_change_user
+          - user
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_user_auth_tokens
+        columns:
+          - id
+          - ocid
+          - user
+          - description
+          - status
+          - expires_on
+          - token
+          - meta
+          - tags
+          - schemas
+          - idcs_created_by
+          - idcs_last_modified_by
+          - idcs_last_upgraded_in_release
+          - idcs_prevented_operations
+          - urn_ietf_params_scim_schemas_oracle_idcs_extension_self_change_user
+          - compartment_ocid
+          - tenancy_ocid
+          - token_id
+          - token_name
+          - username
+          - token_value
+          - token_preview
+          - source
+          - region
+          - tenancy_namespace
+          - domain_ocid
+          - user_ocid
+          - compartment_id
+          - notes
+          - created_at_utc
+          - updated_at_utc
+        primary_keys:
+          - token_id
+
+      # -----------------------------
+      # IoT
+      # -----------------------------
+      - table_name: iot_digital_twin_models
+        columns:
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - iot_domain_id
+          - lifecycle_state
+          - spec_uri
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: iot_digital_twin_adapters
+        columns:
+          - defined_tags
+          - description
+          - digital_twin_model_id
+          - digital_twin_model_spec_uri
+          - display_name
+          - freeform_tags
+          - id
+          - inbound_envelope
+          - inbound_routes
+          - iot_domain_id
+          - lifecycle_state
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: iot_digital_twin_relationships
+        columns:
+          - content
+          - content_path
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - iot_domain_id
+          - lifecycle_state
+          - source_digital_twin_instance_id
+          - system_tags
+          - target_digital_twin_instance_id
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: iot_digital_twin_instances
+        columns:
+          - auth_id
+          - defined_tags
+          - description
+          - digital_twin_adapter_id
+          - digital_twin_model_id
+          - digital_twin_model_spec_uri
+          - display_name
+          - external_key
+          - freeform_tags
+          - id
+          - iot_domain_id
+          - lifecycle_state
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: iot_domain_groups
+        columns:
+          - compartment_id
+          - data_host
+          - db_allow_listed_vcn_ids
+          - db_connection_string
+          - db_token_scope
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - system_tags
+          - time_created
+          - time_updated
+          - type
+        primary_keys:
+          - id
+      - table_name: iot_domains
+        columns:
+          - compartment_id
+          - data_retention_periods_in_days
+          - db_allow_listed_identity_group_names
+          - db_allowed_identity_domain_host
+          - defined_tags
+          - description
+          - device_host
+          - display_name
+          - freeform_tags
+          - id
+          - iot_domain_group_id
+          - lifecycle_state
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      # -----------------------------
+      # DNS Zone
+      # -----------------------------
+      - table_name: dns_zones
+        columns:
+          - SCOPE_GLOBAL
+          - SCOPE_PRIVATE
+          - ZONE_TYPE_PRIMARY
+          - ZONE_TYPE_SECONDARY
+          - compartment_id
+          - defined_tags
+          - dnssec_config
+          - dnssec_state
+          - external_downstreams
+          - external_masters
+          - freeform_tags
+          - id
+          - is_protected
+          - lifecycle_state
+          - name
+          - nameservers
+          - scope
+          - self_uri
+          - serial
+          - time_created
+          - version
+          - view_id
+          - zone_transfer_servers
+          - zone_type
+        primary_keys:
+          - id
+      - table_name: dns_zone_records
+        columns:
+          - zone_id # could be name or OCID depending on user
+          - compartment_id
+          - domain
+          - is_protected
+          - rdata
+          - record_hash
+          - rrset_version
+          - rtype
+          - ttl
+        primary_keys:
+          - record_hash
+      - table_name: dns_private_resolvers
+        columns:
+          - compartment_id
+          - endpoint_type
+          - forwarding_address
+          - is_forwarding
+          - is_listening
+          - lifecycle_state
+          - listening_address
+          - name
+          - time_created
+          - time_updated
+        primary_keys:
+          - compartment_id
+          - name
+      # -----------------------------
+      # API GW 
+      # -----------------------------
+      - table_name: apigw_gateways
+        columns:
+          - ca_bundles
+          - certificate_id
+          - compartment_id
+          - defined_tags
+          - display_name
+          - endpoint_type
+          - freeform_tags
+          - hostname
+          - id
+          - ip_addresses
+          - ip_mode
+          - ipv4_address_configuration
+          - ipv6_address_configuration
+          - lifecycle_details
+          - lifecycle_state
+          - locks
+          - network_security_group_ids
+          - response_cache_details
+          - subnet_id
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: apigw_apis
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - endpoint
+          - freeform_tags
+          - gateway_id
+          - id
+          - lifecycle_details
+          - lifecycle_state
+          - locks
+          - path_prefix
+          - specification
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: apigw_deployments
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - endpoint
+          - freeform_tags
+          - gateway_id
+          - id
+          - lifecycle_details
+          - lifecycle_state
+          - locks
+          - path_prefix
+          - specification
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Network Firewall
+      # -----------------------------
+      - table_name: network_firewall_firewalls
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - subnet_id
+          - availability_domain
+          - ipv4_address
+          - ipv6_address
+          - nat_configuration
+          - network_firewall_policy_id
+          - time_created
+          - time_updated
+          - lifecycle_state
+          - lifecycle_details
+          - freeform_tags
+          - defined_tags
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: network_firewall_policies
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - time_created
+          - time_updated
+          - lifecycle_state
+          - lifecycle_details
+          - freeform_tags
+          - defined_tags
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: network_firewall_security_rules
+        columns:
+          - network_firewall_policy_id
+          - compartment_id
+          - name
+          - action
+          - inspection
+          - priority_order
+          - condition
+          - position
+          - parent_resource_id
+        primary_keys:
+          - network_firewall_policy_id
+          - name
+
+      # -----------------------------
+      # Network Load Balancer (NLB)
+      # -----------------------------
+      - table_name: network_load_balancers
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - subnet_id
+          - subnet_ids
+          - ip_addresses
+          - is_private
+          - is_preserve_source
+          - is_symmetric_hash_enabled
+          - network_security_group_ids
+          - lifecycle_state
+          - lifecycle_details
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+          - system_tags
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Managed Kafka
+      # -----------------------------
+      - table_name: kafka_clusters
+        columns:
+          - id
+          - display_name
+          - compartment_id
+          - time_created
+          - time_updated
+          - lifecycle_state
+          - lifecycle_details
+          - access_subnets
+          - client_certificate_bundle
+          - kafka_version
+          - cluster_type
+          - broker_shape
+          - cluster_config_id
+          - cluster_config_version
+          - kafka_bootstrap_urls
+          - coordination_type
+          - secret_id
+          - freeform_tags
+          - defined_tags
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: kafka_cluster_configs
+        columns:
+          - id
+          - display_name
+          - compartment_id
+          - time_created
+          - time_updated
+          - lifecycle_state
+          - lifecycle_details
+          - latest_config
+          - freeform_tags
+          - defined_tags
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: kafka_cluster_config_versions
+        columns:
+          - config_id
+          - compartment_id
+          - version_number
+          - time_created
+          - properties
+        primary_keys:
+          - config_id
+          - version_number
+
+
+      # -----------------------------
+      # Log Groups - 
+      # -----------------------------
+      - table_name: logging_log_groups
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - time_last_modified
+        primary_keys:
+          - id
+
+      - table_name: logging_logs
+        columns:
+          - compartment_id
+          - configuration
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - is_enabled
+          - id
+          - lifecycle_state
+          - log_group_id
+          - log_type
+          - retention_duration
+          - tenancy_id
+          - time_created
+          - time_last_modified
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Object Storage - Technically namespace is unqiue per tenatn but we store it per comp ID here for later use
+      # -----------------------------
+      - table_name: object_storage_namespaces
+        columns:
+          - namespace
+          - default_s3_compartment_id
+          - default_swift_compartment_id
+          - compartment_id
+        primary_keys:
+          - compartment_id
+          - namespace
+
+      - table_name: object_storage_buckets
+        columns:
+          - approximate_count
+          - approximate_size
+          - auto_tiering
+          - compartment_id
+          - created_by
+          - defined_tags
+          - etag
+          - freeform_tags
+          - id
+          - is_read_only
+          - kms_key_id
+          - metadata
+          - name
+          - namespace
+          - object_events_enabled
+          - object_lifecycle_policy_etag
+          - public_access_type
+          - replication_enabled
+          - storage_tier
+          - time_created
+          - versioning
+          - get_run # True | False so we know how much to inspect this in config engine. OCI has SummaryBucket and Bucket Objects for List/Get
+        primary_keys:
+          - namespace
+          - name
+
+      - table_name: object_storage_bucket_objects
+        columns:
+          - namespace
+          - bucket_name
+          - archival_state
+          - etag
+          - md5
+          - name
+          - size
+          - storage_tier
+          - time_created
+          - time_modified
+          - compartment_id
+        primary_keys:
+          - namespace
+          - bucket_name
+          - name
+
+      # -----------------------------
+      # Notifications
+      # -----------------------------
+      - table_name: notification_topics
+        columns:
+          - api_endpoint
+          - compartment_id
+          - defined_tags
+          - description
+          - etag
+          - freeform_tags
+          - lifecycle_state
+          - name
+          - short_topic_id
+          - time_created
+          - topic_id
+        primary_keys:
+          - topic_id
+      - table_name: notification_subscriptions
+        columns:
+          - compartment_id
+          - created_time
+          - defined_tags
+          - deliver_policy
+          - endpoint
+          - etag
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - protocol
+          - topic_id
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Cloud Guard
+      # -----------------------------
+      - table_name: cloud_guard_targets
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - state
+          - target_resource_id
+          - target_resource_type
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_problems
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - detector_id
+          - detector_rule_id
+          - id
+          - labels
+          - lifecycle_state
+          - problem_type
+          - region
+          - resource_id
+          - resource_name
+          - risk_level
+          - target_id
+          - time_created
+          - time_first_detected
+          - time_last_detected
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_recommendations
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - id
+          - lifecycle_state
+          - name
+          - recommendation_type
+          - resource_id
+          - risk_level
+          - target_id
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_detector_recipes
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - source
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_responder_recipes
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - source
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_managed_lists
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - list_type
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_data_sources
+        columns:
+          - compartment_id
+          - data_source_feed_provider
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_security_zones
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_security_recipes
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: cloud_guard_security_policies
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - system_tags
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # ResourceManager
+      # -----------------------------
+      - table_name: resource_manager_stacks
+        columns:
+          - compartment_id
+          - config_source
+          - custom_terraform_provider
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - is_third_party_provider_experience_enabled
+          - lifecycle_state
+          - stack_drift_status
+          - system_tags
+          - terraform_version
+          - time_created
+          - time_drift_last_checked
+          - variables
+        primary_keys:
+          - id
+      # Merged jobs and job outputs into one table
+      - table_name: resource_manager_jobs 
+        columns:
+          - apply_job_plan_resolution
+          - cancellation_details
+          - compartment_id
+          - config_source
+          - defined_tags
+          - display_name
+          - failure_details
+          - freeform_tags
+          - id
+          - is_provider_upgrade_required
+          - is_third_party_provider_experience_enabled
+          - job_operation_details
+          - lifecycle_state
+          - operation
+          - resolved_plan_job_id
+          - stack_id
+          - system_tags
+          - time_created
+          - time_finished
+          - variables
+          - working_directory
+          # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/resource_manager/models/oci.resource_manager.models.JobOutputSummary.html#oci.resource_manager.models.JobOutputSummary
+          - job_output_summary
+        primary_keys:
+          - id
+      - table_name: resource_manager_templates 
+        columns:
+          - category_id
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - is_free_tier
+          - lifecycle_state
+          - long_description
+          - system_tags
+          - template_config_source
+          - time_created
+        primary_keys:
+          - id
+      - table_name: resource_manager_private_endpoints 
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - dns_zones
+          - freeform_tags
+          - id
+          - is_used_with_configuration_source_provider
+          - lifecycle_state
+          - nsg_id_list
+          - security_attributes
+          - source_ips
+          - subnet_id
+          - system_tags
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+      - table_name: resource_configuration_source_provider 
+        columns:
+          - compartment_id
+          - config_source_provider_type
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - private_server_config_details
+          - secret_id
+          - system_tags
+          - time_created
+          - username
+        primary_keys:
+          - id
+  
+      # -----------------------------
+      # Caches/Databases
+      # -----------------------------
+      # docs.oracle.com/en-us/iaas/tools/python/latest/api/redis/models/oci.redis.models.RedisCluster.html#oci.redis.models.RedisCluster
+      - table_name: cache_config_sets
+        columns:
+          - SOFTWARE_VERSION_REDIS_7_0
+          - SOFTWARE_VERSION_V7_0_5
+          - SOFTWARE_VERSION_VALKEY_7_2
+          - compartment_id
+          - configuration_details
+          - default_config_set_id
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - software_version
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: cache_users
+        columns:
+          - STATUS_OFF
+          - STATUS_ON
+          - acl_string
+          - authentication_mode
+          - compartment_id
+          - defined_tags
+          - description
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - name
+          - status
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: cache_clusters
+        columns:
+          - cluster_mode
+          - compartment_id
+          - defined_tags
+          - discovery_endpoint_ip_address
+          - discovery_fqdn
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_details
+          - lifecycle_state
+          - node_collection
+          - node_count
+          - node_memory_in_gbs
+          - nsg_ids
+          - oci_cache_config_set_id
+          - primary_endpoint_ip_address
+          - primary_fqdn
+          - replicas_endpoint_ip_address
+          - replicas_fqdn
+          - security_attributes
+          - shard_count
+          - software_version
+          - subnet_id
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: db_mysql_db_systems
+        columns:
+          - access_mode
+          - availability_domain
+          - backup_policy
+          - channels
+          - compartment_id
+          - configuration_id
+          - crash_recovery
+          - current_placement
+          - customer_contacts
+          - data_storage
+          - data_storage_size_in_gbs
+          - database_console
+          - database_management
+          - database_mode
+          - defined_tags
+          - deletion_policy
+          - description
+          - display_name
+          - encrypt_data
+          - endpoints
+          - fault_domain
+          - freeform_tags
+          - heat_wave_cluster
+          - hostname_label
+          - id
+          - ip_address
+          - is_heat_wave_cluster_attached # HeatWave cluster is a built-in real-time query accelerator and a fully automated in-database machine learning engine.
+          - is_highly_available
+          - lifecycle_details
+          - lifecycle_state
+          - maintenance
+          - mysql_version
+          - nsg_ids
+          - point_in_time_recovery_details
+          - port
+          - port_x
+          - read_endpoint
+          - rest # Allow the creation of REST endpoints of database objects that can be accessed via the HTTPS port below.
+          - secure_connections
+          - security_attributes
+          - shape_name
+          - source
+          - subnet_id
+          - system_tags
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: db_oracle_db_systems
+        columns:
+          - character_set
+          - compartment_id
+          - connection_strings
+          - data_guard_group
+          - database_management_config
+          - database_software_image_id
+          - db_backup_config
+          - db_home_id
+          - db_name
+          - db_system_id
+          - db_unique_name
+          - db_workload
+          - defined_tags
+          - encryption_key_location_details
+          - freeform_tags
+          - id
+          - is_cdb
+          - key_store_id
+          - key_store_wallet_name
+          - kms_key_id
+          - kms_key_version_id
+          - last_backup_duration_in_seconds
+          - last_backup_timestamp
+          - last_failed_backup_timestamp
+          - lifecycle_details
+          - lifecycle_state
+          - ncharacter_set
+          - patch_version
+          - pdb_name
+          - sid_prefix
+          - source_database_point_in_time_recovery_timestamp
+          - storage_size_details
+          - system_tags
+          - time_created
+          - vault_id
+          - vm_cluster_id
+        primary_keys:
+          - id
+      - table_name: db_psql_db_systems
+        columns:
+          - admin_username
+          - compartment_id
+          - config_id
+          - db_version
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - instance_count
+          - instance_memory_size_in_gbs
+          - instance_ocpu_count
+          - instances
+          - lifecycle_details
+          - lifecycle_state
+          - management_policy
+          - network_details
+          - shape
+          - source
+          - storage_details
+          - system_tags
+          - system_type
+          - time_created
+          - time_updated
+          - primary_db_instance_id # from a diff API
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # ContainerRegistry
+      # -----------------------------
+      - table_name: cr_repositories
+        columns:
+          - billable_size_in_gbs
+          - compartment_id
+          - created_by
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - image_count
+          - is_immutable
+          - is_public
+          - layer_count
+          - layers_size_in_bytes
+          - lifecycle_state
+          - namespace
+          - readme
+          - system_tags
+          - time_created
+          - time_last_pushed
+        primary_keys:
+          - id
+      - table_name: cr_images
+        columns:
+          - compartment_id
+          - created_by
+          - defined_tags
+          - digest
+          - display_name
+          - freeform_tags
+          - id
+          - layers
+          - layers_size_in_bytes
+          - lifecycle_state
+          - manifest_size_in_bytes
+          - pull_count
+          - repository_id
+          - repository_name
+          - system_tags
+          - time_created
+          - time_last_pulled
+          - version
+          - versions
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # ArtifactRegistry
+      # -----------------------------
+      - table_name: ar_repositories
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - display_name
+          - freeform_tags
+          - id
+          - is_immutable
+          - lifecycle_state
+          - repository_type
+          - time_created
+        primary_keys:
+          - id
+      - table_name: ar_generic_artifact
+        columns:
+          - artifact_path
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - repository_id
+          - sha256
+          - size_in_bytes
+          - time_created
+          - version
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Functions
+      # -----------------------------
+      - table_name: functions_apps
+        columns:
+          - compartment_id
+          - config
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - image_policy_config
+          - lifecycle_state
+          - network_security_group_ids
+          - security_attributes
+          - shape
+          - subnet_ids
+          - syslog_url
+          - time_created
+          - time_updated
+          - trace_config
+        primary_keys:
+          - id
+
+      - table_name: functions_functions
+        columns:
+          - application_id
+          - compartment_id
+          - config
+          - defined_tags
+          - detached_mode_timeout_in_seconds
+          - display_name
+          - failure_destination
+          - freeform_tags
+          - id
+          - image
+          - image_digest
+          - invoke_endpoint
+          - lifecycle_state
+          - memory_in_mbs
+          - provisioned_concurrency_config
+          - shape
+          - source_details
+          - success_destination
+          - time_created
+          - time_updated
+          - timeout_in_seconds
+          - trace_config
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Email Delivery
+      # -----------------------------
+      - table_name: email_senders
+        columns:
+          - compartment_id
+          - defined_tags
+          - email_address
+          - freeform_tags
+          - id
+          - is_email_verified
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      - table_name: email_domains
+        columns:
+          - compartment_id
+          - defined_tags
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - name
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      - table_name: email_domain_dkims
+        columns:
+          - compartment_id
+          - defined_tags
+          - email_domain_id
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - name
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      - table_name: email_domain_spfs
+        columns:
+          - compartment_id
+          - defined_tags
+          - email_domain_id
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      - table_name: email_return_paths
+        columns:
+          - compartment_id
+          - defined_tags
+          - description
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - name
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      - table_name: email_suppressions
+        columns:
+          - compartment_id
+          - email_address
+          - id
+          - reason
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+
+      - table_name: email_configuration
+        columns:
+          - compartment_id
+          - http_submit_endpoint
+          - smtp_submit_endpoint
+        primary_keys:
+          - compartment_id
+
+      # -----------------------------
+      # OKE
+      # -----------------------------
+      - table_name: containerengine_clusters
+        columns:
+          - available_kubernetes_upgrades
+          - cluster_pod_network_options
+          - compartment_id
+          - defined_tags
+          - endpoint_config
+          - endpoints
+          - freeform_tags
+          - id
+          - image_policy_config
+          - kms_key_id
+          - kubernetes_version
+          - lifecycle_details
+          - lifecycle_state
+          - metadata
+          - name
+          - open_id_connect_discovery_endpoint
+          - open_id_connect_discovery_key
+          - options
+          - system_tags
+          - type
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: containerengine_node_pools
+        columns:
+          - cluster_id
+          - compartment_id
+          - defined_tags
+          - freeform_tags
+          - id
+          - initial_node_labels
+          - kubernetes_version
+          - lifecycle_details
+          - lifecycle_state
+          - name
+          - node_config_details
+          - node_eviction_node_pool_settings
+          - node_image_id
+          - node_image_name
+          - node_metadata
+          - node_pool_cycling_details
+          - node_shape
+          - node_shape_config
+          - node_source
+          - node_source_details
+          - nodes
+          - quantity_per_subnet
+          - ssh_public_key
+          - subnet_ids
+          - system_tags
+        primary_keys:
+          - id
+
+      - table_name: containerengine_virtual_nodes
+        columns:
+          - availability_domain
+          - defined_tags
+          - display_name
+          - fault_domain
+          - freeform_tags
+          - id
+          - kubernetes_version
+          - lifecycle_details
+          - lifecycle_state
+          - nsg_ids
+          - private_ip
+          - subnet_id
+          - system_tags
+          - time_created
+          - virtual_node_error
+          - virtual_node_pool_id
+        primary_keys:
+          - id
+
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/container_engine/models/oci.container_engine.models.VirtualNodePool.html#oci.container_engine.models.VirtualNodePool
+      - table_name: containerengine_virtual_node_pools
+        columns:
+          - cluster_id
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - initial_virtual_node_labels
+          - kubernetes_version
+          - lifecycle_details
+          - lifecycle_state
+          - nsg_ids
+          - placement_configurations
+          - pod_configuration
+          - size
+          - system_tags
+          - taints
+          - time_created
+          - time_updated
+          - virtual_node_tags
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # File Storage
+      # -----------------------------
+      - table_name: file_storage_file_systems
+        columns:
+          - are_quota_rules_enabled
+          - availability_domain
+          - clone_attach_status
+          - clone_count
+          - compartment_id
+          - defined_tags
+          - display_name
+          - filesystem_snapshot_policy_id
+          - freeform_tags
+          - id
+          - is_clone_parent
+          - is_hydrated
+          - is_targetable
+          - kms_key_id
+          - lifecycle_details
+          - lifecycle_state
+          - locks
+          - metered_bytes
+          - quota_enforcement_state
+          - replication_source_count
+          - replication_target_id
+          - source_details
+          - system_tags
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: file_storage_mount_targets
+        columns:
+          - availability_domain
+          - compartment_id
+          - defined_tags
+          - display_name
+          - export_set_id
+          - freeform_tags
+          - id
+          - idmap_type
+          - kerberos
+          - ldap_idmap
+          - lifecycle_details
+          - lifecycle_state
+          - locks
+          - nsg_ids
+          - observed_throughput
+          - private_ip_ids
+          - requested_throughput
+          - reserved_storage_capacity
+          - security_attributes
+          - subnet_id
+          - system_tags
+          - time_billing_cycle_end
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: file_storage_export_sets
+        columns:
+          - availability_domain
+          - compartment_id
+          - display_name
+          - id
+          - lifecycle_state
+          - max_fs_stat_bytes
+          - max_fs_stat_files
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: file_storage_exports
+        columns:
+          - export_options
+          - export_set_id
+          - file_system_id
+          - id
+          - is_idmap_groups_for_sys_auth
+          - lifecycle_state
+          - locks
+          - path
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: file_storage_snapshots
+        columns:
+          - defined_tags
+          - expiration_time
+          - file_system_id
+          - filesystem_snapshot_policy_id
+          - freeform_tags
+          - id
+          - is_clone_source
+          - lifecycle_details
+          - lifecycle_state
+          - locks
+          - name
+          - provenance_id
+          - snapshot_time
+          - snapshot_type
+          - system_tags
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Compute
+      # -----------------------------
+      - table_name: compute_instances
+        columns:
+          - agent_config
+          - availability_config
+          - availability_domain
+          - capacity_reservation_id
+          - cluster_placement_group_id
+          - compartment_id
+          - dedicated_vm_host_id
+          - defined_tags
+          - display_name
+          - extended_metadata
+          - fault_domain
+          - freeform_tags
+          - id
+          - image_id
+          - instance_configuration_id
+          - instance_options
+          - ipxe_script
+          - is_ai_enterprise_enabled
+          - is_cross_numa_node
+          - launch_mode
+          - launch_options
+          - licensing_configs
+          - lifecycle_state
+          - metadata
+          - placement_constraint_details
+          - platform_config
+          - preemptible_instance_config
+          - region
+          - security_attributes
+          - security_attributes_state
+          - shape
+          - shape_config
+          - source_details
+          - system_tags
+          - time_created
+          - time_maintenance_reboot_due
+        primary_keys:
+          - id
+      - table_name: compute_images
+        columns:
+          - agent_features
+          - base_image_id
+          - billable_size_in_gbs
+          - compartment_id
+          - create_image_allowed
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - launch_mode
+          - launch_options
+          - lifecycle_state
+          - listing_type
+          - operating_system
+          - operating_system_version
+          - size_in_mbs
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: compute_instance_agent_commands
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - lifecycle_state
+          - delivery_state
+          - execution_time_out_in_seconds
+          - delivery_time_out_in_seconds
+          - is_canceled
+          - time_created
+          - time_updated
+          - target_instance_id
+          - target_raw_json
+          - content_raw_json
+          - command_text
+          - command_source_type
+          - command_output_type
+          - source
+        primary_keys:
+          - id
+
+      - table_name: compute_instance_agent_command_executions
+        columns:
+          - execution_key
+          - instance_agent_command_id
+          - instance_id
+          - compartment_id
+          - display_name
+          - lifecycle_state
+          - delivery_state
+          - sequence_number
+          - time_created
+          - time_updated
+          - exit_code
+          - message
+          - output_type
+          - output_text
+          - output_text_sha256
+          - content_raw_json
+          - source
+        primary_keys:
+          - execution_key
+
+      - table_name: compute_instance_agent_plugins
+        columns:
+          - plugin_key
+          - instance_id
+          - instance_name
+          - compartment_id
+          - name
+          - status
+          - desired_state
+          - time_last_update_utc
+          - message
+          - plugin_raw_json
+          - source
+        primary_keys:
+          - plugin_key
+
+      # -----------------------------
+      # Block Storage
+      # -----------------------------
+      - table_name: blockstorage_volumes
+        columns:
+          - availability_domain
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - kms_key_id
+          - lifecycle_state
+          - size_in_gbs
+          - time_created
+          - vpus_per_gb
+          - volume_group_id
+        primary_keys:
+          - id
+
+      - table_name: blockstorage_boot_volumes
+        columns:
+          - availability_domain
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - kms_key_id
+          - lifecycle_state
+          - size_in_gbs
+          - time_created
+          - vpus_per_gb
+        primary_keys:
+          - id
+
+      - table_name: blockstorage_volume_backups
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - size_in_gbs
+          - time_created
+          - volume_id
+        primary_keys:
+          - id
+
+      - table_name: blockstorage_boot_volume_backups
+        columns:
+          - boot_volume_id
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - size_in_gbs
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Compute Management
+      # -----------------------------
+      - table_name: compute_instance_configurations
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: compute_instance_pools
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - instance_configuration_id
+          - lifecycle_state
+          - size
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: compute_cluster_networks
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: compute_compute_clusters
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Virtual Network
+      # -----------------------------
+      - table_name: virtual_network_vcns
+        columns:
+          - cidr_block
+          - cidr_blocks
+          - compartment_id
+          - defined_tags
+          - display_name
+          - dns_label
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_subnets
+        columns:
+          - availability_domain
+          - cidr_block
+          - compartment_id
+          - defined_tags
+          - dhcp_options_id
+          - display_name
+          - dns_label
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - prohibit_public_ip_on_vnic
+          - route_table_id
+          - security_list_ids
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_route_tables
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - route_rules
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_security_lists
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - egress_security_rules
+          - freeform_tags
+          - id
+          - ingress_security_rules
+          - lifecycle_state
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_network_security_groups
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_internet_gateways
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - is_enabled
+          - lifecycle_state
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_nat_gateways
+        columns:
+          - block_traffic
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_service_gateways
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - services
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_drgs
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - redundancy_status
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_drg_attachments
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - drg_id
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      - table_name: virtual_network_dhcp_options
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - options
+          - time_created
+          - vcn_id
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Container Instances (serverless containers)
+      # -----------------------------
+      - table_name: container_instances
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Data Flow
+      # -----------------------------
+      - table_name: dataflow_applications
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: dataflow_runs
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+      - table_name: dataflow_pools
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: dataflow_private_endpoints
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: dataflow_sql_endpoints
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: dataflow_work_requests
+        columns:
+          - compartment_id
+          - id
+          - operation_type
+          - status
+          - time_accepted
+          - time_finished
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Data Science
+      # -----------------------------
+      - table_name: data_science_projects
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - description
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_notebook_sessions
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_models
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_model_version_sets
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_model_groups
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_model_deployments
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_jobs
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_job_runs
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - job_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_started
+          - time_finished
+        primary_keys:
+          - id
+      - table_name: data_science_pipelines
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_pipeline_runs
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - pipeline_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_started
+          - time_finished
+        primary_keys:
+          - id
+      - table_name: data_science_schedules
+        columns:
+          - id
+          - compartment_id
+          - project_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_private_endpoints
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - lifecycle_state
+          - subnet_id
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: data_science_work_requests
+        columns:
+          - id
+          - compartment_id
+          - operation_type
+          - status
+          - time_accepted
+          - time_started
+          - time_finished
+          - time_created
+        primary_keys:
+          - id
+      - table_name: data_science_ml_applications
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Blockchain
+      # -----------------------------
+      - table_name: blockchain_platforms
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - description
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - platform_role
+          - service_endpoint
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: blockchain_peers
+        columns:
+          - id
+          - compartment_id
+          - blockchain_platform_id
+          - display_name
+          - role
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: blockchain_osns
+        columns:
+          - id
+          - compartment_id
+          - blockchain_platform_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: blockchain_platform_patches
+        columns:
+          - record_hash
+          - id
+          - compartment_id
+          - blockchain_platform_id
+          - display_name
+          - description
+          - lifecycle_state
+          - version
+          - time_created
+          - time_released
+        primary_keys:
+          - record_hash
+      - table_name: blockchain_work_requests
+        columns:
+          - id
+          - compartment_id
+          - blockchain_platform_id
+          - operation_type
+          - status
+          - time_accepted
+          - time_started
+          - time_finished
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Desktops
+      # -----------------------------
+      - table_name: desktops_desktops
+        columns:
+          - id
+          - compartment_id
+          - desktop_pool_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: desktops_pools
+        columns:
+          - id
+          - compartment_id
+          - display_name
+          - description
+          - lifecycle_state
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: desktops_pool_desktops
+        columns:
+          - id
+          - compartment_id
+          - desktop_pool_id
+          - display_name
+          - lifecycle_state
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: desktops_pool_volumes
+        columns:
+          - record_hash
+          - id
+          - compartment_id
+          - desktop_pool_id
+          - display_name
+          - lifecycle_state
+          - volume_type
+          - size_in_gbs
+          - time_created
+          - time_updated
+        primary_keys:
+          - record_hash
+      - table_name: desktops_work_requests
+        columns:
+          - id
+          - compartment_id
+          - operation_type
+          - status
+          - time_accepted
+          - time_started
+          - time_finished
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Bastion
+      # -----------------------------
+      - table_name: bastion_bastions
+        columns:
+          - id
+          - compartment_id
+          - name
+          - bastion_type
+          - target_subnet_id
+          - dns_proxy_status
+          - lifecycle_state
+          - max_session_ttl_in_seconds
+          - max_sessions_allowed
+          - cidr_block_allow_list
+          - time_created
+          - time_updated
+          - freeform_tags
+          - defined_tags
+        primary_keys:
+          - id
+      - table_name: bastion_sessions
+        columns:
+          - id
+          - compartment_id
+          - bastion_id
+          - display_name
+          - session_type
+          - lifecycle_state
+          - key_details
+          - target_resource_details
+          - session_ttl_in_seconds
+          - ssh_metadata
+          - time_created
+          - time_updated
+        primary_keys:
+          - id
+      - table_name: bastion_work_requests
+        columns:
+          - id
+          - compartment_id
+          - bastion_id
+          - operation_type
+          - status
+          - time_accepted
+          - time_started
+          - time_finished
+          - time_created
+        primary_keys:
+          - id
+      - table_name: bastion_work_request_errors
+        columns:
+          - record_hash
+          - work_request_id
+          - compartment_id
+          - code
+          - message
+          - timestamp
+        primary_keys:
+          - record_hash
+      - table_name: bastion_work_request_logs
+        columns:
+          - record_hash
+          - work_request_id
+          - compartment_id
+          - message
+          - timestamp
+        primary_keys:
+          - record_hash
+
+      # -----------------------------
+      # Resource Scheduler (scheduled jobs)
+      # -----------------------------
+      - table_name: resource_schedules
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # DevOps
+      # -----------------------------
+      - table_name: devops_projects
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - description
+          - freeform_tags
+          - id
+          - name
+          - lifecycle_state
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: devops_deploy_pipelines
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - description
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - project_id
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: devops_build_pipelines
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - description
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - project_id
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: devops_repositories
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - description
+          - freeform_tags
+          - id
+          - http_url
+          - lifecycle_state
+          - name
+          - project_id
+          - repository_url
+          - ssh_url
+          - time_created
+        primary_keys:
+          - id
+
+      - table_name: devops_connections
+        columns:
+          - compartment_id
+          - defined_tags
+          - display_name
+          - description
+          - freeform_tags
+          - id
+          - lifecycle_state
+          - project_id
+          - connection_type
+          - time_created
+        primary_keys:
+          - id
+
+      # -----------------------------
+      # Identity Domain posture / settings artifacts
+      # (enum_identity_domains settings)
+      #
+      # NOTE: Primary key strategy:
+      #   - id is unique *within a domain*, but to be safe across multiple domains
+      #     we key on (domain_ocid, id).
+      # -----------------------------
+
+      - table_name: identity_domain_password_policies
+        columns:
+          - domain_ocid
+          - compartment_ocid
+          - tenancy_ocid
+          - id 
+          - ocid
+          - name
+          - groups
+
+          # PasswordPolicy-specific (common)
+          - dictionary_delimiter
+          - dictionary_location
+          - dictionary_word_disallowed
+          - disallowed_chars
+          - disallowed_substrings
+          - distinct_characters
+          - first_name_disallowed
+          - force_password_reset
+          - lockout_duration
+          - max_incorrect_attempts
+          - max_length
+          - max_repeated_chars
+          - max_special_chars
+          - min_alpha_numerals
+          - min_length
+          - min_lower_case
+          - min_numerals
+          - min_password_age
+          - min_special_chars
+          - min_unique_chars
+          - min_upper_case
+          - num_passwords_in_history
+          - password_expires_after
+          - password_strength
+          - priority
+          - required_chars
+          - starts_with_alphabet
+          - user_name_disallowed
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_authentication_factor_settings
+        columns:
+          - domain_ocid
+          - compartment_ocid
+          - tenancy_ocid
+          - id 
+          - ocid
+
+          # MFA-specific (common)
+          - bypass_code_enabled
+          - bypass_code_settings
+          - client_app_settings
+          - compliance_policy
+          - email_enabled
+          - email_settings
+          - endpoint_restrictions
+          - fido_authenticator_enabled
+          - hide_backup_factor_enabled
+          - mfa_enabled_category
+          - mfa_enrollment_type
+          - notification_settings
+          - phone_call_enabled
+          - push_enabled
+          - schemas
+          - security_questions_enabled
+          - sms_enabled
+          - third_party_factor
+          - totp_enabled
+          - totp_settings
+          - yubico_otp_enabled
+        primary_keys:
+          - id
+
+      - table_name: identity_domain_lockout_policies
+        columns:
+          - domain_ocid
+          - identity_domain_id
+          - identity_domain_name
+          - identity_domain_url
+          - compartment_ocid
+          - tenancy_ocid
+
+          - id
+          - display_name
+          - description
+          - active
+          - schemas
+          - meta
+          - tags
+
+          # LockoutPolicy-ish fields (best-effort)
+          - max_incorrect_attempts
+          - lockout_duration_minutes
+          - lockout_failure_count
+          - additional_properties_json
+        primary_keys:
+          - domain_ocid
+          - id
+
+      - table_name: identity_domain_sign_on_policies
+        columns:
+          - domain_ocid
+          - identity_domain_id
+          - identity_domain_name
+          - identity_domain_url
+          - compartment_ocid
+          - tenancy_ocid
+
+          - id
+          - display_name
+          - description
+          - active
+          - schemas
+          - meta
+          - tags
+
+          # SignOnPolicy-ish fields (best-effort)
+          - rules_json
+          - conditions_json
+          - network_perimeter_enabled
+          - session_duration_minutes
+          - additional_properties_json
+        primary_keys:
+          - domain_ocid
+          - id
+
+      - table_name: identity_domain_identity_providers
+        columns:
+          - domain_ocid
+          - identity_domain_id
+          - identity_domain_name
+          - identity_domain_url
+          - compartment_ocid
+          - tenancy_ocid
+
+          - id
+          - schemas
+          - meta
+          - tags
+
+          # IdentityProvider-ish fields (best-effort)
+          - partner_name
+          - type
+          - enabled
+          - shown_on_login_page
+          - idp_sso_url
+          - issuer
+          - authorization_url
+          - token_url
+          - jwks_uri
+          - redirect_url
+          - signing_certificate
+          - additional_properties_json
+        primary_keys:
+          - domain_ocid
+          - id
+
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/key_management/client/oci.key_management.KmsVaultClient.html?highlight=list_vaults#oci.key_management.KmsVaultClient.list_vaults
+      - table_name: vault_vaults
+        columns:
+          - compartment_id
+          - crypto_endpoint # Cryptographic operations include Encrypt, Decrypt, and GenerateDataEncryptionKey operations.
+          - display_name
+          - id
+          - is_primary
+          - is_vault_replicable
+          - lifecycle_state
+          - management_endpoint # Management operations include “Create,” “Update,” “List,” “Get,” and “Delete” operations.
+          - replica_details
+          - restored_from_vault_id
+          - vault_type
+          - wrappingkey_id
+          - defined_tags
+          - freeform_tags
+        primary_keys:
+          - id
+
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/key_management/client/oci.key_management.KmsManagementClient.html#oci.key_management.KmsManagementClient
+      - table_name: vault_keys
+        columns:
+          - compartment_id
+          - vault_id
+          - id
+          - auto_key_rotation_details
+          - display_name
+          - external_key_reference_details
+          - is_auto_rotation_enabled
+          - is_primary
+          - key_shape
+          - lifecycle_state
+          - protection_mode
+          - replica_details
+          - restored_from_key_id
+          - current_key_version
+          - defined_tags
+          - freeform_tags
+        primary_keys:
+          - id
+
+      - table_name: vault_key_versions
+        columns:
+          - compartment_id
+          - external_key_reference_details
+          - id
+          - is_auto_rotated
+          - is_primary
+          - key_id
+          - lifecycle_state
+          - origin
+          - public_key
+          - replica_details
+          - restored_from_key_version_id
+          - time_created
+          - time_of_deletion
+          - vault_id
+        primary_keys:
+          - id
+
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/key_management/client/oci.key_management.KmsHsmClusterClient.html#oci.key_management.KmsHsmClusterClient
+      - table_name: vault_hsm_cluster
+        columns:
+          - compartment_id
+          - id
+          - display_name
+          - dns_name
+          - lifecycle_state
+          - defined_tags
+          - freeform_tags
+        primary_keys:
+          - id
+
+      # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/vault/client/oci.vault.VaultsClient.html#oci.vault.VaultsClient
+      - table_name: vault_secret
+        columns:
+          - compartment_id
+          - vault_id
+          - id
+          - current_version_number
+          - description
+          - is_auto_generation_enabled
+          - is_replica
+          - key_id
+          - last_rotation_time
+          - lifecycle_state
+          - metadata
+          - next_rotation_time
+          - replication_config
+          - rotation_config
+          - rotation_status
+          - secret_generation_context
+          - secret_name
+          - secret_rules
+        primary_keys:
+          - id
+
+      - table_name: vault_secret_versions
+        columns:
+          - content_type
+          - is_content_auto_generated
+          - name
+          - secret_id
+          - stages
+          - time_created
+          - time_of_current_version_expiry
+          - time_of_deletion
+          - version_number
+        primary_keys:
+          - secret_id
+          - version_number
+
+    # https://docs.oracle.com/en-us/iaas/tools/python/latest/api/secrets/client/oci.secrets.SecretsClient.html#oci.secrets.SecretsClient
+      - table_name: vault_secret_bundle
+        columns:
+          - metadata
+          - secret_bundle_content
+          - secret_id
+          - stages
+          - version_name
+          - version_number
+        primary_keys:
+          - secret_id
+          - version_number
+
+      - table_name: identity_policies
+        columns:
+          - compartment_id
+          - description
+          - id
+          - inactive_status
+          - lifecycle_state
+          - name
+          - statements
+          - time_created
+          - version_date
+          - defined_tags
+          - freeform_tags
+        primary_keys:
+          - id
+      - table_name: opengraph_edges
+        columns:
+          - source_id
+          - edge_type
+          - destination_id
+          - edge_properties
+        primary_keys:
+          - source_id
+          - edge_type
+          - destination_id
+      - table_name: opengraph_nodes
+        columns:
+          - node_type
+          - node_id
+          - node_properties
+        primary_keys:
+          - node_type
+          - node_id

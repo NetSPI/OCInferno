@@ -1,0 +1,1 @@
+Identity domain user alice is a member of group BlueTeam

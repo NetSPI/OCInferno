@@ -1,0 +1,1 @@
+Allow any-user to {SUBNET_ATTACH, SUBNET_READ} subnets in compartment RootTeam where request.user.id = 'ocid1.user.oc1..alice'

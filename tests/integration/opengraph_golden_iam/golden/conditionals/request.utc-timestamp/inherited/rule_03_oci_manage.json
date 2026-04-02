@@ -1,0 +1,214 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "ocid1.group.oc1..securityadmins"
+        },
+        "kind": "OCI_SPECIFIC_RESOURCE",
+        "properties": {
+          "description": "Scope expansion to principals.",
+          "edge_category": "RESOURCE",
+          "resource_family": false,
+          "resource_used": true
+        },
+        "start": {
+          "value": "groups@ocid1.compartment.oc1..root"
+        }
+      },
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage groups in compartment RootTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
+          "value": "groups@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing groups (can enable privilege changes by controlling group membership / lifecycle).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage groups in compartment RootTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage:0"
+        }
+      },
+      {
+        "end": {
+          "value": "groups@ocid1.compartment.oc1..dev"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing groups (can enable privilege changes by controlling group membership / lifecycle).",
+          "edge_category": "PERMISSION",
+          "has_direct": false,
+          "has_impossible_conditionals": false,
+          "has_inherited": true,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage groups in compartment RootTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage:0"
+        }
+      },
+      {
+        "end": {
+          "value": "groups@ocid1.compartment.oc1..root"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing groups (can enable privilege changes by controlling group membership / lifecycle).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage groups in compartment RootTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.group.oc1..securityadmins",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "SecurityAdmins",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "name": "CondInherited_request.utc-timestamp_03_OCI_MANAGE:Statement_1@root-team",
+          "policy_id": "ocid1.policy.oc1..cond_inherited_request.utc-timestamp_03_oci_manage",
+          "policy_name": "CondInherited_request.utc-timestamp_03_OCI_MANAGE",
+          "raw_statement": "Allow group SecurityAdmins to manage groups in compartment RootTeam where request.utc-timestamp before '2099-01-01T00:00:00Z'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "groups@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "groups@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "groups@ocid1.compartment.oc1..dev",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..dev",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..dev",
+          "name": "groups@dev-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "groups@ocid1.compartment.oc1..root",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..root",
+          "name": "groups@root-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}
