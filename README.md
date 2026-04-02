@@ -117,10 +117,6 @@ modules run enum_all --get --comp [--not-downloads buckets]
 
 ```
 
-If you want to validate the SVG creation:
-
-- SVG builder/writer: `ocinferno/core/utils/module_helpers.py` (`export_compartment_tree_image`, `_render_compartment_tree_svg`). Note it is a standard SVG with some dynamic elements, and the SVG root includes `xmlns="http://www.w3.org/2000/svg"` for SVG parsing.
-
 <p align="center" style="margin: 0.35em 0 0 0;">
   <img src="./images/COMP_HIERARCHY_1.png" alt="Compartment Tree Export" />
 </p>
@@ -249,6 +245,8 @@ Then rerun `enum_oracle_cloud_hound_data` and update tests/golden outputs if beh
 | `pandas>=2.2.0` | Data export | Excel export pipeline. |
 | `xlsxwriter>=3.2.0` | Data export | `.xlsx` writer engine for exports. |
 | `pytest>=8.0`* | Unit tests | Test framework (`tests/unit`). |
+
+SVG creation for `data export treeimage` can be found in `ocinferno/core/utils/module_helpers.py` (`export_compartment_tree_image`, `_render_compartment_tree_svg`). Note it is a standard SVG with some dynamic elements, and the SVG root includes `xmlns="http://www.w3.org/2000/svg"` for SVG parsing.
 
 *Dev/test-scoped dependency.
 
