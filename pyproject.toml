@@ -49,3 +49,4 @@ namespaces = true
 
 [tool.setuptools.package-data]
 "ocinferno.mappings" = ["*.json", "*.yaml"]
+"ocinferno.modules.opengraph.utilities.helpers" = ["data/*.json"]
