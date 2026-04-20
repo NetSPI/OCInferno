@@ -1,5 +1,5 @@
 PyYAML==6.0.3 
-oci==2.170.0
+oci==2.171.0
 requests==2.33.1
 prettytable==3.17.0
 oci-lexer-parser==0.1.2
