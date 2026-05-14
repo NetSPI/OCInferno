@@ -16,7 +16,7 @@ authors = [
 dependencies = [
   "PyYAML==6.0.3",
   "oci==2.173.1",
-  "requests==2.33.1",
+  "requests==2.34.1",
   "prettytable==3.17.0",
   "oci-lexer-parser==0.1.2",
   "pandas==2.3.3; python_version < '3.11'",
