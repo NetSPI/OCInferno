@@ -1,7 +1,7 @@
 PyYAML==6.0.3 
 oci==2.181.1
 requests==2.34.2
-prettytable==3.17.0
+prettytable==3.18.0
 oci-lexer-parser==0.1.2
 # Excel export stack per pandas docs:
 # https://pandas.pydata.org/docs/getting_started/install.html#excel-files
