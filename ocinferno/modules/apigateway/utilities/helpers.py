@@ -30,7 +30,7 @@ _PATH_PARAM_RE = re.compile(r"\{([^}]+)\}")
 def build_apigateway_client(session, client_cls, service_name: str = "API Gateway", region: Optional[str] = None):
     """Initialize one API Gateway client with shared signer/proxy/session behavior."""
     client = _init_client(client_cls, session=session, service_name=service_name)
-    target_region = region or getattr(session, "region", None)
+    target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
     if target_region:
         try:
             client.base_client.set_region(target_region)

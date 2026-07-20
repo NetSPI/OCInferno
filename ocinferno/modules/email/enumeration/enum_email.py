@@ -138,16 +138,22 @@ def run_module(user_args, session) -> Dict[str, Any]:
         results["return_paths"] = len(return_paths)
 
     if selected["suppressions"]:
-        try:
-            suppressions = suppressions_resource.list(compartment_id=comp_id)
-        except Exception as e:
-            UtilityTools.dlog(True, "list_suppressions failed", err=f"{type(e).__name__}: {e}")
+        tenant_id = getattr(session, "tenant_id", None)
+        if tenant_id and comp_id != tenant_id:
+            print(f"{UtilityTools.YELLOW}[-] suppressions: skipped "
+                  f"(tenancy-root-only resource; this compartment isn't the tenancy root).{UtilityTools.RESET}")
             suppressions = []
-        for row in suppressions:
-            if isinstance(row, dict):
-                row.setdefault("compartment_id", comp_id)
-        UtilityTools.print_limited_table(suppressions, suppressions_resource.COLUMNS)
-        suppressions_resource.save(suppressions)
+        else:
+            try:
+                suppressions = suppressions_resource.list(compartment_id=comp_id)
+            except Exception as e:
+                UtilityTools.dlog(True, "list_suppressions failed", err=f"{type(e).__name__}: {e}")
+                suppressions = []
+            for row in suppressions:
+                if isinstance(row, dict):
+                    row.setdefault("compartment_id", comp_id)
+            UtilityTools.print_limited_table(suppressions, suppressions_resource.COLUMNS)
+            suppressions_resource.save(suppressions)
         results["suppressions"] = len(suppressions)
 
     if selected["email_configuration"]:

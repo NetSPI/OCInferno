@@ -33,7 +33,7 @@ class ArtifactRegistryArtifactsResource(ResourceBase):
             session=session,
             service_name="GenericArtifactsContent",
         )
-        target_region = region or getattr(session, "region", None)
+        target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
         if target_region:
             for client in (self.client, self.content_client):
                 try:

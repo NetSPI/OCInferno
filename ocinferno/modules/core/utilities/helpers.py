@@ -456,44 +456,20 @@ class ComputeInstanceAgentResourceClient:
             oci.compute_instance_agent.ComputeInstanceAgentClient,
             session=session,
             service_name="Compute Instance Agent",
+            region=region,
         )
         self.plugin_client = _init_client(
             oci.compute_instance_agent.PluginClient,
             session=session,
             service_name="Compute Instance Agent Plugin",
+            region=region,
         )
         self.pluginconfig_client = _init_client(
             oci.compute_instance_agent.PluginconfigClient,
             session=session,
             service_name="Compute Instance Agent PluginConfig",
+            region=region,
         )
-
-        if region:
-            try:
-                self.client.base_client.set_region(region)
-            except Exception:
-                pass
-            try:
-                self.plugin_client.base_client.set_region(region)
-            except Exception:
-                pass
-            try:
-                self.pluginconfig_client.base_client.set_region(region)
-            except Exception:
-                pass
-        elif getattr(session, "region", None):
-            try:
-                self.client.base_client.set_region(session.region)
-            except Exception:
-                pass
-            try:
-                self.plugin_client.base_client.set_region(session.region)
-            except Exception:
-                pass
-            try:
-                self.pluginconfig_client.base_client.set_region(session.region)
-            except Exception:
-                pass
 
     @staticmethod
     def _as_dict(value: Any) -> Dict[str, Any]:

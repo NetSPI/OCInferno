@@ -232,7 +232,7 @@ def run_module(user_args, session):
                     namespace = str(row.get("namespace") or "").strip()
                     bucket_name = str(row.get("bucket_name") or "").strip()
                     object_name = str(row.get("name") or "").strip()
-                    region = str(row.get("region") or getattr(session, "region", "") or "").strip()
+                    region = str(row.get("region") or getattr(session, "config_current_default_region", "") or getattr(session, "region", "") or "").strip()
                     if not namespace or not bucket_name or not object_name:
                         continue
 

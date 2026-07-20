@@ -17,7 +17,7 @@ def build_email_clients(session, region: Optional[str] = None) -> Tuple[Any, Any
         service_name="EmailDeliveryDataPlane",
     )
 
-    target_region = region or getattr(session, "region", None)
+    target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
     if target_region:
         for client in (email_client, dp_client):
             try:

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from ocinferno.core.utils.enum_framework import Component, run_components
+from ocinferno.core.utils.enum_framework import Component, run_components, tenancy_root_list_fn
 from ocinferno.modules.governance_rules.utilities.helpers import (
     GovernanceRulesRulesResource,
     GovernanceRulesTenancyAttachmentsResource,
 )
 
 COMPONENTS = [
-    Component("rules", GovernanceRulesRulesResource, help_text="Enumerate governance rules", cache_table="governance_rules_rules"),
-    Component("tenancy_attachments", GovernanceRulesTenancyAttachmentsResource, help_text="Enumerate tenancy attachments", cache_table="governance_rules_tenancy_attachments"),
+    Component("rules", GovernanceRulesRulesResource, help_text="Enumerate governance rules", cache_table="governance_rules_rules",
+              list_fn=tenancy_root_list_fn),
+    Component("tenancy_attachments", GovernanceRulesTenancyAttachmentsResource, help_text="Enumerate tenancy attachments", cache_table="governance_rules_tenancy_attachments",
+              list_fn=tenancy_root_list_fn),
 ]
 
 

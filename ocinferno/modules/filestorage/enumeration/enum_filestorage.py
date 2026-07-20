@@ -66,7 +66,7 @@ def run_module(user_args, session):
     if not compartment_id:
         raise ValueError("session.compartment_id is not set. Select a compartment in the module runner.")
 
-    region = (getattr(session, "region", "") or "").strip()
+    region = (getattr(session, "config_current_default_region", "") or getattr(session, "region", "") or "").strip()
 
     fs_resource = FileStorageFileSystemsResource(session=session)
     mt_resource = FileStorageMountTargetsResource(session=session)

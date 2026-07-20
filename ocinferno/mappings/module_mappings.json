@@ -362,6 +362,14 @@
       "service": "LoadBalancer"
     },
     {
+      "module_name": "enum_network_load_balancers",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Network Load Balancers (L3/L4 NLBs)",
+      "author": "OCInferno",
+      "location": "ocinferno.modules.networkloadbalancer.enumeration.enum_network_load_balancers",
+      "service": "NetworkLoadBalancer"
+    },
+    {
       "module_name": "enum_mysql",
       "module_category": "Enumeration",
       "info_blurb": "Enumerate MySQL HeatWave DB systems in a compartment",

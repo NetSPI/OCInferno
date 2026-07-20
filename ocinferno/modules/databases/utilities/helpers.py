@@ -25,7 +25,7 @@ def build_database_client(session, service: str, region: Optional[str] = None):
     }
     client_cls, service_name = service_map[service]
     client = _init_client(client_cls, session=session, service_name=service_name)
-    target_region = region or getattr(session, "region", None)
+    target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
     if target_region:
         try:
             client.base_client.set_region(target_region)

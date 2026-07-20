@@ -20,7 +20,7 @@ def build_vault_client(session, client_cls, service_name: str, region: Optional[
     if endpoint:
         kwargs["service_endpoint"] = endpoint
     client = _init_client(client_cls, session=session, service_name=service_name, **kwargs)
-    target_region = region or getattr(session, "region", None)
+    target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
     if target_region and not endpoint:
         try:
             client.base_client.set_region(target_region)
@@ -55,7 +55,7 @@ class VaultVaultsResource(ResourceBase):
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
-        self.region = region or getattr(session, "region", None)
+        self.region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
         self.compartment_id = (
             getattr(session, "compartment_id", None)
             or getattr(session, "tenancy_id", None)
@@ -95,7 +95,7 @@ class VaultKeysResource(ResourceBase):
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
-        self.region = region or getattr(session, "region", None)
+        self.region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
         self.compartment_id = (
             getattr(session, "compartment_id", None)
             or getattr(session, "tenancy_id", None)
@@ -278,7 +278,7 @@ class VaultSecretsResource(ResourceBase):
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
-        self.region = region or getattr(session, "region", None)
+        self.region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
         self.compartment_id = (
             getattr(session, "compartment_id", None)
             or getattr(session, "tenancy_id", None)

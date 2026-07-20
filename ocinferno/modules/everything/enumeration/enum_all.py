@@ -1259,43 +1259,59 @@ def _run_execution_plan(
     if multi_region:
         print(f"{UtilityTools.YELLOW}[!] Multi-region: enumerating {len(regions)} region(s) "
               f"({', '.join(str(r) for r in regions)}); peak API calls scale by #regions.{UtilityTools.RESET}")
+
+    def _run_target(cid: str, region: Optional[str], plan: List[Tuple[str, bool, List[str]]]) -> None:
+        module_names = [m for _n, run, mods in plan if run for m in mods]
+        if not module_names:
+            return
+        label = f"{cid}@{region}" if region else cid
+        UtilityTools._log_action("module", f"START enum_all target {label}", "N/A")
+        old_cid = getattr(session, "compartment_id", None)
+        old_region = getattr(session, "config_current_default_region", None)
+        total = len(module_names)
+        done = 0
+        try:
+            session.compartment_id = cid
+            if region:
+                session.config_current_default_region = region
+            for svc_name, should_run, modules in plan:
+                if not should_run:
+                    continue
+                UtilityTools.dlog(debug, "enum_all: running service group", service=svc_name, compartment_id=cid, region=region)
+                for module_name in modules:
+                    done += 1
+                    print(f"{UtilityTools.BRIGHT_CYAN}[*] ({done}/{total}) Running {module_name} for {UtilityTools.condense_ocid(cid)}"
+                          f"{(' @ ' + region) if region else ''}{UtilityTools.RESET}")
+                    _run_other_module(
+                        session,
+                        _module_args_for_target(
+                            args,
+                            module_name,
+                            cid,
+                            debug=debug,
+                            download_all=download_all,
+                            module_download_extras=module_download_extras,
+                        ),
+                        module_name,
+                    )
+        finally:
+            session.compartment_id = old_cid
+            if region:
+                session.config_current_default_region = old_region
+            UtilityTools._log_action("module", f"END enum_all target {label}", "N/A")
+
+    global_plan = [spec for spec in execution_plan if spec[0] in _GLOBAL_SERVICE_NAMES]
+    regional_plan = [spec for spec in execution_plan if spec[0] not in _GLOBAL_SERVICE_NAMES]
+
+    # Global (tenancy-wide) services: once per compartment target, in the home region only --
+    # no region dimension, so multi-region fan-out never revisits them.
+    for cid in final_targets:
+        _run_target(cid, home, global_plan)
+
+    # Regional services: every (region, compartment) pair.
     for region in regions:
         for cid in final_targets:
-            label = f"{cid}@{region}" if region else cid
-            UtilityTools._log_action("module", f"START enum_all target {label}", "N/A")
-            old_cid = getattr(session, "compartment_id", None)
-            old_region = getattr(session, "config_current_default_region", None)
-            try:
-                session.compartment_id = cid
-                if region:
-                    session.config_current_default_region = region
-                for svc_name, should_run, modules in execution_plan:
-                    if not should_run:
-                        continue
-                    # Global services run once, in the home region only.
-                    if svc_name in _GLOBAL_SERVICE_NAMES and multi_region and region != home:
-                        continue
-                    UtilityTools.dlog(debug, "enum_all: running service group", service=svc_name, compartment_id=cid, region=region)
-                    for module_name in modules:
-                        print(f"{UtilityTools.BRIGHT_CYAN}[*] Running {module_name} for {UtilityTools.condense_ocid(cid)}"
-                              f"{(' @ ' + region) if region else ''}{UtilityTools.RESET}")
-                        _run_other_module(
-                            session,
-                            _module_args_for_target(
-                                args,
-                                module_name,
-                                cid,
-                                debug=debug,
-                                download_all=download_all,
-                                module_download_extras=module_download_extras,
-                            ),
-                            module_name,
-                        )
-            finally:
-                session.compartment_id = old_cid
-                if region:
-                    session.config_current_default_region = old_region
-                UtilityTools._log_action("module", f"END enum_all target {label}", "N/A")
+            _run_target(cid, region, regional_plan)
 
 
 def _run_once_modules(session, args: argparse.Namespace, *, run_config_check: bool, run_opengraph: bool) -> None:

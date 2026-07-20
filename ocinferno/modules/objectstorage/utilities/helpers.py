@@ -43,7 +43,7 @@ def normalize_sse_c_key(sse_c_key_b64: Union[str, bytes, Path]) -> tuple:
 def build_object_storage_client(session, region: Optional[str] = None):
     """Initialize an Object Storage client with shared signer/proxy/session behavior."""
     client = _init_client(oci.object_storage.ObjectStorageClient, session=session, service_name="ObjectStorage")
-    target_region = region or getattr(session, "region", None)
+    target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
     if target_region:
         try:
             client.base_client.set_region(target_region)
@@ -392,10 +392,13 @@ class ObjectStorageObjectsResource:
         table_name: str = "object_storage_buckets",
         namespace: Optional[str] = None,
         compartment_id: Optional[str] = None,
+        region: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         where = {}
         if compartment_id:
             where["compartment_id"] = compartment_id
+        if region:
+            where["region"] = region
         rows = session.get_resource_fields(table_name, where_conditions=where or None) or []
 
         ns = _s(namespace)
@@ -419,7 +422,7 @@ class ObjectStorageObjectsResource:
             if not namespace_names:
                 raise ValueError("When --buckets is provided, --namespaces is also required.")
             out: List[Dict[str, Any]] = []
-            region = (getattr(self.session, "region", "") or "").strip()
+            region = (getattr(self.session, "config_current_default_region", "") or getattr(self.session, "region", "") or "").strip()
             for namespace in namespace_names:
                 for bucket in bucket_names:
                     out.append(
@@ -432,9 +435,11 @@ class ObjectStorageObjectsResource:
                     )
             return out
 
+        region = (getattr(self.session, "config_current_default_region", "") or getattr(self.session, "region", "") or "").strip()
         db_rows = self.get_buckets_from_db(
             self.session,
             compartment_id=compartment_id,
+            region=region or None,
         )
         if db_rows:
             return db_rows
@@ -450,7 +455,7 @@ class ObjectStorageObjectsResource:
                 namespace_names = [live_ns] if live_ns else []
 
         out: List[Dict[str, Any]] = []
-        region = (getattr(self.session, "region", "") or "").strip()
+        region = (getattr(self.session, "config_current_default_region", "") or getattr(self.session, "region", "") or "").strip()
         for namespace in namespace_names:
             try:
                 resp = oci.pagination.list_call_get_all_results(
@@ -519,7 +524,7 @@ class ObjectStorageObjectsResource:
             if not namespace or not bucket_name:
                 continue
 
-            region = _s(bucket_row.get("region")) or _s(getattr(self.session, "region", ""))
+            region = _s(bucket_row.get("region")) or _s(getattr(self.session, "config_current_default_region", "")) or _s(getattr(self.session, "region", ""))
             region_client = build_object_storage_client(self.session, region=region)
 
             start = None

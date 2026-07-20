@@ -1319,6 +1319,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             new_data=row_details,
             override=override,
         )
+        self.global_compartment_list = self.get_all_compartment_ids(self.workspace_id)
 
     def get_all_compartment_ids(self, workspace_id: int) -> List[Dict[str, Any]]:
         return self.data_master.fetch_column_from_table(

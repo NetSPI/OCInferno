@@ -559,7 +559,7 @@ class ServiceEnumOpsBase:
     def _set_client_region(self, client: Any, region: Optional[str] = None) -> None:
         if not client:
             return
-        target = region or getattr(self.session, "region", None)
+        target = region or getattr(self.session, "config_current_default_region", None) or getattr(self.session, "region", None)
         if not target:
             return
         try:

@@ -27,6 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Sequence
 
+from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.service_runtime import (
     SOFT_SKIP_STATUSES,
     append_cached_component_counts,
@@ -160,6 +161,22 @@ def nested_list_fn(
         return _inner
 
     return _make
+
+
+def tenancy_root_list_fn(session, args, resource):
+    """``list_fn`` for a component whose SDK list call rejects any compartment_id
+    other than the tenancy root (some OCI services enforce this server-side even
+    though the SDK's own docstring doesn't say so). Runs once, only when the current
+    scan target IS the tenancy root; skips (rather than re-querying the same root
+    data) for every other compartment in a --comp sweep."""
+    def _inner(compartment_id):
+        root = getattr(session, "tenant_id", None)
+        if root and compartment_id != root:
+            print(f"{UtilityTools.YELLOW}[-] {resource.TABLE_NAME}: skipped "
+                  f"(tenancy-root-only resource; this compartment isn't the tenancy root).{UtilityTools.RESET}")
+            return []
+        return resource.list(compartment_id=root or compartment_id) or []
+    return _inner
 
 
 def run_components(

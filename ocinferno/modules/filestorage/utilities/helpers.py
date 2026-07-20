@@ -22,7 +22,7 @@ def build_file_storage_clients(session, region: Optional[str] = None):
         service_name="Identity",
     )
 
-    target_region = region or getattr(session, "region", None)
+    target_region = region or getattr(session, "config_current_default_region", None) or getattr(session, "region", None)
     if target_region:
         for client in (fs_client, id_client):
             try:

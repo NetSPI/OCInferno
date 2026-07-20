@@ -180,8 +180,7 @@ def run_module(user_args, session):
                     secret_ids = dedupe_strs([s.get("id") for s in secrets if isinstance(s.get("id"), str)])
         elif not secret_ids and not (do_dump and args.secret_name):
             if do_dump:
-                print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Can't download due to missing vault scope for secrets.{UtilityTools.RESET}")
-                print(f"{UtilityTools.BRIGHT_BLACK}    Provide --vault-id, run enum_vault --vaults, or provide --secret-id.{UtilityTools.RESET}")
+                print(f"{UtilityTools.YELLOW}[-] secrets: skipped (no vault known in this compartment to download from).{UtilityTools.RESET}")
             else:
                 print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Secrets listing requires vault scope.{UtilityTools.RESET}")
                 print(f"{UtilityTools.BRIGHT_BLACK}    Provide --vault-id, run enum_vault --vaults, or provide --secret-id.{UtilityTools.RESET}")
