@@ -28,8 +28,8 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
-  "ruff==0.15.21",
-  "mypy==2.2.0"
+  "ruff==0.15.22",
+  "mypy==2.3.0"
 ]
 excel = [
   "pandas==2.3.3; python_version < '3.11'",
@@ -38,7 +38,7 @@ excel = [
 ]
 # Prettier boxed tables. Optional: without it, output falls back to a plain ASCII table.
 table = [
-  "prettytable==3.17.0"
+  "prettytable==3.18.0"
 ]
 
 [project.scripts]
