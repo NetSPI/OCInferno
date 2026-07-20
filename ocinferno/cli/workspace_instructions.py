@@ -95,7 +95,7 @@ OCInferno Commands:
           api_logging_file_path          (path; defaults to ./ocinferno_output/<slug>/tool_logs/telemetry_api.log)
           api_logging_verbosity          (basic|standard|verbose; default standard)
           api_logging_attributes         (comma list; e.g. "ts,url,method,status,args,duration_ms")
-          std_output_format              (table|txt; default table)
+          std_output_format              (table|txt; default txt)
           note: unknown default regions are allowed with warning (for dedicated/private realms)
 
     help / ?                                      Show this help banner
@@ -1383,7 +1383,7 @@ class CommandProcessor:
             else:
                 print(f"[*] Query returned {total} row(s).")
             if display_rows:
-                UtilityTools.print_limited_table(display_rows, columns, sort_key=None)
+                UtilityTools.print_limited_table(display_rows, columns, sort_key=None, auto_title=False)
             else:
                 print("[*] No rows.")
 

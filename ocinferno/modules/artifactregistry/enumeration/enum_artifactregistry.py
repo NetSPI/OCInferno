@@ -55,6 +55,7 @@ def _parse_args(user_args):
 
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
+    debug = bool(getattr(session, "individual_run_debug", False) or getattr(session, "debug", False))
     compartment_id = getattr(session, "compartment_id", None)
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
@@ -102,16 +103,33 @@ def run_module(user_args, session):
 
             rows = unique_rows_by_id(rows)
 
+            # --get enrichment is best-effort on top of an already-successful list: a
+            # permission gap on the per-artifact GET specifically must not discard the
+            # rows already fetched.
+            get_failed = 0
             if args.get:
                 for row in rows:
                     artifact_id = row.get("id")
                     if not artifact_id:
                         continue
-                    meta = artifacts_resource.get(resource_id=artifact_id) or {}
+                    try:
+                        meta = artifacts_resource.get(resource_id=artifact_id) or {}
+                    except Exception as get_err:
+                        get_failed += 1
+                        UtilityTools.dlog(
+                            debug,
+                            "get artifact failed for one row (non-fatal; row kept from list)",
+                            id=artifact_id, err=f"{type(get_err).__name__}: {get_err}",
+                        )
+                        continue
                     fill_missing_fields(row, meta)
+            if get_failed:
+                print(f"{UtilityTools.YELLOW}[-] enum_artifactregistry.artifacts: --get enrichment failed for "
+                      f"{get_failed}/{len(rows)} row(s) (kept the listed rows; likely a permission gap on the "
+                      f"GET operation specifically).{UtilityTools.RESET}")
 
             if rows:
-                UtilityTools.print_limited_table(rows, artifacts_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, artifacts_resource.COLUMNS, title="Artifactregistry - Artifacts")
 
             downloaded = 0
             failed = 0

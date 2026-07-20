@@ -154,6 +154,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                             "user_data_path",
                             "additional_metadata_path",
                         ],
+                        title="Core Compute - Instance Metadata Downloads",
                     )
                 summary["instance_metadata_download_files"] = metadata_download_files
 
@@ -267,6 +268,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             UtilityTools.print_limited_table(
                 rows,
                 ["id", "display_name", "lifecycle_state", "shape", "availability_domain"],
+                title="Core Compute - Instances",
             )
 
             ops.save(rows)
@@ -311,6 +313,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             UtilityTools.print_limited_table(
                 rows,
                 ["id", "display_name", "lifecycle_state", "operating_system", "operating_system_version"],
+                title="Core Compute - Images",
             )
             save_rows(session, img_ops.TABLE_NAME, rows)
 
@@ -351,7 +354,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     fill_missing_fields(r, meta)
 
         if rows:
-            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"])
+            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"], title="Core Compute - Instance Configurations")
             save_rows(session, ic_ops.TABLE_NAME, rows)
         summary["instance_configs"] = len(rows)
     else:
@@ -384,7 +387,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     fill_missing_fields(r, meta)
 
         if rows:
-            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "size", "instance_configuration_id"])
+            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "size", "instance_configuration_id"], title="Core Compute - Instance Pools")
             save_rows(session, ip_ops.TABLE_NAME, rows)
         summary["instance_pools"] = len(rows)
     else:
@@ -417,7 +420,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     fill_missing_fields(r, meta)
 
         if rows:
-            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"])
+            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"], title="Core Compute - Cluster Networks")
             save_rows(session, cn_ops.TABLE_NAME, rows)
         summary["cluster_networks"] = len(rows)
     else:
@@ -450,7 +453,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     fill_missing_fields(r, meta)
 
         if rows:
-            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"])
+            UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"], title="Core Compute - Compute Clusters")
             save_rows(session, cc_ops.TABLE_NAME, rows)
         summary["compute_clusters"] = len(rows)
     else:
@@ -569,6 +572,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     "delivery_state",
                     "time_created",
                 ],
+                title="Core Compute - Instance Agent Commands",
             )
             save_rows(session, ia_ops.TABLE_COMMANDS, command_rows)
             if args.get or args.download:
@@ -766,6 +770,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     "exit_code",
                     "time_updated",
                 ],
+                title="Core Compute - Instance Agent Command Executions",
             )
             save_rows(session, ia_ops.TABLE_EXECUTIONS, execution_rows)
         else:
@@ -790,6 +795,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             UtilityTools.print_limited_table(
                 merged_files.get("download_rows") or [],
                 ["instance_id", "command_count", "file_path"],
+                title="Core Compute - Instance Agent Merged Command Downloads",
             )
         instance_agent_download_files += int(merged_files.get("files_written") or 0)
         summary["instance_agent_merged_command_records"] = int(merged_files.get("merged_record_count") or 0)
@@ -864,6 +870,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             UtilityTools.print_limited_table(
                 plugin_rows,
                 ["instance_name", "instance_id", "name", "status", "desired_state", "time_last_update_utc"],
+                title="Core Compute - Instance Agent Plugins",
             )
             save_rows(session, ia_ops.TABLE_PLUGINS, plugin_rows)
         else:

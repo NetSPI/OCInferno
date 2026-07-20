@@ -159,7 +159,7 @@ def run_module(user_args, session):
                         fill_missing_fields(row, meta)
 
                 if rows:
-                    UtilityTools.print_limited_table(rows, cfg_ver_resource.COLUMNS)
+                    UtilityTools.print_limited_table(rows, cfg_ver_resource.COLUMNS, title="Managedkafka - Cluster Config Versions")
 
                 cfg_ver_resource.save(rows)
 

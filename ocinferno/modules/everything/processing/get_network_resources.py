@@ -134,6 +134,10 @@ def _print_report(records, summary) -> None:
              "source_table": r["source_table"], "column": r["column_name"], "compartment_id": r["compartment_id"]}
             for r in subset
         ]
-        UtilityTools.print_limited_table(rows, ["value", "resource", "source_table", "column", "compartment_id"])
+        UtilityTools.print_limited_table(
+            rows,
+            ["value", "resource", "source_table", "column", "compartment_id"],
+            title=f"Network Resources - {kind.replace('_', ' ').title()}",
+        )
     distinct_counts = ", ".join(f"{k}={summary.get(f'{k}_distinct', 0)}" for k in ni.ALL_KINDS)
     print(f"\n{UtilityTools.GREEN}[+] Network inventory (distinct): {distinct_counts}{UtilityTools.RESET}")

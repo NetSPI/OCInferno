@@ -119,7 +119,7 @@ def run_module(user_args, session):
                     fill_missing_fields(pool, meta)
 
             if pools:
-                UtilityTools.print_limited_table(pools, vnp_resource.COLUMNS)
+                UtilityTools.print_limited_table(pools, vnp_resource.COLUMNS, title="Kubernetes - Virtual Node Pools")
 
             vnp_resource.save(pools)
 
@@ -140,7 +140,7 @@ def run_module(user_args, session):
                         nodes_rows.append(node)
 
                 if nodes_rows:
-                    UtilityTools.print_limited_table(nodes_rows, vnp_resource.NODE_COLUMNS)
+                    UtilityTools.print_limited_table(nodes_rows, vnp_resource.NODE_COLUMNS, title="Kubernetes - Virtual Nodes")
 
                 if args.save_nodes and nodes_rows:
                     vnp_resource.save_nodes(nodes_rows)

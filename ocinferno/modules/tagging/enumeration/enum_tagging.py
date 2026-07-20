@@ -104,7 +104,7 @@ def run_module(user_args, session):
                     out_rows.append(row)
 
             if out_rows:
-                UtilityTools.print_limited_table(out_rows, definitions_resource.COLUMNS)
+                UtilityTools.print_limited_table(out_rows, definitions_resource.COLUMNS, title="Tagging - Definitions")
 
             definitions_resource.save(out_rows)
 

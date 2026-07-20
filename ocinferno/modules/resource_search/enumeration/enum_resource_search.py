@@ -56,7 +56,7 @@ def run_module(user_args, session):
     by_type = Counter(str(r.get("resource_type") or "?") for r in rows)
     print(f"[*] Resource Search inventory: {len(rows)} resources across {len(by_type)} type(s).")
     if rows:
-        UtilityTools.print_limited_table(rows, resource.COLUMNS)
+        UtilityTools.print_limited_table(rows, resource.COLUMNS, title="Resource Search - Inventory")
 
     resource.save(rows)
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import importlib.util
+import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -1043,6 +1044,11 @@ def _build_execution_plan(service_run_flags: Dict[str, bool], *, debug: bool = F
         modules = [str(m).strip() for m in (spec.get("modules") or []) if str(m).strip()]
         execution_plan.append((service_name, service_run_flags.get(service_name, False), modules))
 
+    # Dispatch order: tenancy-scoped services (compartments/identity) first, then
+    # everything else alphabetically -- sorted here rather than hand-ordered in
+    # SERVICE_GROUP_SPECS so new services stay in place without manual reinsertion.
+    execution_plan.sort(key=lambda spec: (spec[0] not in _GLOBAL_SERVICE_NAMES, spec[0]))
+
     return execution_plan
 
 
@@ -1207,12 +1213,26 @@ def _run_execution_plan_parallel(
     print(f"{UtilityTools.BRIGHT_CYAN}[*] Running {len(units)} {scope_word} unit(s) across {threads} worker(s).{UtilityTools.RESET}")
     print(f"{UtilityTools.YELLOW}[!] Interrupt-safe: one Ctrl+C stops the pool; resume with  enum_all --parallel-services {threads} --resume {run_id}{UtilityTools.RESET}")
 
+    # Per-(region, compartment) (done/total) counter, mirroring the serial path's
+    # "(done/total) Running <module> for <compartment>" line -- workers interleave
+    # across compartments, so this is tracked per-target rather than as one global count.
+    target_totals: Dict[Tuple[str, str], int] = {}
+    for region, cid, _module_name in units:
+        target_totals[(region, cid)] = target_totals.get((region, cid), 0) + 1
+    target_progress: Dict[Tuple[str, str], int] = {}
+    progress_lock = threading.Lock()
+
     def _worker(unit: Tuple[str, str, str]):
         region, cid, module_name = unit
         if cancel_requested():
             return None
         scoped = CompartmentScopedSession(session, cid, region or None)
         where = f"{cid}@{region}" if region else cid
+        with progress_lock:
+            done = target_progress[(region, cid)] = target_progress.get((region, cid), 0) + 1
+        total_for_target = target_totals.get((region, cid), done)
+        print(f"{UtilityTools.BRIGHT_CYAN}[*] ({done}/{total_for_target}) Running {module_name} for {UtilityTools.condense_ocid(cid)}"
+              f"{(' @ ' + region) if region else ''}{UtilityTools.RESET}")
         UtilityTools._log_action("module", f"START enum_all {module_name} @ {where}", "N/A")
         _ledger_mark(session, run_id, region, cid, module_name, "running")
         try:
@@ -1355,6 +1375,7 @@ def _render_scan_summary(session, final_targets: List[str]) -> Tuple[List[Dict[s
             max_rows=max(50, len(tally_rows)),
             truncate=160,
             align="l",
+            auto_title=False,  # the print() above is already the section header
         )
         _print_compartment_tree(session, final_targets)
 
@@ -1376,6 +1397,7 @@ def _render_scan_summary(session, final_targets: List[str]) -> Tuple[List[Dict[s
             truncate=100,
             condense_ocids=False,
             align="l",
+            auto_title=False,  # the print() above is already the section header
         )
 
     return tally_rows, detailed_rows

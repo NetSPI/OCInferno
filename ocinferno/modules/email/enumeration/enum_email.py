@@ -66,7 +66,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
         for row in senders:
             if isinstance(row, dict):
                 row.setdefault("compartment_id", comp_id)
-        UtilityTools.print_limited_table(senders, senders_resource.COLUMNS)
+        UtilityTools.print_limited_table(senders, senders_resource.COLUMNS, title="Email - Senders")
         senders_resource.save(senders)
         results["senders"] = len(senders)
 
@@ -80,7 +80,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             if isinstance(row, dict):
                 row.setdefault("compartment_id", comp_id)
         if selected["domains"]:
-            UtilityTools.print_limited_table(domains, domains_resource.COLUMNS)
+            UtilityTools.print_limited_table(domains, domains_resource.COLUMNS, title="Email - Domains")
             domains_resource.save(domains)
         results["domains"] = len(domains)
 
@@ -100,7 +100,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     row.setdefault("compartment_id", comp_id)
                     row.setdefault("email_domain_id", domain_id)
             dkims.extend(rows)
-        UtilityTools.print_limited_table(dkims, dkims_resource.COLUMNS)
+        UtilityTools.print_limited_table(dkims, dkims_resource.COLUMNS, title="Email - DKIM Records")
         dkims_resource.save(dkims)
         results["dkims"] = len(dkims)
 
@@ -120,7 +120,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     row.setdefault("compartment_id", comp_id)
                     row.setdefault("email_domain_id", domain_id)
             spfs.extend(rows)
-        UtilityTools.print_limited_table(spfs, spfs_resource.COLUMNS)
+        UtilityTools.print_limited_table(spfs, spfs_resource.COLUMNS, title="Email - SPF Records")
         spfs_resource.save(spfs)
         results["spfs"] = len(spfs)
 
@@ -133,7 +133,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
         for row in return_paths:
             if isinstance(row, dict):
                 row.setdefault("compartment_id", comp_id)
-        UtilityTools.print_limited_table(return_paths, return_paths_resource.COLUMNS)
+        UtilityTools.print_limited_table(return_paths, return_paths_resource.COLUMNS, title="Email - Return Paths")
         return_paths_resource.save(return_paths)
         results["return_paths"] = len(return_paths)
 
@@ -152,7 +152,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             for row in suppressions:
                 if isinstance(row, dict):
                     row.setdefault("compartment_id", comp_id)
-            UtilityTools.print_limited_table(suppressions, suppressions_resource.COLUMNS)
+            UtilityTools.print_limited_table(suppressions, suppressions_resource.COLUMNS, title="Email - Suppression List")
             suppressions_resource.save(suppressions)
         results["suppressions"] = len(suppressions)
 
@@ -167,6 +167,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             UtilityTools.print_limited_table(
                 [cfg_row],
                 email_configuration_resource.COLUMNS,
+                title="Email - Configuration",
             )
             email_configuration_resource.save([cfg_row])
             results["email_configuration"] = 1

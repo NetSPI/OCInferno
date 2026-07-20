@@ -847,7 +847,7 @@ class IdentityResourceSuite(ResourceBase):
         if not rows:
             print("[*] None.")
             return
-        UtilityTools.print_limited_table(rows, columns, sort_key=None)
+        UtilityTools.print_limited_table(rows, columns, sort_key=None, title=f"Identityclient - {title.title()}")
 
     @staticmethod
     def _load_identity_domains_from_db(
@@ -919,7 +919,7 @@ class IdentityResourceSuite(ResourceBase):
             seen.add(dom_id)
             dom_name = domain_label_by_id.get(dom_id) or _s(dom_rows[0].get("identity_domain_name")) or dom_id
             print(f"\n[*] Identity Domain: {dom_name} ({dom_id})")
-            UtilityTools.print_limited_table(dom_rows, columns, sort_key=None)
+            UtilityTools.print_limited_table(dom_rows, columns, sort_key=None, title=f"Identityclient - {title.title()}")
 
         for dom_id, dom_rows in grouped.items():
             if dom_id in seen:
@@ -927,7 +927,7 @@ class IdentityResourceSuite(ResourceBase):
             dom_name = _s(dom_rows[0].get("identity_domain_name")) or dom_id or "<unknown>"
             suffix = f" ({dom_id})" if dom_id else ""
             print(f"\n[*] Identity Domain: {dom_name}{suffix}")
-            UtilityTools.print_limited_table(dom_rows, columns, sort_key=None)
+            UtilityTools.print_limited_table(dom_rows, columns, sort_key=None, title=f"Identityclient - {title.title()}")
 
     def _load_domains_from_cache(
         self,
@@ -1340,7 +1340,10 @@ class IdentityResourceSuite(ResourceBase):
             print("[*] No identity domains found.")
             return {"ok": True, "domains": 0, "saved": False}
 
-        UtilityTools.print_limited_table(normalized_domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            normalized_domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         if save:
             try:
@@ -1386,7 +1389,10 @@ class IdentityResourceSuite(ResourceBase):
             UtilityTools.dlog(debug, "enum_iam: list_policies failed", err=f"{type(e).__name__}: {e}")
             return {"ok": False, "iam": 0}
 
-        UtilityTools.print_limited_table(policies, ["id", "name", "lifecycle_state"], sort_key=None)
+        UtilityTools.print_limited_table(
+            policies, ["id", "name", "lifecycle_state"], sort_key=None,
+            title="Identityclient - Iam Policies",
+        )
         if save:
             try:
                 ops.save_policies(policies)
@@ -1710,7 +1716,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": False, "apps": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         total_apps = 0
         for dom in domains:
@@ -1747,7 +1756,10 @@ class IdentityResourceSuite(ResourceBase):
                     UtilityTools.dlog(self.debug, "enum_idd_apps: save_idd_apps failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
 
             print(f"\n[*] Apps for Domain: {dom_name or dom_id}")
-            UtilityTools.print_limited_table(apps, ["domain_ocid", "id", "display_name", "active"], sort_key="display_name")
+            UtilityTools.print_limited_table(
+                apps, ["domain_ocid", "id", "display_name", "active"], sort_key="display_name",
+                title="Identityclient - Idd Apps",
+            )
 
         print(f"\n[*] enum_idd_apps complete. Domains: {len(domains)} | Apps: {total_apps}")
         return {"ok": True, "apps": int(total_apps), "saved": True}
@@ -1794,7 +1806,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": True, "app_roles": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"], max_rows=200, truncate=140)
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"], max_rows=200, truncate=140,
+            title="Identityclient - Identity Domains",
+        )
 
         attrs = args.attributes or "id,ocid,name,displayName,description,active,app,adminRole,members,schemas,meta"
         total_roles = 0
@@ -1843,6 +1858,7 @@ class IdentityResourceSuite(ResourceBase):
                 reverse=bool(args.reverse),
                 max_rows=max(1, int(args.limit)),
                 truncate=140,
+                title="Identityclient - Idd App Roles",
             )
 
             if app_roles:
@@ -1886,7 +1902,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": False, "api_keys": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         attrs = args.attributes or None
         total = 0
@@ -1942,6 +1961,7 @@ class IdentityResourceSuite(ResourceBase):
                 keys,
                 ["owner", "domain_ocid", "id", "created", "last_modified", "version"],
                 sort_key="owner",
+                title="Identityclient - Idd Api Keys",
             )
 
         print(f"\n[*] enum_idd_api_keys complete. Domains: {len(domains)} | ApiKeys: {total}")
@@ -1980,7 +2000,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": False, "auth_tokens": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         attrs = args.attributes or None
         attribute_sets = parse_csv_args(args.attribute_sets)
@@ -2074,6 +2097,7 @@ class IdentityResourceSuite(ResourceBase):
                 tokens,
                 filtered_fields,
                 sort_key="owner",
+                title="Identityclient - Idd Auth Tokens",
             )
 
         print(f"\n[*] enum_idd_auth_tokens complete. Domains: {len(domains)} | AuthTokens: {total}")
@@ -2111,7 +2135,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": False, "grants": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         attrs = args.attributes or (
             "id,ocid,schemas,meta,domainOcid,compartmentOcid,tenancyOcid,active,"
@@ -2160,6 +2187,7 @@ class IdentityResourceSuite(ResourceBase):
                 normalized,
                 ["id", "grant_mechanism", "grantor_summary", "grantee_summary", "granted_summary"],
                 sort_key="grantee_name",
+                title="Identityclient - Idd Grants",
             )
 
         print(f"\n[*] enum_idd_grants complete. Domains: {len(domains)} | Grants: {total}")
@@ -2200,7 +2228,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": False, "password_policies": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         attrs = args.attributes or (
             "id,ocid,name,description,schemas,meta,"
@@ -2260,6 +2291,7 @@ class IdentityResourceSuite(ResourceBase):
                 rows,
                 ["id", "name", "priority", "assigned_to_groups", "min_length", "max_length"],
                 sort_key="name",
+                title="Identityclient - Idd Password Policies",
             )
 
         print(f"\n[*] enum_idd_password_policies complete. Domains: {len(domains)} | PasswordPolicies: {total}")
@@ -2296,7 +2328,10 @@ class IdentityResourceSuite(ResourceBase):
             return {"ok": False, "mfa_settings": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
-        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
 
         total = 0
         for dom in domains:
@@ -2338,6 +2373,7 @@ class IdentityResourceSuite(ResourceBase):
             UtilityTools.print_limited_table(
                 rows,
                 ["id", "mfa_enabled_category", "mfa_enrollment_type", "totp_enabled", "push_enabled"],
+                title="Identityclient - Idd Mfa Settings",
             )
 
         print(f"\n[*] enum_idd_mfa_settings complete. Domains: {len(domains)} | MFA settings: {total}")

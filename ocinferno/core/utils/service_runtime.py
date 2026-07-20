@@ -468,6 +468,15 @@ def run_standard_enum_component(
     """
     do_get = _flag_enabled(user_args, "get")
     label = f"{module_name}.{component_key}" if module_name else component_key
+    # Explicit "<Service> - <Component>" title: this helper's own frame (and its
+    # callers -- run_components, etc.) don't match the "_run_*"/"enum_*" stack-walk
+    # UtilityTools._infer_table_title() relies on for an auto title, so without this
+    # it falls through to whatever frame IS matched first -- typically enum_all's own
+    # dispatch wrapper, printing an unhelpful "<Service> - Other Module".
+    service_part = module_name[len("enum_"):] if module_name.startswith("enum_") else module_name
+    table_title = " - ".join(
+        UtilityTools._humanize_table_label(part) for part in (service_part, component_key) if part
+    )
     try:
         comp_id = getattr(session, "compartment_id", None)
         if require_compartment and not comp_id:
@@ -478,18 +487,36 @@ def run_standard_enum_component(
             for row in rows:
                 row.setdefault("compartment_id", comp_id)
 
+        # --get enrichment is best-effort on top of an already-successful list: a
+        # permission gap or transient error on the per-row GET (e.g. an operation the
+        # credential isn't granted, distinct from whatever authorized the LIST call)
+        # must not discard the rows already fetched -- same non-fatal treatment as
+        # download_rows_fn below, just per-row instead of per-component.
         enriched = 0
+        get_failed = 0
         if do_get and callable(get_row):
             for row in rows:
                 rid = row.get("id")
                 if not rid:
                     continue
-                meta = get_row(row) or {}
+                try:
+                    meta = get_row(row) or {}
+                except Exception as err:
+                    get_failed += 1
+                    UtilityTools.dlog(
+                        bool(getattr(session, "individual_run_debug", False) or getattr(session, "debug", False)),
+                        f"get_{component_key} failed for one row (non-fatal; row kept from list)",
+                        id=rid, err=f"{type(err).__name__}: {err}",
+                    )
+                    continue
                 if isinstance(meta, dict) and fill_missing_fields(row, meta):
                     enriched += 1
+        if get_failed:
+            print(f"{UtilityTools.YELLOW}[-] {label}: --get enrichment failed for {get_failed}/{len(rows)} row(s) "
+                  f"(kept the listed rows; likely a permission gap on the GET operation specifically).{UtilityTools.RESET}")
 
         if rows:
-            UtilityTools.print_limited_table(rows, print_columns or [])
+            UtilityTools.print_limited_table(rows, print_columns or [], title=table_title or None)
         # Enumeration always persists to the DB (no --save opt-in).
         if callable(save_rows_fn):
             save_rows_fn(rows)
@@ -509,6 +536,7 @@ def run_standard_enum_component(
             "ok": True,
             component_key: len(rows),
             "enriched": enriched,
+            "get_failed": get_failed,
             "saved": True,
             "get": bool(do_get),
             "download": do_download,
@@ -660,7 +688,7 @@ class ServiceEnumOpsBase:
                 if isinstance(meta, dict):
                     fill_missing_fields(r, meta)
 
-        UtilityTools.print_limited_table(rows, print_columns)
+        UtilityTools.print_limited_table(rows, print_columns, resource_type=component_key)
 
         self._save_rows(rows, table_name=save_table)
 

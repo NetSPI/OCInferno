@@ -63,7 +63,7 @@ def _safe_oci_to_dict(obj: Any) -> Any:
 # =============================================================================
 
 class UtilityTools:
-    TABLE_OUTPUT_FORMAT = "table"
+    TABLE_OUTPUT_FORMAT = "txt"
     _REDACTED = "<redacted>"
     _SENSITIVE_KEY_TOKENS = (
         "token",
@@ -544,7 +544,7 @@ class UtilityTools:
         if section_title:
             print(f"\n[*] {section_title}")
 
-        output_format = str(getattr(UtilityTools, "TABLE_OUTPUT_FORMAT", "table") or "table").strip().lower()
+        output_format = str(getattr(UtilityTools, "TABLE_OUTPUT_FORMAT", "txt") or "txt").strip().lower()
         if not rows:
             if resource_type:
                 print(f"{UtilityTools.BOLD}Resource Type:{UtilityTools.RESET} {resource_type}")

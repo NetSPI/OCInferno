@@ -101,5 +101,5 @@ def default_workspace_config(
         "api_logging_file_path": "",
         "api_logging_verbosity": "standard",
         "api_logging_attributes": list(default_api_log_attributes or []),
-        "std_output_format": "table",
+        "std_output_format": "txt",
     }

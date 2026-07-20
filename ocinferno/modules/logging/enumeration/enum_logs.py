@@ -168,10 +168,11 @@ def run_module(user_args, session) -> Dict[str, Any]:
     UtilityTools.print_limited_table(
         groups,
         groups_resource.COLUMNS,
+        title="Logging - Log Groups",
     )
 
     if args.logs and all_logs:
-        UtilityTools.print_limited_table(all_logs, logs_resource.COLUMNS)
+        UtilityTools.print_limited_table(all_logs, logs_resource.COLUMNS, title="Logging - Logs")
 
     # 5) Save
     groups_resource.save(groups)

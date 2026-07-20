@@ -103,7 +103,7 @@ class BlockBootVolumeBackupsResource(OciListResource):
 def print_section_table(title: str, rows: List[Dict[str, Any]], columns: List[str]) -> None:
     print(f"\n[*] {title}")
     if rows:
-        UtilityTools.print_limited_table(rows, columns)
+        UtilityTools.print_limited_table(rows, columns, title=f"Core Network - {title}")
     else:
         print("[*] No resources found.")
 

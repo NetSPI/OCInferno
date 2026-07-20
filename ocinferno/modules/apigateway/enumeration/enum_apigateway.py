@@ -92,15 +92,32 @@ def run_module(user_args, session):
                 if comp_id:
                     row.setdefault("compartment_id", comp_id)
 
+            # --get enrichment is best-effort on top of an already-successful list: a
+            # permission gap on the per-API GET specifically must not discard the rows
+            # already fetched.
             enriched = 0
+            get_failed = 0
             if args.get:
                 for row in rows:
                     rid = row.get("id")
                     if not rid:
                         continue
-                    meta = apis_resource.get(resource_id=rid) or {}
+                    try:
+                        meta = apis_resource.get(resource_id=rid) or {}
+                    except Exception as get_err:
+                        get_failed += 1
+                        UtilityTools.dlog(
+                            debug,
+                            "get api failed for one row (non-fatal; row kept from list)",
+                            id=rid, err=f"{type(get_err).__name__}: {get_err}",
+                        )
+                        continue
                     if fill_missing_fields(row, meta):
                         enriched += 1
+            if get_failed:
+                print(f"{UtilityTools.YELLOW}[-] enum_apigateway.apis: --get enrichment failed for "
+                      f"{get_failed}/{len(rows)} row(s) (kept the listed rows; likely a permission gap on the "
+                      f"GET operation specifically).{UtilityTools.RESET}")
 
             downloaded = 0
             download_bytes = 0
@@ -166,7 +183,7 @@ def run_module(user_args, session):
                             row["deployment_spec_summary"] = {"bytes": len(spec_blob), "saved_as": filename}
 
             if rows:
-                UtilityTools.print_limited_table(rows, apis_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, apis_resource.COLUMNS, title="Apigateway - Apis")
             apis_resource.save(rows)
 
             results.append(
@@ -217,14 +234,28 @@ def run_module(user_args, session):
                 rows = [r for r in (sdks_resource.list(sdk_id=sdk_id, api_ids=api_ids) or []) if isinstance(r, dict)]
 
             enriched = 0
+            get_failed = 0
             if args.get:
                 for row in rows:
                     rid = row.get("id")
                     if not rid:
                         continue
-                    meta = sdks_resource.get(resource_id=rid) or {}
+                    try:
+                        meta = sdks_resource.get(resource_id=rid) or {}
+                    except Exception as get_err:
+                        get_failed += 1
+                        UtilityTools.dlog(
+                            debug,
+                            "get sdk failed for one row (non-fatal; row kept from list)",
+                            id=rid, err=f"{type(get_err).__name__}: {get_err}",
+                        )
+                        continue
                     if fill_missing_fields(row, meta):
                         enriched += 1
+            if get_failed:
+                print(f"{UtilityTools.YELLOW}[-] enum_apigateway.sdks: --get enrichment failed for "
+                      f"{get_failed}/{len(rows)} row(s) (kept the listed rows; likely a permission gap on the "
+                      f"GET operation specifically).{UtilityTools.RESET}")
 
             downloaded = 0
             if args.download:
@@ -248,7 +279,7 @@ def run_module(user_args, session):
                         row["sdk_artifact_summary"] = {"saved_as": filename}
 
             if rows:
-                UtilityTools.print_limited_table(rows, sdks_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, sdks_resource.COLUMNS, title="Apigateway - Sdks")
             sdks_resource.save(rows)
 
             results.append(

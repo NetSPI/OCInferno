@@ -557,7 +557,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         self.config_api_logging_file_path: str = ""
         self.config_api_logging_verbosity: str = "standard"
         self.config_api_logging_attributes: List[str] = []
-        self.config_std_output_format: str = "table"
+        self.config_std_output_format: str = "txt"
 
         self.http_policy = HttpPolicyService(
             get_rate_limit_seconds=lambda: self._effective_http_rate_limit_seconds(),

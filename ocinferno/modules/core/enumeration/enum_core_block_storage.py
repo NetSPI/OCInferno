@@ -108,7 +108,11 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     fill_missing_fields(row, meta)
 
         if rows:
-            UtilityTools.print_limited_table(rows, resource.COLUMNS)
+            UtilityTools.print_limited_table(
+                rows,
+                resource.COLUMNS,
+                title=f"Core Block Storage - {key.replace('_', ' ').title()}",
+            )
             resource.save(rows)
 
         summary[key] = len(rows)

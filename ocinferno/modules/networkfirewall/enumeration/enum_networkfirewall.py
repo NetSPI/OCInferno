@@ -149,7 +149,7 @@ def run_module(user_args, session):
                         fill_missing_fields(row, meta)
 
                 if rows:
-                    UtilityTools.print_limited_table(rows, security_rules_resource.COLUMNS)
+                    UtilityTools.print_limited_table(rows, security_rules_resource.COLUMNS, title="Networkfirewall - Security Rules")
 
                 security_rules_resource.save(rows)
 

@@ -140,7 +140,7 @@ def run_module(user_args, session):
                     fill_missing_fields(row, ex_resource.get(resource_id=rid) or {})
 
             if rows:
-                UtilityTools.print_limited_table(rows, ex_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, ex_resource.COLUMNS, title="File Storage - Exports")
             ex_resource.save(rows)
 
             results.append(
@@ -184,7 +184,7 @@ def run_module(user_args, session):
                     fill_missing_fields(row, snap_resource.get(resource_id=rid) or {})
 
             if rows:
-                UtilityTools.print_limited_table(rows, snap_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, snap_resource.COLUMNS, title="File Storage - Snapshots")
             snap_resource.save(rows)
 
             results.append(

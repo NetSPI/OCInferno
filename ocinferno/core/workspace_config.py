@@ -172,11 +172,11 @@ class WorkspaceConfigMixin:
                 out.append(a)
 
         self.config_api_logging_attributes = out
-        std_output_format = str(cfg.get("std_output_format", "table") or "table").strip().lower()
+        std_output_format = str(cfg.get("std_output_format", "txt") or "txt").strip().lower()
         if std_output_format == "text":
             std_output_format = "txt"
         if std_output_format not in {"table", "txt"}:
-            std_output_format = "table"
+            std_output_format = "txt"
         self.config_std_output_format = std_output_format
         UtilityTools.TABLE_OUTPUT_FORMAT = std_output_format
 

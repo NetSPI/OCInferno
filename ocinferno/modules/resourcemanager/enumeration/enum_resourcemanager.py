@@ -59,6 +59,7 @@ def _parse_args(user_args):
 
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
+    debug = bool(getattr(session, "individual_run_debug", False) or getattr(session, "debug", False))
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
 
@@ -96,13 +97,30 @@ def run_module(user_args, session):
                     rows = rows.get("items") or []
                 rows = [row for row in rows if isinstance(row, dict)]
 
+                # --get enrichment is best-effort on top of an already-successful list: a
+                # permission gap on the per-template GET specifically must not discard
+                # the rows already fetched.
+                get_failed = 0
                 if args.get:
                     for row in rows:
                         row_id = row.get("id")
                         if not row_id:
                             continue
-                        meta = templates_resource.get(resource_id=row_id) or {}
+                        try:
+                            meta = templates_resource.get(resource_id=row_id) or {}
+                        except Exception as get_err:
+                            get_failed += 1
+                            UtilityTools.dlog(
+                                debug,
+                                "get template failed for one row (non-fatal; row kept from list)",
+                                id=row_id, err=f"{type(get_err).__name__}: {get_err}",
+                            )
+                            continue
                         fill_missing_fields(row, meta)
+                if get_failed:
+                    print(f"{UtilityTools.YELLOW}[-] enum_resourcemanager.templates: --get enrichment failed for "
+                          f"{get_failed}/{len(rows)} row(s) (kept the listed rows; likely a permission gap on the "
+                          f"GET operation specifically).{UtilityTools.RESET}")
 
                 downloaded = 0
                 if args.download:
@@ -137,7 +155,7 @@ def run_module(user_args, session):
                             downloaded += 1
 
                 if rows:
-                    UtilityTools.print_limited_table(rows, templates_resource.COLUMNS)
+                    UtilityTools.print_limited_table(rows, templates_resource.COLUMNS, title="Resourcemanager - Templates")
 
                 templates_resource.save(rows)
 

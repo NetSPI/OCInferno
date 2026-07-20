@@ -116,7 +116,7 @@ def run_module(user_args, session):
                             fill_missing_fields(row, {"zone_lifecycle_state": meta.get("lifecycle_state")})
 
             if rows:
-                UtilityTools.print_limited_table(rows, zone_records_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, zone_records_resource.COLUMNS, title="Dns - Zone Records")
 
             zone_records_resource.save(rows)
 

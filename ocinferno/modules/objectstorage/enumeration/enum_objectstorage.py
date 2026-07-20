@@ -66,6 +66,7 @@ def _parse_args(user_args):
 
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
+    debug = bool(getattr(session, "individual_run_debug", False) or getattr(session, "debug", False))
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
 
@@ -89,15 +90,31 @@ def run_module(user_args, session):
         try:
             rows = [r for r in (namespaces_resource.list(compartment_id=compartment_id) or []) if isinstance(r, dict)]
 
+            # --get enrichment is best-effort on top of an already-successful list: a
+            # permission gap on get_namespace_metadata specifically (distinct from
+            # whatever authorized the list) must not discard the rows already fetched.
+            get_failed = 0
             if args.get:
                 for row in rows:
                     namespace = row.get("namespace")
                     if not namespace:
                         continue
-                    fill_missing_fields(row, namespaces_resource.get(resource_id=namespace) or {})
+                    try:
+                        fill_missing_fields(row, namespaces_resource.get(resource_id=namespace) or {})
+                    except Exception as get_err:
+                        get_failed += 1
+                        UtilityTools.dlog(
+                            debug,
+                            "get namespace metadata failed for one row (non-fatal; row kept from list)",
+                            namespace=namespace, err=f"{type(get_err).__name__}: {get_err}",
+                        )
+            if get_failed:
+                print(f"{UtilityTools.YELLOW}[-] enum_objectstorage.namespaces: --get enrichment failed for "
+                      f"{get_failed}/{len(rows)} row(s) (kept the listed rows; likely a permission gap on the "
+                      f"GET operation specifically).{UtilityTools.RESET}")
 
             if rows:
-                UtilityTools.print_limited_table(rows, namespaces_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, namespaces_resource.COLUMNS, title="Object Storage - Namespaces")
             namespaces_resource.save(rows)
 
             results.append(
@@ -133,19 +150,36 @@ def run_module(user_args, session):
                 if isinstance(r, dict)
             ]
 
+            # --get enrichment is best-effort on top of an already-successful list: a
+            # permission gap on the per-bucket GET specifically (distinct from whatever
+            # authorized the list) must not discard the rows already fetched.
+            get_failed = 0
             if args.get:
                 for row in rows:
                     bucket_name = row.get("name")
                     namespace = row.get("namespace")
                     if not bucket_name or not namespace:
                         continue
-                    meta = buckets_resource.get(resource_id=bucket_name, namespace=namespace) or {}
+                    try:
+                        meta = buckets_resource.get(resource_id=bucket_name, namespace=namespace) or {}
+                    except Exception as get_err:
+                        get_failed += 1
+                        UtilityTools.dlog(
+                            debug,
+                            "get bucket failed for one row (non-fatal; row kept from list)",
+                            bucket=bucket_name, namespace=namespace, err=f"{type(get_err).__name__}: {get_err}",
+                        )
+                        continue
                     if isinstance(meta, dict):
                         meta["get_run"] = True
                     fill_missing_fields(row, meta)
+            if get_failed:
+                print(f"{UtilityTools.YELLOW}[-] enum_objectstorage.buckets: --get enrichment failed for "
+                      f"{get_failed}/{len(rows)} row(s) (kept the listed rows; likely a permission gap on the "
+                      f"GET operation specifically).{UtilityTools.RESET}")
 
             if rows:
-                UtilityTools.print_limited_table(rows, buckets_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, buckets_resource.COLUMNS, title="Object Storage - Buckets")
             buckets_resource.save(rows)
 
             results.append(
@@ -202,7 +236,7 @@ def run_module(user_args, session):
                     )
 
             if rows:
-                UtilityTools.print_limited_table(rows, objects_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, objects_resource.COLUMNS, title="Object Storage - Objects")
             objects_resource.save(rows)
 
             downloaded = 0
@@ -315,7 +349,7 @@ def run_module(user_args, session):
                 except Exception as par_err:
                     print(f"[*] enum_objectstorage.pars: {bucket_name} skipped ({_component_error_summary(par_err)}).")
             if rows:
-                UtilityTools.print_limited_table(rows, pars_resource.COLUMNS)
+                UtilityTools.print_limited_table(rows, pars_resource.COLUMNS, title="Object Storage - Pre-Authenticated Requests")
             pars_resource.save(rows)
             results.append({
                 "ok": True,
