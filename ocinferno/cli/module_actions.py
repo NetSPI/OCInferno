@@ -14,6 +14,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Sequence, List, Dict, Any, Set
 
+from ocinferno.core.contracts import AuthError
 from ocinferno.core.contracts import ErrorCode
 from ocinferno.core.contracts import OperationResult
 from ocinferno.core.console import UtilityTools
@@ -744,6 +745,11 @@ def interact_with_module(session, module_path: str, module_args: Sequence[str]) 
             )
             return -1
 
+        if action.auth_mode == AuthMode.AUTH:
+            ensure_fresh_creds = getattr(session, "ensure_fresh_creds", None)
+            if callable(ensure_fresh_creds):
+                ensure_fresh_creds(skew_seconds=600)
+
         module = importlib.import_module(module_import_path)
 
         # Help passthrough
@@ -806,6 +812,9 @@ def interact_with_module(session, module_path: str, module_args: Sequence[str]) 
 
     except KeyboardInterrupt:
         return 0
+    except AuthError as e:
+        print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] {e.message}{UtilityTools.RESET}")
+        return -1
     except Exception:
         print(
             f"{UtilityTools.RED}{UtilityTools.BOLD}[X] [{ErrorCode.MODULE_EXECUTION_FAILED}] "

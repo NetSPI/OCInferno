@@ -12,7 +12,6 @@ import base64
 import hashlib
 import json
 import os
-import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,6 +56,24 @@ except Exception:  # pragma: no cover
 
 from ocinferno.core.coerce import _safe_str, _truthy
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.contracts import AuthError, ErrorCode
+
+
+def _jwt_exp(token: str) -> int:
+    """Decode a JWT's ``exp`` claim (payload is the base64url middle segment). 0 on failure."""
+    parts = token.split(".")
+    if len(parts) < 2:
+        return 0
+    payload_b64 = parts[1]
+    payload_b64 += "=" * (-len(payload_b64) % 4)
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64.encode("utf-8")).decode("utf-8"))
+    except Exception:
+        return 0
+    try:
+        return int(payload.get("exp") or 0)
+    except Exception:
+        return 0
 
 
 def _build_instance_delegation_signer(federation_client, delegation_token: str):
@@ -98,155 +115,191 @@ class AuthMixin:
         skew_seconds: int = 600,          # refresh if expiring within 10 minutes
         min_interval_seconds: int = 60,   # don't refresh more than once per minute per session
         debug: bool = False,
-    ) -> bool:
+    ) -> Optional[bool]:
         """
-        If this credential contains a session token, check JWT exp and refresh via OCI CLI if needed.
+        If this credential contains a session token, check JWT exp and refresh if needed.
+
+        Refresh is a signed POST to the auth service's own refresh endpoint (the same call
+        ``oci session refresh`` makes internally) using the profile's own key -- no external
+        CLI process involved.
 
         Returns:
-        True  -> refreshed (or attempted) and rec.session_creds updated in-memory if refresh succeeded
-        False -> no refresh done (not token, not near expiry, or refresh failed)
+        None  -> nothing to do (not a token cred, undecodable exp, rate-limited, or still
+                 valid well beyond ``skew_seconds``)
+        True  -> refresh was attempted and succeeded; rec.session_creds updated in-memory
+        False -> refresh was attempted (token within ``skew_seconds`` of expiry) but failed
+                 -- caller should check whether the CURRENT token is now actually past its
+                 own exp (see ``ensure_fresh_creds``) to decide whether this is fatal
 
         Requires stored metadata:
-        - profile_name (required)
-        - file_location (optional)
+        - key_content (required) -- the profile's own private key, already on file
+        - region (required)
         """
         # Parse stored JSON
         try:
             stored = json.loads(rec.session_creds or "{}")
         except Exception:
-            return False
+            return None
 
         token = (stored.get("security_token_content") or "").strip()
         if not token:
-            return False  # not a session-token cred
-
-        # --- decode exp from JWT (payload is base64url in middle segment) ---
-        def _jwt_exp(tok: str) -> int:
-            parts = tok.split(".")
-            if len(parts) < 2:
-                return 0
-            payload_b64 = parts[1]
-            payload_b64 += "=" * (-len(payload_b64) % 4)
-            try:
-                payload = json.loads(base64.urlsafe_b64decode(payload_b64.encode("utf-8")).decode("utf-8"))
-            except Exception:
-                return 0
-            try:
-                return int(payload.get("exp") or 0)
-            except Exception:
-                return 0
+            return None  # not a session-token cred
 
         exp = _jwt_exp(token)
         if exp <= 0:
             # Can't decode exp safely; don't auto-refresh (avoid loops)
             if debug:
                 print(f"[!] Session token for '{rec.credname}' has no decodable exp; skip refresh.")
-            return False
+            return None
         now = int(time.time())
 
         # Rate-limit refresh attempts per session instance
         last_ts = int(getattr(self, "_last_session_token_refresh_ts", 0) or 0)
         if last_ts and (now - last_ts) < min_interval_seconds:
-            return False
+            return None
 
         seconds_left = exp - now
         if seconds_left > skew_seconds:
-            return False  # still valid enough
+            return None  # still valid enough
 
-        profile_name = (stored.get("profile_name") or "").strip()
-        file_location = (stored.get("file_location") or "").strip()
+        region = (stored.get("region") or "").strip()
+        key_content = (stored.get("key_content") or "").strip()
 
-        if not profile_name:
-            if debug:
-                print(f"[!] Session token for '{rec.credname}' expiring in {seconds_left}s but no profile_name stored; skip.")
+        if not region or not key_content:
+            print(f"[!] Session token for '{rec.credname}' expiring in {seconds_left}s but missing region/key_content; can't refresh.")
             return False
 
-        # Build CLI command
-        cmd = ["oci", "session", "refresh", "--profile", profile_name]
-        if file_location:
-            cmd += ["--config-file", file_location]
-
-        if debug:
-            print(f"[*] Session token for '{rec.credname}' expires in {seconds_left}s -> refreshing...")
-            print("    CMD:", " ".join(cmd))
-
-        # Execute CLI refresh
-        effective_proxy = self._resolve_proxy(include_auth_proxy=True)
-        run_env = None
-        if effective_proxy:
-            run_env = dict(os.environ)
-            run_env["HTTP_PROXY"] = effective_proxy
-            run_env["HTTPS_PROXY"] = effective_proxy
-            run_env["http_proxy"] = effective_proxy
-            run_env["https_proxy"] = effective_proxy
-
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, env=run_env)
+            pass_phrase = stored.get("pass_phrase")
+            pass_phrase_b = pass_phrase.encode("utf-8") if isinstance(pass_phrase, str) else None
+            private_key_obj = serialization.load_pem_private_key(key_content.encode("utf-8"), password=pass_phrase_b)
+            signer = SecurityTokenSigner(token, private_key_obj)
         except Exception as e:
-            if debug:
-                print(f"[!] Failed to execute OCI CLI refresh: {e}")
+            print(f"[!] Could not build signer to refresh session token for '{rec.credname}': {e}")
             return False
 
-        if proc.returncode != 0:
-            if debug:
-                msg = (proc.stderr or "").strip() or (proc.stdout or "").strip()
-                print(f"[!] OCI session refresh failed (rc={proc.returncode}): {msg[:400]}")
-            return False
+        refresh_url = f"{oci.regions.endpoint_for('auth', region)}/v1/authentication/refresh"
+        print(f"[*] Session token for '{rec.credname}' expires in {seconds_left}s -> refreshing via POST {refresh_url}")
 
-        # Re-read the refreshed token from config profile
+        effective_proxy = self._resolve_proxy(include_auth_proxy=True)
+        proxies = {"http": effective_proxy, "https": effective_proxy} if effective_proxy else None
+
         try:
-            kwargs = {"profile_name": profile_name}
-            if file_location:
-                kwargs["file_location"] = file_location
+            resp = requests.post(
+                refresh_url,
+                headers={"content-type": "application/json"},
+                data=json.dumps({"currentToken": token}),
+                auth=signer,
+                proxies=proxies,
+                timeout=30,
+            )
+        except Exception as e:
+            print(f"[!] Session token refresh request to {refresh_url} failed: {e}")
+            return False
 
-            refreshed_cfg = from_file(**kwargs)
-            token_file = refreshed_cfg.get("security_token_file") or stored.get("security_token_file")
+        if resp.status_code == 401:
+            print(f"[!] Session for '{rec.credname}' was rejected by {refresh_url} (401) and cannot be refreshed; re-authenticate with 'oci session authenticate'.")
+            return False
+        if resp.status_code != 200:
+            print(f"[!] OCI session refresh failed (status={resp.status_code}): {resp.text[:400]}")
+            if debug:
+                print(f"    URL: {refresh_url}")
+            return False
 
-            if not token_file:
-                if debug:
-                    print("[!] Refresh succeeded but could not find security_token_file in config or stored record.")
-                return False
+        try:
+            new_token = str((resp.json() or {}).get("token") or "").strip()
+        except Exception as e:
+            print(f"[!] Session refresh returned 200 but response could not be parsed: {e}")
+            return False
+        if not new_token:
+            print("[!] Session refresh returned 200 but no token in response.")
+            return False
 
-            new_token = Path(str(token_file)).expanduser().read_text(encoding="utf-8").strip()
-            if not new_token:
-                if debug:
-                    print("[!] Refresh succeeded but refreshed token file was empty.")
-                return False
+        # Update stored JSON and persist back to DB
+        stored["security_token_content"] = new_token
+        token_file = (stored.get("security_token_file") or "").strip()
+        if token_file:
+            try:
+                Path(token_file).expanduser().write_text(new_token, encoding="utf-8")
+            except Exception:
+                pass  # best-effort mirror to disk; the DB copy is authoritative either way
 
-            # Update stored JSON and persist back to DB
-            stored["security_token_content"] = new_token
-            stored["profile_name"] = profile_name
-            if file_location:
-                stored["file_location"] = file_location
-            stored["security_token_file"] = str(token_file)
+        self.data_master.save_value_to_table_column(
+            db="metadata",
+            table_name="sessions",
+            target_column="session_creds",
+            value=json.dumps(stored),
+            where={"workspace_id": self.workspace_id, "credname": rec.credname},
+        )
 
-            self.data_master.save_value_to_table_column(
-                db="metadata",
-                table_name="sessions",
-                target_column="session_creds",
-                value=json.dumps(stored),
-                where={"workspace_id": self.workspace_id, "credname": rec.credname},
+        # Update in-memory record so caller uses the fresh token immediately
+        rec.session_creds = json.dumps(stored)
+
+        # Update rate-limit timestamp
+        self._last_session_token_refresh_ts = now
+
+        new_exp = _jwt_exp(new_token)
+        if new_exp:
+            print(f"[*] Refreshed session token for '{rec.credname}': new expiry in {new_exp - now}s.")
+        else:
+            print(f"[*] Refreshed session token for '{rec.credname}' (new expiry could not be decoded).")
+
+        return True
+
+    def ensure_fresh_creds(self, *, skew_seconds: int = 600) -> bool:
+        """Call before dispatching a module: if the active credential is a session
+        token within ``skew_seconds`` of expiring, refresh it and rebuild the active
+        signer in place so subsequent API calls use the new token immediately.
+
+        A cheap no-op the vast majority of calls -- ``_maybe_refresh_session_token``
+        is internally rate-limited (at most once per minute) and returns instantly
+        for non-session-token credentials or a token that still has plenty of time
+        left. Safe to call before every module dispatch in a long enum_all sweep.
+
+        If a refresh is attempted and fails, the outcome depends on whether the
+        CURRENT token is still technically valid: still valid -> a warning is
+        printed and the run continues on the current token (it may still work for
+        a while); already past its own exp -> raises ``AuthError`` so the caller
+        can stop cleanly instead of grinding through doomed API calls one module
+        at a time.
+        """
+        credname = getattr(self, "credname", None)
+        if not credname:
+            return False
+        rec = self._fetch_cred_record(credname)
+        if not rec:
+            return False
+
+        result = self._maybe_refresh_session_token(rec, skew_seconds=skew_seconds, debug=self.individual_run_debug)
+        if result is True:
+            self.load_stored_creds(credname)  # rebuild self.credentials from the new token
+            return True
+        if result is None:
+            return False
+
+        # result is False: refresh was attempted and failed. Check whether the
+        # CURRENT (unrefreshed) token is now actually past its own expiry.
+        try:
+            stored = json.loads(rec.session_creds or "{}")
+            token = (stored.get("security_token_content") or "").strip()
+            exp = _jwt_exp(token) if token else 0
+        except Exception:
+            exp = 0
+        now = int(time.time())
+
+        if exp > 0 and exp <= now:
+            raise AuthError(
+                code=ErrorCode.AUTH_REQUIRED,
+                message=(
+                    f"Session token for '{credname}' has expired and could not be refreshed. "
+                    "Re-authenticate with 'oci session authenticate' and re-add the credential."
+                ),
+                details={"credname": credname},
             )
 
-            # Update in-memory record so caller uses the fresh token immediately
-            rec.session_creds = json.dumps(stored)
-
-            # Update rate-limit timestamp
-            self._last_session_token_refresh_ts = now
-
-            if debug:
-                new_exp = _jwt_exp(new_token)
-                if new_exp:
-                    print(f"[*] Refreshed '{rec.credname}' token exp: {new_exp} (in {new_exp - now}s)")
-                else:
-                    print(f"[*] Refreshed '{rec.credname}' token (new exp could not be decoded)")
-
-            return True
-
-        except Exception as e:
-            if debug:
-                print(f"[!] Refresh succeeded but failed to reload/persist token: {e}")
-            return False
+        print(f"{UtilityTools.YELLOW}[!] Could not proactively refresh session token for '{credname}'; "
+              f"continuing on the current token, which may still be valid for a short while.{UtilityTools.RESET}")
+        return False
 
     def load_stored_creds(self, credname: str, *, force_refresh: bool = False) -> Optional[int]:
         print(f"[*] Loading creds: {credname}")

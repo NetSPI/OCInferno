@@ -16,6 +16,7 @@ from ocinferno.modules.everything.utilities.enum_all_summary import (
 from datetime import datetime, timezone
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.contracts import AuthError
 from ocinferno.core.utils.service_runtime import invoke_run_module as _invoke_run_module
 from ocinferno.core.utils.service_runtime import component_error_summary as _component_error_summary
 from ocinferno.core.utils.parallel import cancel_requested, clear_cancel, parallel_map, request_cancel
@@ -541,8 +542,13 @@ def _is_nonfatal_service_error(exc: Exception) -> bool:
 
 def _run_other_module(session, user_args: List[str], module_name: str):
     try:
+        ensure_fresh_creds = getattr(session, "ensure_fresh_creds", None)
+        if callable(ensure_fresh_creds):
+            ensure_fresh_creds(skew_seconds=600)
         module = importlib.import_module(module_name)
         return _invoke_run_module(module, user_args, session)
+    except AuthError:
+        raise  # session token is dead -- let the caller stop the whole sweep, not just this unit
     except Exception as e:
         debug = bool(getattr(session, "debug", False))
         if _is_nonfatal_service_error(e):
@@ -1223,6 +1229,13 @@ def _run_execution_plan_parallel(
                 module_name,
             )
             _ledger_mark(session, run_id, region, cid, module_name, "done")
+        except AuthError as err:
+            # Session token is dead -- stop the pool from launching further units
+            # (same cooperative-cancel path as Ctrl+C) instead of grinding through
+            # every remaining unit with a credential that can only keep failing.
+            _ledger_mark(session, run_id, region, cid, module_name, "failed", error=str(err))
+            print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Stopping enum_all: {err.message}{UtilityTools.RESET}")
+            request_cancel()
         except Exception as err:
             # Record the failure (with a one-line summary) but don't sink the batch;
             # the unit stays non-"done" so --resume re-runs it. KeyboardInterrupt is a
@@ -1303,15 +1316,18 @@ def _run_execution_plan(
     global_plan = [spec for spec in execution_plan if spec[0] in _GLOBAL_SERVICE_NAMES]
     regional_plan = [spec for spec in execution_plan if spec[0] not in _GLOBAL_SERVICE_NAMES]
 
-    # Global (tenancy-wide) services: once per compartment target, in the home region only --
-    # no region dimension, so multi-region fan-out never revisits them.
-    for cid in final_targets:
-        _run_target(cid, home, global_plan)
-
-    # Regional services: every (region, compartment) pair.
-    for region in regions:
+    try:
+        # Global (tenancy-wide) services: once per compartment target, in the home region only --
+        # no region dimension, so multi-region fan-out never revisits them.
         for cid in final_targets:
-            _run_target(cid, region, regional_plan)
+            _run_target(cid, home, global_plan)
+
+        # Regional services: every (region, compartment) pair.
+        for region in regions:
+            for cid in final_targets:
+                _run_target(cid, region, regional_plan)
+    except AuthError as e:
+        print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Stopping enum_all: {e.message}{UtilityTools.RESET}")
 
 
 def _run_once_modules(session, args: argparse.Namespace, *, run_config_check: bool, run_opengraph: bool) -> None:
