@@ -17,12 +17,20 @@ def _parse_args(user_args):
     )
     parser.add_argument(
         "--recursive",
+        dest="recursive",
         action="store_true",
+        default=True,
         help=(
-            "Recursively enumerate sub-compartments.\n"
+            "Recursively enumerate sub-compartments (default: on).\n"
             "- Tenancy root: uses ListCompartments(subtree=True)\n"
             "- Non-tenancy root: walks recursively via repeated ListCompartments(subtree=False)"
         ),
+    )
+    parser.add_argument(
+        "--no-recursive",
+        dest="recursive",
+        action="store_false",
+        help="Only list direct children of the root compartment; do not walk nested sub-compartments.",
     )
     parser.add_argument(
         "--lifecycle",
@@ -123,10 +131,10 @@ def run_module(user_args, session):
             return None
         return row if isinstance(row, dict) else None
 
-    if args.get_root_only and (args.recursive or args.get_root or args.get_all_comps):
+    if args.get_root_only and (args.get_root or args.get_all_comps):
         print(
             f"{UtilityTools.RED}[X] --get-root-only cannot be combined with "
-            f"--recursive/--get-root/--get-all-comps.{UtilityTools.RESET}"
+            f"--get-root/--get-all-comps.{UtilityTools.RESET}"
         )
         return -1
 
