@@ -1,15 +1,77 @@
 from __future__ import annotations
 
+import functools
 import json
 import os
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import date, datetime
 from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+# One process-wide re-entrant lock serializes all DataController access. The
+# single connection is opened check_same_thread=False, so worker threads may call
+# get/insert helpers safely -- they block on this lock rather than raising
+# sqlite3.ProgrammingError. Writes still queue; the lock makes them correct, not
+# parallel.
+_DB_LOCK = threading.RLock()
 
 
+def _synchronized(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with _DB_LOCK:
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+def _resolve_state_dir() -> Path:
+    """Writable base directory for OCInferno's SQLite database.
+
+    Resolution order:
+      1. ``$OCINFERNO_HOME`` if set (explicit override).
+      2. A source checkout -- the installed package dir (``ocinferno/ocinferno``)
+         sits under a repo root that contains ``pyproject.toml`` and is itself
+         writable -- so a dev checkout keeps its gitignored ``databases/`` in
+         place (unchanged behavior).
+      3. Otherwise ``~/.ocinferno`` -- the pip-installed case (``__file__`` under
+         a read-only ``site-packages``) and the PyInstaller onefile case
+         (``__file__`` under an ephemeral, read-only ``_MEIPASS`` temp dir),
+         where writing next to the package would fail or be lost.
+    """
+    env = os.environ.get("OCINFERNO_HOME")
+    if env:
+        return Path(env).expanduser()
+    package_dir = Path(__file__).resolve().parents[1]
+    repo_root = package_dir.parent
+    if (repo_root / "pyproject.toml").is_file() and os.access(package_dir, os.W_OK):
+        return package_dir
+    return Path.home() / ".ocinferno"
+
+
+def _synchronize_public_methods(cls):
+    """Wrap every public instance/class method of ``cls`` with the shared lock.
+
+    Equivalent to decorating each method with ``@_synchronized`` individually, but
+    applied in one place. Static methods are skipped: the path-based readers open
+    their own short-lived connections and never touch the shared one.
+    """
+    for name, attr in list(vars(cls).items()):
+        if name.startswith("_"):
+            continue
+        if isinstance(attr, staticmethod):
+            continue
+        if isinstance(attr, classmethod):
+            setattr(cls, name, classmethod(_synchronized(attr.__func__)))
+        elif callable(attr):
+            setattr(cls, name, _synchronized(attr))
+    return cls
+
+
+@_synchronize_public_methods
 class DataController:
     _SERVICE_TABLE_INDEXES = {
         "opengraph_nodes": [
@@ -65,25 +127,34 @@ class DataController:
         for your existing JSON shapes.
     """
 
-    _repo_root = Path(__file__).resolve().parents[1]
-    metadata_db = str(_repo_root / "databases" / "organization_metadata.db")
-    service_db = str(_repo_root / "databases" / "service_info.db")
+    # One unified SQLite database: one file so FKs can span the workspace registry +
+    # service tables with ON DELETE CASCADE. metadata_db / service_db are kept as
+    # aliases so existing call sites keep working.
+    _state_dir = _resolve_state_dir()
+    database_path = str(_state_dir / "databases" / "ocinferno.db")
+    metadata_db = database_path
+    service_db = database_path
+
+    # Control-plane tables (workspace registry + stored credentials) share the file
+    # but must NEVER appear in service-data exports or be wiped by `data wipe-service`.
+    _CONTROL_PLANE_TABLES = frozenset({"workspace_index", "sessions", "user_permissions"})
 
     def __init__(self):
-        os.makedirs(str(Path(self.service_db).parent), exist_ok=True)
+        os.makedirs(str(Path(self.database_path).parent), exist_ok=True)
 
-        # Metadata DB connection
-        self.conn = sqlite3.connect(self.metadata_db)
+        # Single shared connection. check_same_thread=False + the process-wide lock
+        # (see _synchronize_public_methods) make worker-thread DB access safe.
+        self.conn = sqlite3.connect(self.database_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         self._apply_pragmas(self.conn)
-        self._initialize_metadata_schema()
 
-        # Service DB connection
-        self.service_conn = sqlite3.connect(self.service_db)
-        self.service_conn.row_factory = sqlite3.Row
-        self.service_cursor = self.service_conn.cursor()
-        self._apply_pragmas(self.service_conn)
+        # service_* are aliases of the one connection so existing call sites
+        # (self.service_conn / self.service_cursor) keep working unchanged.
+        self.service_conn = self.conn
+        self.service_cursor = self.cursor
+
+        self._initialize_metadata_schema()
 
     # -------------------------------------------------------------------------
     # Lifecycle / pragmas
@@ -148,21 +219,53 @@ class DataController:
 
     @contextmanager
     def transaction(self, db: str):
-        conn, cursor = self._get_conn_cursor(db)
-        try:
-            cursor.execute("BEGIN")
-            yield
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
+        # NOTE: @_synchronize_public_methods wrapping this method only guards the
+        # (near-instant) call that builds this generator-context-manager -- calling a
+        # @contextmanager function doesn't run its body. The lock must be held here,
+        # around BEGIN/yield/commit-or-rollback, or the transaction runs unserialized
+        # against the shared single connection (see CLAUDE.md invariant 1).
+        with _DB_LOCK:
+            conn, cursor = self._get_conn_cursor(db)
+            try:
+                cursor.execute("BEGIN")
+                yield
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
     # -------------------------------------------------------------------------
     # Metadata schema
     # -------------------------------------------------------------------------
 
     def _initialize_metadata_schema(self) -> None:
-        self.cursor.execute(
+        # Parent table first so the child FKs below (and every service table) can
+        # reference workspace_index(id) ON DELETE CASCADE -- deleting a workspace
+        # then removes all of its rows in one statement.
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS workspace_index (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                configs TEXT
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sessions (
+                workspace_id INTEGER,
+                credname TEXT,
+                credtype TEXT,
+                default_compartment_id TEXT,
+                session_creds TEXT,
+                PRIMARY KEY (workspace_id, credname),
+                FOREIGN KEY (workspace_id) REFERENCES workspace_index(id) ON DELETE CASCADE
+            )
+            """
+        )
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS user_permissions (
                 workspace_id INTEGER,
@@ -174,34 +277,36 @@ class DataController:
                 apis_failed_json TEXT,
 
                 updated_at TEXT,
-                PRIMARY KEY (workspace_id, credname)
+                PRIMARY KEY (workspace_id, credname),
+                FOREIGN KEY (workspace_id) REFERENCES workspace_index(id) ON DELETE CASCADE
             )
             """
         )
         self.conn.commit()
 
-        self.cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS workspace_index (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                configs TEXT
-            )
-            """
-        )
-        self.cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS sessions (
-                workspace_id INTEGER,
-                credname TEXT,
-                credtype TEXT,
-                default_compartment_id TEXT,
-                session_creds TEXT,
-                PRIMARY KEY (workspace_id, credname)
-            )
-            """
+    def ensure_workspace(self, workspace_id: int, name: str = "", configs: str = "") -> None:
+        """Insert a workspace_index parent row for ``workspace_id`` if absent.
+
+        Real usage creates workspaces through ``insert_workspace`` before any
+        enumeration, so the FK parent always exists. This helper lets callers that
+        already hold an explicit workspace id (tests, restores) satisfy the FK.
+        """
+        self.conn.cursor().execute(
+            "INSERT OR IGNORE INTO workspace_index (id, name, configs) VALUES (?, ?, ?)",
+            (int(workspace_id), name, configs),
         )
         self.conn.commit()
+
+    def delete_workspace(self, workspace_id: int) -> bool:
+        """Delete a workspace and, via ON DELETE CASCADE, ALL of its rows across
+        every service + metadata table in one statement."""
+        try:
+            self.conn.cursor().execute("DELETE FROM workspace_index WHERE id = ?", (int(workspace_id),))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print("[X] Failed to delete workspace:", e)
+            return False
 
     def ensure_user_permissions_row(self, workspace_id: int, credname: str) -> None:
         """
@@ -376,11 +481,12 @@ class DataController:
 
     def fetch_user_permissions(self, workspace_id: int, credname: str) -> Optional[Dict[str, Any]]:
         try:
-            self.cursor.execute(
+            cur = self.conn.cursor()
+            cur.execute(
                 "SELECT * FROM user_permissions WHERE workspace_id = ? AND credname = ?",
                 (workspace_id, credname),
             )
-            r = self.cursor.fetchone()
+            r = cur.fetchone()
             return dict(r) if r else None
         except Exception as e:
             print(f"[X] fetch_user_permissions failed: {e}")
@@ -391,9 +497,19 @@ class DataController:
     # -------------------------------------------------------------------------
 
     def _get_conn_cursor(self, db: str) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
+        """Return the shared connection plus a FRESH cursor (never the stored
+        self.cursor/self.service_cursor singleton). Every caller already runs under
+        _DB_LOCK (see _synchronize_public_methods), so the connection is safely
+        serialized across worker threads -- but reusing one long-lived Cursor object
+        across threads is a separate, more fragile pattern than reusing the
+        Connection: a cursor carries its own internal state (statement cache, row
+        iterator) that has known edge cases under heavy concurrent load in CPython's
+        sqlite3 C extension even when externally serialized. A cheap, disposable
+        cursor per call removes that risk entirely."""
         if db not in ("metadata", "service"):
             raise ValueError("db must be 'metadata' or 'service'")
-        return (self.conn, self.cursor) if db == "metadata" else (self.service_conn, self.service_cursor)
+        conn = self.conn if db == "metadata" else self.service_conn
+        return conn, conn.cursor()
 
     def _table_columns(self, db: str, table_name: str) -> List[str]:
         _, cursor = self._get_conn_cursor(db)
@@ -487,13 +603,21 @@ class DataController:
     @classmethod
     def collect_sqlite_table_refs_by_paths(cls, db_paths: List[str]) -> List[Dict[str, Any]]:
         refs: List[Dict[str, Any]] = []
+        seen_paths: set = set()
         for db_path in db_paths or []:
             db_file = Path(str(db_path or "")).expanduser().resolve()
             if not db_file.exists():
                 continue
+            # Dedupe: metadata_db and service_db are the same unified file now.
+            if str(db_file) in seen_paths:
+                continue
+            seen_paths.add(str(db_file))
             db_name = db_file.stem
             table_names = cls.list_sqlite_tables_by_path(str(db_file))
             for table_name in table_names:
+                # Never export the workspace registry or stored credentials.
+                if table_name in cls._CONTROL_PLANE_TABLES:
+                    continue
                 refs.append(
                     {
                         "db_name": db_name,
@@ -570,6 +694,8 @@ class DataController:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
         table_rows = cursor.fetchall() or []
         table_names = [str(r[0]) for r in table_rows if isinstance(r, (tuple, list, sqlite3.Row)) and r]
+        # Never wipe the workspace registry or stored credentials (they share the file).
+        table_names = [t for t in table_names if t not in self._CONTROL_PLANE_TABLES]
         if not table_names:
             return {
                 "db_path": self.service_db,
@@ -644,14 +770,15 @@ class DataController:
 
         deleted_total = 0
         deleted_tables = 0
+        cur = self.service_conn.cursor()
         for entry in tables_with_rows:
             table_name = str(entry.get("table_name") or "").strip()
             if not table_name:
                 continue
             if all_workspaces:
-                self.service_cursor.execute(f'DELETE FROM "{table_name}"')
+                cur.execute(f'DELETE FROM "{table_name}"')
             else:
-                self.service_cursor.execute(f'DELETE FROM "{table_name}" WHERE "workspace_id" = ?', (target_ws,))
+                cur.execute(f'DELETE FROM "{table_name}" WHERE "workspace_id" = ?', (target_ws,))
             deleted_tables += 1
             deleted_total += int(entry.get("row_count") or 0)
 
@@ -814,28 +941,31 @@ class DataController:
 
     def insert_workspace(self, name: str, starting_config_data_json_blob: str) -> Optional[int]:
         try:
-            self.cursor.execute(
+            cur = self.conn.cursor()
+            cur.execute(
                 "INSERT INTO workspace_index (name, configs) VALUES (?, ?)",
                 (name, starting_config_data_json_blob),
             )
             self.conn.commit()
-            return self.cursor.lastrowid
+            return cur.lastrowid
         except Exception as e:
             print("[X] Failed to insert workspace:", e)
             return None
 
     def fetch_all_workspace_names(self) -> List[str]:
         try:
-            self.cursor.execute("SELECT name FROM workspace_index")
-            return [row["name"] for row in self.cursor.fetchall()]
+            cur = self.conn.cursor()
+            cur.execute("SELECT name FROM workspace_index")
+            return [row["name"] for row in cur.fetchall()]
         except Exception as e:
             print("[X] Failed to fetch workspace names:", e)
             return []
 
     def get_workspaces(self) -> List[Tuple[int, str]]:
         try:
-            self.cursor.execute("SELECT id, name FROM workspace_index")
-            return [(row["id"], row["name"]) for row in self.cursor.fetchall()]
+            cur = self.conn.cursor()
+            cur.execute("SELECT id, name FROM workspace_index")
+            return [(row["id"], row["name"]) for row in cur.fetchall()]
         except Exception as e:
             print("[X] Failed to get workspaces:", e)
             return []
@@ -846,31 +976,37 @@ class DataController:
             values = [workspace_id, credname, credtype, session_creds]
             placeholders = ["?"] * len(values)
             query = f"INSERT OR REPLACE INTO sessions ({','.join(columns)}) VALUES ({','.join(placeholders)})"
-            self.cursor.execute(query, values)
+            cur = self.conn.cursor()
+            cur.execute(query, values)
             self.conn.commit()
-            return self.cursor.lastrowid
+            return cur.lastrowid
         except Exception as e:
             print("[X] Failed in insert_creds:", e)
             return None
 
-    def list_creds(self, workspace_id: int) -> Optional[List[Tuple[str, str]]]:
+    def list_creds(self, workspace_id: int) -> Optional[List[Tuple[str, str, str]]]:
+        # Returns (credname, credtype, session_creds_json). session_creds lets callers
+        # distinguish sub-types that share a credtype (e.g. instance-principal with vs
+        # without a delegation/OBO token). Callers using only [0]/[1] stay compatible.
         try:
-            self.cursor.execute(
-                "SELECT credname, credtype FROM sessions WHERE workspace_id = ?",
+            cur = self.conn.cursor()
+            cur.execute(
+                "SELECT credname, credtype, session_creds FROM sessions WHERE workspace_id = ?",
                 (workspace_id,),
             )
-            return [(row["credname"], row["credtype"]) for row in self.cursor.fetchall()]
+            return [(row["credname"], row["credtype"], row["session_creds"]) for row in cur.fetchall()]
         except Exception as e:
             print(f"[X] Failed in list_creds: {e}")
             return None
 
     def fetch_cred(self, workspace_id: int, credname: str) -> Optional[Dict[str, Any]]:
         try:
-            self.cursor.execute(
+            cur = self.conn.cursor()
+            cur.execute(
                 "SELECT credname, credtype, session_creds FROM sessions WHERE workspace_id = ? AND credname = ?",
                 (workspace_id, credname),
             )
-            row = self.cursor.fetchone()
+            row = cur.fetchone()
             return dict(row) if row else None
         except Exception as e:
             print("[X] Failed in fetch_cred:", e)
@@ -881,71 +1017,98 @@ class DataController:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def _resolve_database_info_yaml_path() -> str:
+    def _resolve_database_info_path() -> str:
         # Load only packaged resource path (works for both installed wheel and repo source).
         try:
-            candidate = resources.files("ocinferno.mappings").joinpath("database_info.yaml")
+            candidate = resources.files("ocinferno.mappings").joinpath("database_info.json")
             if candidate.is_file():
                 return str(candidate)
         except Exception as exc:
             raise FileNotFoundError(
-                "Required resource 'mappings/database_info.yaml' is missing. "
+                "Required resource 'mappings/database_info.json' is missing. "
                 "Reinstall/upgrade OCInferno in a clean environment."
             ) from exc
         raise FileNotFoundError(
-            "Required resource 'mappings/database_info.yaml' is missing. "
+            "Required resource 'mappings/database_info.json' is missing. "
             "Reinstall/upgrade OCInferno in a clean environment."
         )
 
-    def create_service_tables_from_yaml(self, yaml_path: str | None = None) -> bool:
+    def create_service_tables_from_schema(self, schema_path: str | None = None) -> bool:
         try:
-            import yaml
+            if not schema_path:
+                schema_path = self._resolve_database_info_path()
 
-            if not yaml_path:
-                yaml_path = self._resolve_database_info_yaml_path()
+            with open(schema_path, "r", encoding="utf-8") as file:
+                schema_data = json.load(file)
 
-            with open(yaml_path, "r", encoding="utf-8") as file:
-                yaml_data = yaml.safe_load(file)
-
-            for db in yaml_data.get("databases", []):
-                for table in db.get("tables", []):
-                    table_name = table["table_name"]
-                    columns = list(table["columns"]) + ["workspace_id"]
-                    primary_keys = list(table["primary_keys"]) + ["workspace_id"]
-                    self._create_service_table(table_name, columns, primary_keys)
+            # Flat schema: {"tables": [...]}. Tolerate the legacy nested
+            # {"databases": [{"tables": [...]}]} shape so older files still load.
+            tables = schema_data.get("tables")
+            if tables is None:
+                tables = [t for db in schema_data.get("databases", []) for t in db.get("tables", [])]
+            for table in tables:
+                table_name = table["table_name"]
+                columns = list(table["columns"]) + ["workspace_id"]
+                primary_keys = list(table["primary_keys"]) + ["workspace_id"]
+                self._create_service_table(table_name, columns, primary_keys)
 
             return True
         except Exception as e:
-            print("[X] Failed to create service tables from YAML:", e)
+            print("[X] Failed to create service tables from schema:", e)
             return False
 
     def _create_service_table(self, table_name: str, columns: List[str], primary_keys: List[str]) -> None:
         try:
+            cur = self.service_conn.cursor()
             col_defs = ", ".join([f'"{col}" TEXT' for col in columns])
             pk_defs = ", ".join([f'"{pk}"' for pk in primary_keys])
+            # One-off migration: the enum_all resume ledger gained a `region` column in
+            # its PRIMARY KEY (multi-region units are keyed by region+compartment+module).
+            # An older DB created the table with the pre-region PK, which CREATE TABLE IF
+            # NOT EXISTS can't alter -- so multi-region resume rows would collide. Drop the
+            # stale table (the ledger is ephemeral progress state) so it recreates correctly.
+            if table_name == "enum_all_task_ledger":
+                try:
+                    cur.execute('PRAGMA table_info("enum_all_task_ledger")')
+                    info = cur.fetchall() or []
+                    exists = bool(info)
+                    pk_cols = set()
+                    for r in info:
+                        name = str(r["name"]) if isinstance(r, sqlite3.Row) else str(r[1])
+                        pk_flag = r["pk"] if isinstance(r, sqlite3.Row) else r[5]
+                        if pk_flag:
+                            pk_cols.add(name)
+                    if exists and "region" not in pk_cols:
+                        cur.execute('DROP TABLE "enum_all_task_ledger"')
+                except Exception:
+                    pass
+
+            # workspace_id FK -> workspace_index(id) ON DELETE CASCADE so a workspace
+            # delete removes all of its service rows.
             create_stmt = f'''
             CREATE TABLE IF NOT EXISTS "{table_name}" (
                 {col_defs},
-                PRIMARY KEY ({pk_defs})
+                PRIMARY KEY ({pk_defs}),
+                FOREIGN KEY ("workspace_id") REFERENCES "workspace_index" ("id") ON DELETE CASCADE
             );
             '''
-            self.service_cursor.execute(create_stmt)
+            cur.execute(create_stmt)
 
             # Schema drift fix: add newly-defined columns to existing tables.
-            self.service_cursor.execute(f'PRAGMA table_info("{table_name}")')
+            cur.execute(f'PRAGMA table_info("{table_name}")')
             existing_cols = set()
-            for r in (self.service_cursor.fetchall() or []):
+            for r in (cur.fetchall() or []):
                 if isinstance(r, sqlite3.Row):
                     existing_cols.add(str(r["name"]))
                 elif isinstance(r, (list, tuple)) and len(r) >= 2:
                     existing_cols.add(str(r[1]))
             for col in columns:
                 if col not in existing_cols:
-                    self.service_cursor.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col}" TEXT')
+                    cur.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col}" TEXT')
 
             # Ensure full edge identity uniqueness for existing DBs, even if legacy PK is narrower.
             if table_name == "opengraph_edges":
-                self.service_cursor.execute(
+                cur.execute(
                     'CREATE UNIQUE INDEX IF NOT EXISTS "ux_opengraph_edges_identity" '
                     'ON "opengraph_edges" ("source_id", "edge_type", "destination_id", "workspace_id")'
                 )
@@ -954,7 +1117,7 @@ class DataController:
                 if not index_cols:
                     continue
                 cols_sql = ", ".join(f'"{c}"' for c in index_cols)
-                self.service_cursor.execute(
+                cur.execute(
                     f'CREATE INDEX IF NOT EXISTS "{index_name}" ON "{table_name}" ({cols_sql})'
                 )
 
@@ -1079,7 +1242,15 @@ class DataController:
             print(f"[X] Table '{table_name}' not found.")
             return 0
 
-        columns = [c for c in rows[0].keys() if c in cols_in_table]
+        # Union every row's keys (not just rows[0]'s) so a column present only on LATER
+        # rows isn't silently dropped from the whole executemany batch. Order-preserving.
+        columns: List[str] = []
+        _seen: Set[str] = set()
+        for r in rows:
+            for c in r.keys():
+                if c in cols_in_table and c not in _seen:
+                    _seen.add(c)
+                    columns.append(c)
         if not columns:
             print(f"[X] No valid columns to insert for '{table_name}'.")
             return 0

@@ -11,7 +11,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence
+from typing import Any, Dict, Iterator, List, Optional, Sequence
 from unittest.mock import patch
 
 
@@ -302,25 +302,19 @@ def _wrapper_common_flags(source_path: Path) -> Dict[str, FlagSpec]:
             continue
 
         include_get = True
-        include_save = True
         include_download = False
 
         kw_get = _literal(_kw(node, "include_get"))
-        kw_save = _literal(_kw(node, "include_save"))
         kw_download = _literal(_kw(node, "include_download"))
 
         if isinstance(kw_get, bool):
             include_get = kw_get
-        if isinstance(kw_save, bool):
-            include_save = kw_save
         if isinstance(kw_download, bool):
             include_download = kw_download
 
         flags: Dict[str, FlagSpec] = {}
         if include_get:
             flags["--get"] = FlagSpec(flag="--get", takes_value=False)
-        if include_save:
-            flags["--save"] = FlagSpec(flag="--save", takes_value=False)
         if include_download:
             flags["--download"] = FlagSpec(flag="--download", takes_value=False)
         return flags
@@ -332,13 +326,38 @@ def _component_flags(module) -> Dict[str, FlagSpec]:
     flags: Dict[str, FlagSpec] = {}
     components = list(getattr(module, "COMPONENTS", []) or [])
     for item in components:
-        if not isinstance(item, (list, tuple)) or not item:
-            continue
-        key = item[0]
+        # Legacy tuple COMPONENTS (key, suffix, help) or run_components Component objects.
+        if isinstance(item, (list, tuple)) and item:
+            key = item[0]
+        else:
+            key = getattr(item, "key", None)
         if isinstance(key, str) and key:
             flag = f"--{key.replace('_', '-')}"
             flags[flag] = FlagSpec(flag=flag, takes_value=False)
     return flags
+
+
+def _framework_parser(module):
+    """Parse callable for run_components-based modules (no module-level _parse_args).
+
+    Mirrors run_components' own arg parsing: parse_wrapper_args over the module's
+    Component-derived arg specs plus its optional ``_add_extra_args`` hook.
+    """
+    from ocinferno.core.utils.enum_framework import component_arg_specs
+    from ocinferno.core.utils.service_runtime import parse_wrapper_args
+
+    components = list(getattr(module, "COMPONENTS", []) or [])
+    add_extra = getattr(module, "_add_extra_args", None)
+
+    def _parse(argv):
+        return parse_wrapper_args(
+            argv,
+            description="offline-test",
+            components=component_arg_specs(components),
+            add_extra_args=add_extra if callable(add_extra) else None,
+        )
+
+    return _parse
 
 
 def collect_module_flag_specs(module_name: str) -> List[FlagSpec]:
@@ -359,13 +378,16 @@ def collect_module_flag_specs(module_name: str) -> List[FlagSpec]:
 def assert_module_flags_parse(module_name: str) -> None:
     with stub_optional_dependencies():
         module = import_module(module_name)
+        # run_components modules parse internally (no module-level _parse_args); reuse
+        # the same parse path the framework does so their flags still get validated.
+        parse = getattr(module, "_parse_args", None) or _framework_parser(module)
         for spec in collect_module_flag_specs(module_name):
             argv = [spec.flag]
             if spec.takes_value:
                 argv.append(spec.value)
 
             try:
-                parsed = module._parse_args(argv)
+                parsed = parse(argv)
             except SystemExit as exc:
                 raise AssertionError(f"{module_name}: failed parsing {argv!r} (SystemExit {exc.code})") from exc
 
@@ -407,7 +429,7 @@ def _patched_offline_runtime(module, module_name: str):
             stack.enter_context(patch.object(module, "_print_compartment_tree", return_value=None))
             stack.enter_context(patch.object(module, "_expand_compartments", return_value=None))
 
-        if module_name == "ocinferno.modules.everything.enumeration.enum_config_check":
+        if module_name == "ocinferno.modules.everything.processing.process_config_check":
             class _Report:
                 def to_dict(self):
                     return {"findings": [], "summary": {}}
@@ -415,18 +437,15 @@ def _patched_offline_runtime(module, module_name: str):
             stack.enter_context(patch.object(module, "run_audit", return_value=_Report()))
             stack.enter_context(patch.object(module, "print_audit_report", return_value=None))
 
-        if module_name == "ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data":
-            stack.enter_context(patch.object(module, "push_custom_node_attributes", return_value={"ok": True}))
-
         yield
 
 
 def module_smoke_args(module_name: str) -> List[str]:
     if module_name == "ocinferno.modules.everything.enumeration.enum_all":
         return ["--modules", "identity", "--no-recursive-compartments"]
-    if module_name == "ocinferno.modules.everything.enumeration.enum_config_check":
+    if module_name == "ocinferno.modules.everything.processing.process_config_check":
         return ["--quiet"]
-    if module_name == "ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data":
+    if module_name == "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data":
         return ["--export-only"]
     return []
 

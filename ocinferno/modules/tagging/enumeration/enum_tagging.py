@@ -14,6 +14,7 @@ from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -59,26 +60,14 @@ def run_module(user_args, session):
     defaults_resource = TaggingTagDefaultsResource(session=session)
 
     if selected.get("namespaces", False):
-        try:
-            rows = namespaces_resource.list(
-                compartment_id=compartment_id,
-                include_subcompartments=bool(args.include_subcompartments),
-            )
-        except oci.exceptions.ServiceError as err:
-            UtilityTools.dlog(True, "list_tag_namespaces failed", status=err.status, code=err.code)
-            results.append({"ok": False, "namespaces": 0})
-        else:
-            rows = [row for row in rows if isinstance(row, dict)]
-            for row in rows:
-                row.setdefault("compartment_id", compartment_id)
-
-            if rows:
-                UtilityTools.print_limited_table(rows, namespaces_resource.COLUMNS)
-
-            if args.save:
-                namespaces_resource.save(rows)
-
-            results.append({"ok": True, "namespaces": len(rows), "saved": bool(args.save)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="namespaces",
+            list_rows=lambda cid: namespaces_resource.list(compartment_id=cid, include_subcompartments=bool(args.include_subcompartments)),
+            get_row=None,
+            save_rows_fn=namespaces_resource.save,
+            print_columns=namespaces_resource.COLUMNS,
+            module_name="enum_tagging",
+        ))
     if selected.get("definitions", False):
         try:
             namespaces = definitions_resource.list_namespaces(
@@ -117,31 +106,18 @@ def run_module(user_args, session):
             if out_rows:
                 UtilityTools.print_limited_table(out_rows, definitions_resource.COLUMNS)
 
-            if args.save:
-                definitions_resource.save(out_rows)
+            definitions_resource.save(out_rows)
 
-            results.append({"ok": True, "definitions": len(out_rows), "saved": bool(args.save)})
+            results.append({"ok": True, "definitions": len(out_rows), "saved": True})
     if selected.get("defaults", False):
-        try:
-            rows = defaults_resource.list(
-                compartment_id=compartment_id,
-                include_subcompartments=bool(args.include_subcompartments),
-            )
-        except oci.exceptions.ServiceError as err:
-            UtilityTools.dlog(True, "list_tag_defaults failed", status=err.status, code=err.code)
-            results.append({"ok": False, "defaults": 0})
-        else:
-            rows = [row for row in rows if isinstance(row, dict)]
-            for row in rows:
-                row.setdefault("compartment_id", compartment_id)
-
-            if rows:
-                UtilityTools.print_limited_table(rows, defaults_resource.COLUMNS)
-
-            if args.save:
-                defaults_resource.save(rows)
-
-            results.append({"ok": True, "defaults": len(rows), "saved": bool(args.save)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="defaults",
+            list_rows=lambda cid: defaults_resource.list(compartment_id=cid, include_subcompartments=bool(args.include_subcompartments)),
+            get_row=None,
+            save_rows_fn=defaults_resource.save,
+            print_columns=defaults_resource.COLUMNS,
+            module_name="enum_tagging",
+        ))
 
     append_cached_component_counts(
         results=results,

@@ -71,13 +71,26 @@ def _parse_dynamic_group_matching_rules_stub(rule_text, *_args, **_kwargs):
     return copy.deepcopy(_RULE_AST_MAP.get(str(rule_text or "").strip(), {"rules": []}))
 
 
-# Stub parser symbols before importing OpenGraph runner.
-parser_stub = sys.modules.get("oci_lexer_parser", types.ModuleType("oci_lexer_parser"))
-parser_stub.parse_dynamic_group_matching_rules = _parse_dynamic_group_matching_rules_stub
-parser_stub.parse_policy_statements = lambda *_a, **_k: []
-sys.modules["oci_lexer_parser"] = parser_stub
+# Stub parser symbols before importing OpenGraph runner -- but only when the real
+# oci_lexer_parser package is genuinely unavailable. This used to unconditionally
+# overwrite (or mutate in place) sys.modules["oci_lexer_parser"], which -- if that
+# name was already bound to the REAL package elsewhere in the session -- permanently
+# clobbered its real parse_policy_statements/parse_dynamic_group_matching_rules for
+# every other test module for the rest of the pytest run (e.g.
+# tests/unit/test_config_audit.py's identity-policy tests silently got 0 findings).
+# TestDynamicGroupMembershipOpenGraphModule.setUp() below already monkeypatches
+# matching_rules_engine.parse_dynamic_group_matching_rules directly on every test run,
+# so this module-level stub only needs to make the import below succeed when the real
+# package truly isn't installed.
+try:
+    import oci_lexer_parser  # noqa: F401
+except ImportError:
+    parser_stub = types.ModuleType("oci_lexer_parser")
+    parser_stub.parse_dynamic_group_matching_rules = _parse_dynamic_group_matching_rules_stub
+    parser_stub.parse_policy_statements = lambda *_a, **_k: []
+    sys.modules["oci_lexer_parser"] = parser_stub
 
-from ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data import run_module
+from ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data import run_module
 from ocinferno.modules.opengraph.utilities.helpers import matching_rules_engine as _mre
 
 
@@ -265,7 +278,7 @@ class TestDynamicGroupMembershipOpenGraphModule(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self._tmp_path = Path(self._tmp.name)
         self.dc = IntegrationTestDataController(self._tmp_path)
-        self.assertTrue(self.dc.create_service_tables_from_yaml())
+        self.assertTrue(self.dc.create_service_tables_from_schema())
         self.session = OpenGraphTestSession(
             self.dc,
             workspace_id=WORKSPACE_ID,

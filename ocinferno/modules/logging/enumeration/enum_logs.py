@@ -10,16 +10,16 @@ from ocinferno.modules.logging.utilities.helpers import (
     LoggingLogGroupsResource,
     LoggingLogsResource,
 )
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
     parser = argparse.ArgumentParser(description="Enumerate OCI Logging (Log Groups + Logs)", allow_abbrev=False)
     parser.add_argument("--logs", action="store_true", help="List logs for each log group")
-    # --get/--save are runner-level common flags; parse module-specific args only.
+    # --get is a runner-level common flag; parse module-specific args only.
     args, _ = parser.parse_known_args(list(user_args))
     raw_args = {str(x) for x in (list(user_args) if user_args is not None else [])}
     args.get = "--get" in raw_args
-    args.save = "--save" in raw_args
     return args
 
 
@@ -40,6 +40,9 @@ def run_module(user_args, session) -> Dict[str, Any]:
     try:
         groups: List[Dict[str, Any]] = groups_resource.list(compartment_id=session.compartment_id) or []
     except oci.exceptions.ServiceError as e:
+        skip = component_soft_skip_or_error(e, component="log_groups", module_name="enum_logs")
+        if skip.get("skipped"):
+            return {"ok": True, "log_groups": 0, "logs": 0, "saved": False}
         UtilityTools.dlog(True, "list_log_groups failed",
                           status=getattr(e, "status", None),
                           code=getattr(e, "code", None),
@@ -67,7 +70,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             if not gid:
                 continue
             try:
-                meta = groups_resource.get(log_group_id=gid)
+                meta = groups_resource.get(resource_id=gid)
             except oci.exceptions.ServiceError as e:
                 UtilityTools.dlog(debug, "get_log_group failed",
                                   log_group_id=gid,
@@ -171,17 +174,16 @@ def run_module(user_args, session) -> Dict[str, Any]:
         UtilityTools.print_limited_table(all_logs, logs_resource.COLUMNS)
 
     # 5) Save
-    if args.save:
-        groups_resource.save(groups)
-        if args.logs and all_logs:
-            logs_resource.save(all_logs)
+    groups_resource.save(groups)
+    if args.logs and all_logs:
+        logs_resource.save(all_logs)
 
     return {
         "ok": True,
         "cid": session.compartment_id,
         "log_groups": len(groups),
         "logs": int(logs_total),
-        "saved": bool(args.save),
+        "saved": True,
         "get": bool(args.get),
         "logs_flag": bool(args.logs),
     }

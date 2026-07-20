@@ -5,35 +5,23 @@ import re
 from typing import Any, Dict, List, Optional
 
 import oci
+from ocinferno.core.resource import OciListResource
+from ocinferno.core.utils.module_helpers import write_response_stream_to_file
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
-class ArtifactRegistryRepositoriesResource:
+class ArtifactRegistryRepositoriesResource(OciListResource):
+    CLIENT_CLS = oci.artifacts.ArtifactsClient
+    SERVICE_NAME = "Artifacts"
     TABLE_NAME = "ar_repositories"
+    LIST_METHOD = "list_repositories"
+    GET_METHOD = "get_repository"
+    GET_ID_PARAM = "repository_id"
     COLUMNS = ["id", "display_name", "repository_type", "lifecycle_state"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = _init_client(oci.artifacts.ArtifactsClient, session=session, service_name="Artifacts")
-        target_region = region or getattr(session, "region", None)
-        if target_region:
-            try:
-                self.client.base_client.set_region(target_region)
-            except Exception:
-                pass
 
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_repositories, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_repository(repository_id=resource_id).data) or {}
-
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class ArtifactRegistryArtifactsResource:
+class ArtifactRegistryArtifactsResource(ResourceBase):
     TABLE_NAME = "ar_generic_artifact"
     COLUMNS = ["id", "artifact_path", "version", "sha256", "lifecycle_state", "time_created", "repository_id"]
 
@@ -68,49 +56,6 @@ class ArtifactRegistryArtifactsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.client.get_generic_artifact(artifact_id=resource_id).data) or {}
 
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    @staticmethod
-    def _write_stream_to_file(payload: Any, out_file: str, chunk_size: int) -> bool:
-        if payload is None:
-            return False
-
-        os.makedirs(os.path.dirname(out_file) or ".", exist_ok=True)
-
-        if isinstance(payload, (bytes, bytearray)):
-            with open(out_file, "wb") as handle:
-                handle.write(payload)
-            return os.path.getsize(out_file) > 0
-
-        if hasattr(payload, "read") and callable(getattr(payload, "read")):
-            with open(out_file, "wb") as handle:
-                while True:
-                    chunk = payload.read(chunk_size)
-                    if not chunk:
-                        break
-                    handle.write(chunk)
-            return os.path.getsize(out_file) > 0
-
-        if hasattr(payload, "iter_content") and callable(getattr(payload, "iter_content")):
-            with open(out_file, "wb") as handle:
-                for chunk in payload.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        handle.write(chunk)
-            return os.path.getsize(out_file) > 0
-
-        raw = getattr(payload, "raw", None)
-        if raw is not None and hasattr(raw, "read") and callable(getattr(raw, "read")):
-            with open(out_file, "wb") as handle:
-                while True:
-                    chunk = raw.read(chunk_size)
-                    if not chunk:
-                        break
-                    handle.write(chunk)
-            return os.path.getsize(out_file) > 0
-
-        return False
-
     def download_by_path(
         self,
         *,
@@ -127,13 +72,13 @@ class ArtifactRegistryArtifactsResource:
             artifact_path=artifact_path,
             version=version,
         )
-        return self._write_stream_to_file(getattr(resp, "data", None), out_file, chunk_size)
+        return write_response_stream_to_file(getattr(resp, "data", None), out_file, chunk_size=chunk_size)
 
     def download_by_id(self, *, artifact_id: str, out_file: str, chunk_size: int = 1024 * 1024) -> bool:
         if not artifact_id:
             return False
         resp = self.content_client.get_generic_artifact_content(artifact_id=artifact_id)
-        return self._write_stream_to_file(getattr(resp, "data", None), out_file, chunk_size)
+        return write_response_stream_to_file(getattr(resp, "data", None), out_file, chunk_size=chunk_size)
 
     @staticmethod
     def sanitize_relpath(value: str) -> str:

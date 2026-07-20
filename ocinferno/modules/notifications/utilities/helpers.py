@@ -4,7 +4,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 import oci
+from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
 def build_notification_clients(session, region: Optional[str] = None) -> Tuple[Any, Any]:
@@ -30,34 +32,17 @@ def build_notification_clients(session, region: Optional[str] = None) -> Tuple[A
     return cp, dp
 
 
-class NotificationTopicsResource:
+class NotificationTopicsResource(OciListResource):
+    # Topics live on the ONS control-plane client (list_topics/get_topic).
+    CLIENT_CLS = oci.ons.NotificationControlPlaneClient
+    SERVICE_NAME = "Notifications"
     TABLE_NAME = "notification_topics"
+    LIST_METHOD = "list_topics"
+    GET_METHOD = "get_topic"
+    GET_ID_PARAM = "topic_id"
     COLUMNS = ["topic_id", "name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.cp, _ = build_notification_clients(session=session, region=region)
-
-    # List topics in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.cp.list_topics, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one topic by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.cp.get_topic(topic_id=resource_id).data) or {}
-
-    # Save topic rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for topic rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class NotificationSubscriptionsResource:
+class NotificationSubscriptionsResource(ResourceBase):
     TABLE_NAME = "notification_subscriptions"
     COLUMNS = ["id", "topic_id", "protocol", "endpoint", "lifecycle_state", "time_created"]
 
@@ -81,11 +66,4 @@ class NotificationSubscriptionsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.dp.get_subscription(subscription_id=resource_id).data) or {}
 
-    # Save subscription rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for subscription rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False

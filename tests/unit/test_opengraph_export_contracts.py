@@ -6,13 +6,18 @@ import types
 import unittest
 
 
-if "oci_lexer_parser" not in sys.modules:
+try:
+    import oci_lexer_parser  # noqa: F401
+except ImportError:
+    # Only stub when the real package is genuinely unavailable -- unconditionally
+    # installing a fake module here would permanently shadow the real
+    # oci_lexer_parser for the rest of the pytest session for any other test file.
     parser_stub = types.ModuleType("oci_lexer_parser")
     parser_stub.parse_dynamic_group_matching_rules = lambda *_a, **_k: {"rules": []}
     parser_stub.parse_policy_statements = lambda *_a, **_k: ({"statements": []}, {"errors": [], "error_count": 0})
     sys.modules["oci_lexer_parser"] = parser_stub
 
-from ocinferno.modules.opengraph.enumeration import enum_oracle_cloud_hound_data as og  # noqa: E402
+from ocinferno.modules.opengraph.processing import process_oracle_cloud_hound_data as og  # noqa: E402
 
 
 class TestOpenGraphExportContract(unittest.TestCase):

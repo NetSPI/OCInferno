@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils import hierarchy as _hierarchy
 
 
 def resource_type_label(table_name: str) -> str:
@@ -281,31 +282,24 @@ def print_compartment_tree(session, target_cids: List[str]) -> None:
     if not target_set:
         return
 
+    def _normalized_parent(r: Dict[str, Any]) -> Optional[str]:
+        pid = r.get("parent_compartment_id")
+        if isinstance(pid, str) and pid.strip().upper() == "N/A":
+            return None
+        return pid if isinstance(pid, str) and pid else None
+
     # Include ancestors for context so the tree shape matches compartment views.
+    parent_by_id = {cid: (_normalized_parent(r) or "") for cid, r in row_by_id.items()}
     include_ids = set(target_set)
-    for cid in list(target_set):
-        cur = cid
-        while True:
-            row = row_by_id.get(cur) or {}
-            pid = row.get("parent_compartment_id")
-            if isinstance(pid, str) and pid.strip().upper() == "N/A":
-                pid = None
-            if not isinstance(pid, str) or not pid:
-                break
-            if pid in include_ids:
-                cur = pid
-                continue
-            include_ids.add(pid)
-            cur = pid
+    for cid in target_set:
+        include_ids.update(_hierarchy.ancestor_chain(parent_by_id, cid))
 
     nodes: Dict[str, Dict[str, Any]] = {}
     children: Dict[Optional[str], List[str]] = {}
     for cid in include_ids:
         r = row_by_id.get(cid) or {}
-        pid = r.get("parent_compartment_id")
-        if isinstance(pid, str) and pid.strip().upper() == "N/A":
-            pid = None
-        if isinstance(pid, str) and pid not in include_ids:
+        pid = _normalized_parent(r)
+        if pid is not None and pid not in include_ids:
             pid = None
         name = str(r.get("name") or r.get("display_name") or cid)
         is_tenant = UtilityTools.is_tenancy_ocid(cid)
@@ -318,35 +312,16 @@ def print_compartment_tree(session, target_cids: List[str]) -> None:
     roots = [cid for cid, n in nodes.items() if n.get("parent") is None or n.get("is_tenant")]
     roots = sorted(roots, key=lambda c: str(nodes[c].get("name", "")).lower())
 
-    tee, elbow, pipe, space = "├─ ", "└─ ", "│  ", "   "
-
-    def label(node: Dict[str, Any]) -> str:
+    def label_of(cid: str) -> str:
+        node = nodes[cid]
         base = f"{node['name']} ({node['id']})"
         if node.get("is_tenant"):
             base = f"{UtilityTools.BOLD}{UtilityTools.CYAN}{base} [TENANCY]{UtilityTools.RESET}"
         return base
 
-    def dfs(cid: str, prefix: str = "", is_last: bool = True, seen: Optional[Set[str]] = None) -> None:
-        if seen is None:
-            seen = set()
-        if cid in seen:
-            print(prefix + (elbow if is_last else tee) + f"(cycle) {nodes[cid]['name']}")
-            return
-        seen.add(cid)
-
-        print(prefix + (elbow if is_last else tee) + label(nodes[cid]))
-        kids = children.get(cid, [])
-        for i, kid in enumerate(kids):
-            last = i == (len(kids) - 1)
-            new_prefix = prefix + (space if is_last else pipe)
-            dfs(kid, new_prefix, last, seen)
-
     print("\n[*] Compartments/Tenancy Tree (scanned scope)")
     for ri, root in enumerate(roots):
-        print(label(nodes[root]))
-        kids = children.get(root, [])
-        for i, kid in enumerate(kids):
-            last = i == (len(kids) - 1)
-            dfs(kid, "", last)
+        for line in _hierarchy.render_tree_lines([root], children, label_of):
+            print(line)
         if ri < len(roots) - 1:
             print()

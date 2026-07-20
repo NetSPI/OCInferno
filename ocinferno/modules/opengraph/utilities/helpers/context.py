@@ -24,6 +24,7 @@ from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_USER,
     RESOURCE_SCOPE_MAP,
 )
+from ocinferno.core.utils import hierarchy as _hierarchy
 
 
 def _base_name(display_name):
@@ -174,15 +175,19 @@ class OfflineIamContext:
         st.setdefault("existing_nodes_set", set())
         st.setdefault("existing_edges_set", set())
         st.setdefault("existing_node_types", {})
+        st.setdefault("existing_node_properties", {})
 
-        if force or not st["existing_nodes_set"] and not st["existing_edges_set"]:
+        if force:
             st["existing_nodes_set"].clear()
             st["existing_edges_set"].clear()
             st["existing_node_types"].clear()
-        elif st["existing_nodes_set"] and st["existing_edges_set"] and (
-            st["existing_node_types"] or not st["existing_nodes_set"]
-        ):
-            # Already hydrated for this run.
+            st["existing_node_properties"].clear()
+            st["hydrated"] = False
+        elif st.get("hydrated"):
+            # Already hydrated for this run; the sets are kept current by incremental
+            # maintenance on every upsert_node/write_edge, so skip the full re-read.
+            # (Explicit flag, not set-nonemptiness: a graph with nodes but zero edges,
+            # or vice-versa, is still validly hydrated.)
             self.og_state = st
             return st
 
@@ -191,7 +196,9 @@ class OfflineIamContext:
             self.og_state = st
             return st
 
-        nodes = session.get_resource_fields("opengraph_nodes", columns=["node_id", "node_type"]) or []
+        nodes = session.get_resource_fields(
+            "opengraph_nodes", columns=["node_id", "node_type", "node_properties"]
+        ) or []
         edges = session.get_resource_fields(
             "opengraph_edges",
             columns=["source_id", "edge_type", "destination_id"],
@@ -200,6 +207,7 @@ class OfflineIamContext:
         en = st["existing_nodes_set"]
         es = st["existing_edges_set"]
         nt = st["existing_node_types"]
+        np_map = st["existing_node_properties"]
 
         for r in nodes:
             if isinstance(r, dict):
@@ -209,6 +217,10 @@ class OfflineIamContext:
                     ntype = r.get("node_type")
                     if isinstance(ntype, str) and ntype:
                         nt[nid] = ntype
+                    # Stash raw node_properties from the SAME query so upsert_node
+                    # can merge against pre-existing props without an N+1 per-node
+                    # SELECT on re-runs (batched here, one query).
+                    np_map[nid] = r.get("node_properties")
 
         for r in edges:
             if not isinstance(r, dict):
@@ -217,6 +229,7 @@ class OfflineIamContext:
             if k[0] and k[1] and k[2]:
                 es.add(k)
 
+        st["hydrated"] = True
         self.og_state = st
         return st
 
@@ -270,6 +283,13 @@ class OfflineIamContext:
             return None
         s = st.get("existing_edges_set")
         return s if isinstance(s, set) else None
+
+    def _og_existing_node_properties(self):
+        st = getattr(self, "og_state", None)
+        if not isinstance(st, dict):
+            return None
+        m = st.get("existing_node_properties")
+        return m if isinstance(m, dict) else None
 
     # -------------------------------------------------------------------------
     # Loads + dedupe
@@ -759,23 +779,9 @@ class OfflineIamContext:
         if isinstance(cached, (list, tuple)):
             return tuple(cached)
 
-        out = []
-        stack = [cid]
-        seen = set()
-
-        while stack:
-            cur = stack.pop()
-            if cur in seen:
-                continue
-            seen.add(cur)
-            out.append(cur)
-            kids = self.children_by_compartment_id.get(cur) or set()
-            for k in kids:
-                if k not in seen:
-                    stack.append(k)
-
-        self.descendants_cache[cid] = tuple(out)
-        return tuple(out)
+        out = (cid, *_hierarchy.descendants(self.children_by_compartment_id, cid))
+        self.descendants_cache[cid] = out
+        return out
 
     # -------------------------------------------------------------------------
     # Node / edge writers
@@ -971,10 +977,22 @@ class OfflineIamContext:
         if existing is None:
             existing = {}
             should_lookup = True
-            # Fast path: when OG state is hydrated and node_id is known absent,
-            # skip the per-key existence read.
-            if isinstance(existing_nodes, set) and node_id not in existing_nodes:
-                should_lookup = False
+            if isinstance(existing_nodes, set):
+                if node_id not in existing_nodes:
+                    # Fast path: hydrated state proves the node is absent — no read.
+                    should_lookup = False
+                else:
+                    # Present + hydrated: reuse the node_properties batched into
+                    # og_state by refresh_opengraph_state rather than a per-node
+                    # SELECT (kills the N+1 on incremental re-runs).
+                    np_map = self._og_existing_node_properties()
+                    if np_map is not None and node_id in np_map:
+                        existing = {
+                            "node_id": node_id,
+                            "node_type": node_type,
+                            "node_properties": np_map.get(node_id),
+                        }
+                        should_lookup = False
             if should_lookup:
                 try:
                     rows = self.session.get_resource_fields(

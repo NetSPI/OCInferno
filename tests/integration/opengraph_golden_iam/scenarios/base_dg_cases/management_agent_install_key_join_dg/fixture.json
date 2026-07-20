@@ -1,0 +1,160 @@
+{
+  "description": "A usable management-agent install key can enroll a rogue agent into a dynamic group that matches resource.type='managementagent' in the key's compartment, inheriting that DG's grants. Expired / slot-exhausted keys emit nothing (usability gate).",
+  "workspace": {
+    "workspace_id": 10099,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..agent_enrollers_manage_instances",
+          "name": "AgentEnrollersPolicy",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_dynamic_groups": [
+        {
+          "id": "ocid1.dynamicgroup.oc1..agentenrollers",
+          "name": "AgentEnrollers",
+          "matching_rule": "Any {resource.type = 'managementagent'}",
+          "description": "Management agents in AppTeam",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "management_agent_install_keys": [
+        {
+          "id": "ocid1.managementagentinstallkey.oc1..usable",
+          "display_name": "prod-agent-key",
+          "lifecycle_state": "ACTIVE",
+          "created_by_principal_id": "ocid1.user.oc1..admin",
+          "time_created": "2026-01-01T00:00:00Z",
+          "time_expires": "2099-12-31T23:59:59Z",
+          "allowed_key_install_count": "1000",
+          "current_key_install_count": "3",
+          "is_unlimited": "0",
+          "compartment_id": "ocid1.compartment.oc1..app"
+        },
+        {
+          "id": "ocid1.managementagentinstallkey.oc1..expired",
+          "display_name": "stale-key",
+          "lifecycle_state": "ACTIVE",
+          "created_by_principal_id": "ocid1.user.oc1..admin",
+          "time_created": "1999-01-01T00:00:00Z",
+          "time_expires": "2000-01-01T00:00:00Z",
+          "allowed_key_install_count": "10",
+          "current_key_install_count": "0",
+          "is_unlimited": "0",
+          "compartment_id": "ocid1.compartment.oc1..app"
+        },
+        {
+          "id": "ocid1.managementagentinstallkey.oc1..exhausted",
+          "display_name": "used-up-key",
+          "lifecycle_state": "ACTIVE",
+          "created_by_principal_id": "ocid1.user.oc1..admin",
+          "time_created": "2026-01-01T00:00:00Z",
+          "time_expires": "2099-12-31T23:59:59Z",
+          "allowed_key_install_count": "5",
+          "current_key_install_count": "5",
+          "is_unlimited": "0",
+          "compartment_id": "ocid1.compartment.oc1..app"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "raw": "Allow dynamic-group AgentEnrollers to manage instances in compartment AppTeam",
+          "parsed": {
+            "kind": "allow",
+            "subject": {
+              "type": "dynamic-group",
+              "values": [
+                {
+                  "ocid": "ocid1.dynamicgroup.oc1..agentenrollers",
+                  "name": "AgentEnrollers"
+                }
+              ]
+            },
+            "actions": {
+              "type": "verbs",
+              "values": [
+                "manage"
+              ]
+            },
+            "resources": {
+              "type": "specific",
+              "values": [
+                "instances"
+              ]
+            },
+            "location": {
+              "type": "compartment_id",
+              "values": [
+                "ocid1.compartment.oc1..app"
+              ]
+            },
+            "conditions": {}
+          }
+        }
+      ],
+      "dynamic_group_matching_rules": {
+        "Any {resource.type = 'managementagent'}": {
+          "schema_version": "1.0",
+          "rules": [
+            {
+              "level": 1,
+              "expr": {
+                "type": "group",
+                "mode": "any",
+                "items": [
+                  {
+                    "type": "clause",
+                    "node": {
+                      "lhs": "resource.type",
+                      "op": "eq",
+                      "rhs": {
+                        "type": "literal",
+                        "value": "managementagent"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

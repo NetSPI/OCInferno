@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from ocinferno.core.console import UtilityTools
-from ocinferno.core.utils.module_helpers import fill_missing_fields
+from ocinferno.core.utils.enum_framework import Component, component_arg_specs, nested_list_fn, run_components
+from ocinferno.core.utils.module_helpers import domain_ids_from_db
+from ocinferno.core.utils.service_runtime import parse_wrapper_args, resolve_selected_components
 from ocinferno.modules.iot.utilities.helpers import (
     IotDigitalTwinAdaptersResource,
     IotDigitalTwinInstancesResource,
@@ -11,142 +12,72 @@ from ocinferno.modules.iot.utilities.helpers import (
     IotDomainGroupsResource,
     IotDomainsResource,
 )
-from ocinferno.core.utils.service_runtime import (
-    append_cached_component_counts,
-    parse_wrapper_args,
-    resolve_selected_components,
+
+
+_NESTED_KEYS = (
+    "digital_twin_models",
+    "digital_twin_instances",
+    "digital_twin_adapters",
+    "digital_twin_relationships",
 )
 
 
-COMPONENTS = [
-    ("domains", "domains", "Enumerate domains"),
-    ("domain_groups", "domain_groups", "Enumerate domain-groups"),
-    ("digital_twin_models", "digital_twin_models", "Enumerate digital-twin-models"),
-    ("digital_twin_instances", "digital_twin_instances", "Enumerate digital-twin-instances"),
-    ("digital_twin_adapters", "digital_twin_adapters", "Enumerate digital-twin-adapters"),
-    ("digital_twin_relationships", "digital_twin_relationships", "Enumerate digital-twin-relationships"),
-]
+def _add_extra_args(parser):
+    parser.add_argument("--domain-id", default="", help="Domain ID filter for digital twin resources")
 
 
-CACHE_TABLES = {
-    "domains": ("iot_domains", "compartment_id"),
-    "domain_groups": ("iot_domain_groups", "compartment_id"),
-    "digital_twin_models": ("iot_digital_twin_models", "compartment_id"),
-    "digital_twin_instances": ("iot_digital_twin_instances", "compartment_id"),
-    "digital_twin_relationships": ("iot_digital_twin_relationships", "compartment_id"),
-    "digital_twin_adapters": ("iot_digital_twin_adapters", "compartment_id"),
-}
-
-
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
-
-
-def _parse_args(user_args):
-    def _add_extra_args(parser):
-        parser.add_argument("--domain-id", default="", help="Domain ID filter for digital twin resources")
-
-    return parse_wrapper_args(
-        user_args=user_args,
-        description="Enumerate IoT resources",
-        components=COMPONENTS,
-        add_extra_args=_add_extra_args,
+def _build_components(domain_ids):
+    # Shared once per run_module call (resolved via domain_ids_from_db: manual --domain-id
+    # filter -> DB cache; no live-list tier) and fanned out identically across all 4
+    # digital-twin resources, instead of each independently re-resolving the same domains.
+    nested = nested_list_fn(
+        parent_resource_cls=IotDomainsResource,
+        parent_id_field="iot_domain_id",
+        manual_parent_ids=domain_ids,
+        child_takes_compartment=False,
     )
+    return [
+        Component("domains", IotDomainsResource, help_text="Enumerate domains", cache_table="iot_domains"),
+        Component("domain_groups", IotDomainGroupsResource, help_text="Enumerate domain-groups", cache_table="iot_domain_groups"),
+        Component("digital_twin_models", IotDigitalTwinModelsResource, help_text="Enumerate digital-twin-models",
+                  cache_table="iot_digital_twin_models", list_fn=nested),
+        Component("digital_twin_instances", IotDigitalTwinInstancesResource, help_text="Enumerate digital-twin-instances",
+                  cache_table="iot_digital_twin_instances", list_fn=nested),
+        Component("digital_twin_adapters", IotDigitalTwinAdaptersResource, help_text="Enumerate digital-twin-adapters",
+                  cache_table="iot_digital_twin_adapters", list_fn=nested),
+        Component("digital_twin_relationships", IotDigitalTwinRelationshipsResource, help_text="Enumerate digital-twin-relationships",
+                  cache_table="iot_digital_twin_relationships", list_fn=nested),
+    ]
+
+
+# Module-level shape (component keys/help text) for CLI-flag introspection; run_module
+# always rebuilds a fresh list bound to the resolved domain_ids for the real run.
+COMPONENTS = _build_components([])
 
 
 def run_module(user_args, session):
-    args, _ = _parse_args(user_args)
-
-    component_order = [key for key, _suffix, _help in COMPONENTS]
+    args, _ = parse_wrapper_args(
+        user_args,
+        description="Enumerate IoT resources",
+        components=component_arg_specs(COMPONENTS),
+        add_extra_args=_add_extra_args,
+    )
+    component_order = [c.key for c in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
 
-    resource_map = {
-        "domains": IotDomainsResource(session=session),
-        "domain_groups": IotDomainGroupsResource(session=session),
-        "digital_twin_models": IotDigitalTwinModelsResource(session=session),
-        "digital_twin_instances": IotDigitalTwinInstancesResource(session=session),
-        "digital_twin_adapters": IotDigitalTwinAdaptersResource(session=session),
-        "digital_twin_relationships": IotDigitalTwinRelationshipsResource(session=session),
-    }
-    results = []
-    for key, _method_suffix, _help_text in COMPONENTS:
-        if not selected.get(key, False):
-            continue
-        try:
-            if key in {"domains", "domain_groups"}:
-                resource = resource_map[key]
-                compartment_id = getattr(session, "compartment_id", None)
-                if not compartment_id:
-                    raise ValueError("session.compartment_id is not set")
+    domain_ids: list = []
+    if any(selected.get(key, False) for key in _NESTED_KEYS):
+        compartment_id = getattr(session, "compartment_id", None)
+        domain_ids = domain_ids_from_db(
+            session,
+            table_name="iot_domains",
+            compartment_id=compartment_id,
+            domain_id_filter=str(getattr(args, "domain_id", "") or "").strip(),
+        )
 
-                rows = resource.list(compartment_id=compartment_id) or []
-                rows = [row for row in rows if isinstance(row, dict)]
-                for row in rows:
-                    row.setdefault("compartment_id", compartment_id)
-
-                if args.get:
-                    for row in rows:
-                        resource_id = row.get("id")
-                        if not resource_id:
-                            continue
-                        meta = resource.get(resource_id=resource_id) or {}
-                        fill_missing_fields(row, meta)
-
-                if rows:
-                    UtilityTools.print_limited_table(rows, resource.COLUMNS)
-
-                if args.save:
-                    resource.save(rows)
-
-                results.append({"ok": True, key: len(rows), "saved": bool(args.save), "get": bool(args.get)})
-            else:
-                resource = resource_map[key]
-                compartment_id = getattr(session, "compartment_id", None)
-                if not compartment_id:
-                    raise ValueError("session.compartment_id is not set")
-
-                domain_filter = str(getattr(args, "domain_id", "") or "").strip()
-                domain_ids = resource.resolve_domain_ids(compartment_id=compartment_id, domain_id_filter=domain_filter)
-                rows = []
-                for domain_id in domain_ids:
-                    listed = resource.list(iot_domain_id=domain_id) or []
-                    for row in listed:
-                        if not isinstance(row, dict):
-                            continue
-                        row.setdefault("iot_domain_id", domain_id)
-                        row.setdefault("compartment_id", compartment_id)
-                        rows.append(row)
-
-                if args.get:
-                    for row in rows:
-                        resource_id = row.get("id")
-                        if not resource_id:
-                            continue
-                        meta = resource.get(resource_id=resource_id) or {}
-                        fill_missing_fields(row, meta)
-
-                if rows:
-                    UtilityTools.print_limited_table(rows, resource.COLUMNS)
-
-                if args.save:
-                    resource.save(rows)
-
-                results.append({"ok": True, key: len(rows), "saved": bool(args.save), "get": bool(args.get)})
-        except Exception as err:
-            print(f"[*] enum_iot.{key}: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": key, "error": _component_error_summary(err)})
-
-    append_cached_component_counts(
-        results=results,
-        session=session,
-        selected=selected,
-        component_order=component_order,
-        cache_tables=CACHE_TABLES,
+    return run_components(
+        user_args, session, _build_components(domain_ids),
+        module_name="enum_iot",
+        description="Enumerate IoT resources",
+        add_extra_args=_add_extra_args,
     )
-
-    return {"ok": True, "components": results}

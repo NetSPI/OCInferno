@@ -12,8 +12,15 @@ from pathlib import Path
 
 
 def _install_oci_stub() -> None:
-    if "oci" in sys.modules:
+    # Only stub when the real SDK is genuinely not installed -- unconditionally
+    # installing a fake module here would permanently shadow the real `oci` for
+    # the rest of the pytest session for any other test file that needs it
+    # (collection-order dependent).
+    try:
+        import oci  # noqa: F401
         return
+    except ImportError:
+        pass
 
     class _DynamicStub:
         def __init__(self, name: str = "stub"):
@@ -109,6 +116,19 @@ def _xlsx_xml_blob(path: str) -> str:
     return "\n".join(parts)
 
 
+# Excel export relies on the optional [excel] extra (pandas + xlsxwriter). Skip
+# those cases when it isn't installed so the base `.[dev]` test run stays green.
+try:
+    import pandas  # noqa: F401
+    import xlsxwriter  # noqa: F401
+
+    _HAS_EXCEL = True
+except Exception:
+    _HAS_EXCEL = False
+
+_EXCEL_SKIP_REASON = "requires the optional Excel extra (pip install ocinferno[excel])"
+
+
 class TestDataExports(unittest.TestCase):
     def test_export_sqlite_dbs_to_csv_blob_includes_resource_column(self):
         with tempfile.TemporaryDirectory() as td:
@@ -172,6 +192,7 @@ class TestDataExports(unittest.TestCase):
             self.assertTrue(all(r.get("resource") == "alpha_table" for r in records))
             self.assertTrue(all((r.get("row") or {}).get("resource") == "alpha_table" for r in records))
 
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
     def test_export_sqlite_db_to_excel_includes_resource_column(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -194,6 +215,7 @@ class TestDataExports(unittest.TestCase):
             self.assertIn("resource", xml_blob)
             self.assertIn("alpha_table", xml_blob)
 
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
     def test_export_sqlite_dbs_to_excel_blob_is_single_file_with_database_and_resource(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -225,6 +247,7 @@ class TestDataExports(unittest.TestCase):
             self.assertIn("alpha_table", xml_blob)
             self.assertIn("beta_table", xml_blob)
 
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
     def test_export_sqlite_dbs_to_excel_blob_condensed_shape(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -274,15 +297,53 @@ class TestDataExports(unittest.TestCase):
             self.assertIn("Table Name", xml_blob)
             self.assertIn("Compartment ID", xml_blob)
             self.assertIn("Compartment Name", xml_blob)
+            self.assertIn("Service Category", xml_blob)
             self.assertIn("Resource Category", xml_blob)
             self.assertIn("Resource Display Name", xml_blob)
             self.assertIn("Remaining JSON", xml_blob)
             self.assertIn("compute_instances", xml_blob)
             self.assertIn("Compute Instance", xml_blob)
+            self.assertIn("Compute", xml_blob)
             self.assertIn("Prod", xml_blob)
             self.assertIn("app1", xml_blob)
             self.assertIn("ocid1.instance.oc1..aaaa", xml_blob)
             self.assertIn('"metadata_json"', xml_blob)
+
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
+    def test_condensed_display_name_falls_back_to_service_specific_name_column(self):
+        """vault_secret (and ~50 other tables) have no display_name/name column --
+        just a service-specific one like secret_name. The fallback must pick it up
+        rather than leaving Resource Display Name blank."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            db_one = root / "service_info.db"
+            out_xlsx = root / "sqlite_blob_secret.xlsx"
+
+            conn = sqlite3.connect(str(db_one))
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    'CREATE TABLE "vault_secret" (id TEXT, compartment_id TEXT, secret_name TEXT)'
+                )
+                cur.execute(
+                    'INSERT INTO "vault_secret" (id, compartment_id, secret_name) VALUES (?, ?, ?)',
+                    ("ocid1.vaultsecret.oc1..aaaa", "ocid1.compartment.oc1..aaaa", "db-password"),
+                )
+                conn.commit()
+            finally:
+                cur.close()
+                conn.close()
+
+            result = export_sqlite_dbs_to_excel_blob(
+                db_paths=[str(db_one)],
+                out_xlsx_path=str(out_xlsx),
+                single_sheet=True,
+                condensed=True,
+            )
+
+            self.assertTrue(result["ok"])
+            xml_blob = _xlsx_xml_blob(result["xlsx_path"])
+            self.assertIn("db-password", xml_blob)
 
     def test_export_compartment_tree_image_svg(self):
         with tempfile.TemporaryDirectory() as td:

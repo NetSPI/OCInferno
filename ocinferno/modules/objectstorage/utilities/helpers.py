@@ -5,13 +5,39 @@ import hashlib
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import oci
 
+from ocinferno.core.coerce import uniq_strs
 from ocinferno.core.console import UtilityTools
-from ocinferno.core.utils.module_helpers import parse_iso_datetime, safe_int
-from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.module_helpers import parse_iso_datetime, safe_int, write_response_stream_to_file
+from ocinferno.core.utils.selection_helpers import _s
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
+
+
+def normalize_sse_c_key(sse_c_key_b64: Union[str, bytes, Path]) -> tuple:
+    """Resolve/validate an SSE-C key argument (file path, bytes, or base64 str).
+
+    Accepts the raw ``--sse-c-key-b64`` CLI value -- possibly a path to a file
+    containing the key -- and returns ``(key_b64_str, key_sha256_b64_str)``.
+    Raises ``ValueError``/``binascii.Error`` if the value isn't valid base64 or
+    doesn't decode to exactly 32 bytes (AES-256). Cheap and idempotent, so it's
+    safe to call once up-front to validate before a download loop AND again
+    per-object inside ``download()``.
+    """
+    if isinstance(sse_c_key_b64, (str, Path)) and Path(str(sse_c_key_b64)).exists():
+        sse_c_key_b64 = Path(str(sse_c_key_b64)).read_text().strip()
+
+    if isinstance(sse_c_key_b64, (bytes, bytearray)):
+        sse_c_key_b64 = sse_c_key_b64.decode("ascii")
+
+    key_raw = base64.b64decode(sse_c_key_b64)
+    if len(key_raw) != 32:
+        raise ValueError("sse_c_key_b64 must decode to exactly 32 bytes (AES-256).")
+
+    sha_b64 = base64.b64encode(hashlib.sha256(key_raw).digest()).decode("ascii")
+    return sse_c_key_b64, sha_b64
 
 
 def build_object_storage_client(session, region: Optional[str] = None):
@@ -26,28 +52,13 @@ def build_object_storage_client(session, region: Optional[str] = None):
     return client
 
 
-class ObjectStorageNamespacesResource:
+class ObjectStorageNamespacesResource(ResourceBase):
     TABLE_NAME = "object_storage_namespaces"
     COLUMNS = ["compartment_id", "namespace"]
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
         self.client = build_object_storage_client(session=session, region=region)
-
-    @staticmethod
-    def _s(x: Any) -> str:
-        return x.strip() if isinstance(x, str) else ""
-
-    @staticmethod
-    def _uniq_strs(xs: Iterable[Any]) -> List[str]:
-        out: List[str] = []
-        seen: Set[str] = set()
-        for x in xs:
-            s = ObjectStorageNamespacesResource._s(x)
-            if s and s not in seen:
-                seen.add(s)
-                out.append(s)
-        return out
 
     @classmethod
     def resolve_namespace_scope_compartment_id(
@@ -57,15 +68,15 @@ class ObjectStorageNamespacesResource:
         explicit_compartment_id: Optional[str] = None,
     ) -> Optional[str]:
         # Always scope namespace calls to compartment context when possible.
-        explicit = cls._s(explicit_compartment_id)
+        explicit = _s(explicit_compartment_id)
         if explicit:
             return explicit
 
-        current = cls._s(getattr(session, "compartment_id", None))
+        current = _s(getattr(session, "compartment_id", None))
         if current:
             return current
 
-        tenant_id = cls._s(getattr(session, "tenant_id", None))
+        tenant_id = _s(getattr(session, "tenant_id", None))
         if tenant_id:
             return tenant_id
 
@@ -88,7 +99,7 @@ class ObjectStorageNamespacesResource:
             creds.get("tenancy"),
             creds.get("tenancy_id"),
         ):
-            tid = cls._s(candidate)
+            tid = _s(candidate)
             if tid.startswith("ocid1.tenancy."):
                 return tid
         return ""
@@ -100,7 +111,7 @@ class ObjectStorageNamespacesResource:
         *,
         compartment_id: Optional[str],
     ) -> str:
-        cid = cls._s(compartment_id)
+        cid = _s(compartment_id)
         if not cid:
             return ""
         if cid.startswith("ocid1.tenancy."):
@@ -111,10 +122,10 @@ class ObjectStorageNamespacesResource:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            row_cid = cls._s(row.get("compartment_id"))
+            row_cid = _s(row.get("compartment_id"))
             if not row_cid:
                 continue
-            parent_by_id[row_cid] = cls._s(row.get("parent_compartment_id"))
+            parent_by_id[row_cid] = _s(row.get("parent_compartment_id"))
 
         if not parent_by_id:
             return ""
@@ -148,13 +159,13 @@ class ObjectStorageNamespacesResource:
             session,
             explicit_compartment_id=explicit_compartment_id,
         )
-        tenant_id = cls._s(getattr(session, "tenant_id", None))
-        current_cid = cls._s(getattr(session, "compartment_id", None))
+        tenant_id = _s(getattr(session, "tenant_id", None))
+        current_cid = _s(getattr(session, "compartment_id", None))
         if not scope_compartment_id:
             raise RuntimeError(
                 "Object Storage get_namespace requires compartment-scoped resolution, but no compartment_id was available. "
                 f"session.tenant_id={tenant_id or '<unset>'}, session.compartment_id={current_cid or '<unset>'}, "
-                f"explicit_compartment_id={cls._s(explicit_compartment_id) or '<unset>'}"
+                f"explicit_compartment_id={_s(explicit_compartment_id) or '<unset>'}"
             )
 
         caller_tenant_id = cls._caller_tenancy_from_session_credentials(session)
@@ -181,11 +192,11 @@ class ObjectStorageNamespacesResource:
         except oci.exceptions.ServiceError as exc:
             status = getattr(exc, "status", "unknown")
             code = getattr(exc, "code", "unknown")
-            raw_msg = cls._s(getattr(exc, "message", "")) or str(exc)
+            raw_msg = _s(getattr(exc, "message", "")) or str(exc)
             if unscoped_error is not None:
                 us_status = getattr(unscoped_error, "status", "unknown")
                 us_code = getattr(unscoped_error, "code", "unknown")
-                us_msg = cls._s(getattr(unscoped_error, "message", "")) or str(unscoped_error)
+                us_msg = _s(getattr(unscoped_error, "message", "")) or str(unscoped_error)
                 raise RuntimeError(
                     "Object Storage get_namespace failed for both unscoped and scoped calls. "
                     f"session.tenant_id={tenant_id or '<unset>'}, "
@@ -213,7 +224,7 @@ class ObjectStorageNamespacesResource:
         for row in rows:
             if isinstance(row, dict):
                 vals.append(row.get("namespace") or "")
-        return cls._uniq_strs(vals)
+        return uniq_strs(vals)
 
     # List namespace for current compartment/tenancy.
     def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
@@ -239,12 +250,8 @@ class ObjectStorageNamespacesResource:
         self.session.save_resources([r for r in (rows or []) if isinstance(r, dict)], self.TABLE_NAME)
 
     # No binary download endpoint for namespace rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class ObjectStorageBucketsResource:
+class ObjectStorageBucketsResource(ResourceBase):
     TABLE_NAME = "object_storage_buckets"
     COLUMNS = ["namespace", "name", "id", "public_access_type", "storage_tier", "kms_key_id", "approximate_count"]
 
@@ -259,7 +266,7 @@ class ObjectStorageBucketsResource:
             parts = [p.strip() for p in str(token).split(",") if p.strip()]
             namespaces.extend(parts)
         if namespaces:
-            return ObjectStorageNamespacesResource._uniq_strs(namespaces)
+            return uniq_strs(namespaces)
 
         db_namespaces = ObjectStorageNamespacesResource.get_namespaces_from_db(self.session)
         if db_namespaces:
@@ -278,7 +285,7 @@ class ObjectStorageBucketsResource:
     # List buckets for provided namespaces.
     def list(self, *, compartment_id: str, namespaces: List[str]) -> List[Dict[str, Any]]:
         rows: List[Dict[str, Any]] = []
-        for namespace in ObjectStorageNamespacesResource._uniq_strs(namespaces):
+        for namespace in uniq_strs(namespaces):
             try:
                 resp = oci.pagination.list_call_get_all_results(
                     self.client.list_buckets,
@@ -325,10 +332,6 @@ class ObjectStorageBucketsResource:
         self.session.save_resources([r for r in (rows or []) if isinstance(r, dict)], self.TABLE_NAME)
 
     # No binary download endpoint for bucket rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class ObjectStorageObjectsResource:
     TABLE_NAME = "object_storage_bucket_objects"
@@ -337,21 +340,6 @@ class ObjectStorageObjectsResource:
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
         self.client = build_object_storage_client(session=session, region=region)
-
-    @staticmethod
-    def _s(x: Any) -> str:
-        return x.strip() if isinstance(x, str) else ""
-
-    @staticmethod
-    def _uniq_strs(xs: Iterable[Any]) -> List[str]:
-        out: List[str] = []
-        seen: Set[str] = set()
-        for x in xs:
-            s = ObjectStorageObjectsResource._s(x)
-            if s and s not in seen:
-                seen.add(s)
-                out.append(s)
-        return out
 
     @staticmethod
     def _dt_to_iso(value: Any) -> Optional[str]:
@@ -410,13 +398,13 @@ class ObjectStorageObjectsResource:
             where["compartment_id"] = compartment_id
         rows = session.get_resource_fields(table_name, where_conditions=where or None) or []
 
-        ns = cls._s(namespace)
+        ns = _s(namespace)
         out: List[Dict[str, Any]] = []
         for row in rows:
             if not isinstance(row, dict):
                 continue
             if ns:
-                row_ns = cls._s(row.get("namespace"))
+                row_ns = _s(row.get("namespace"))
                 if row_ns and row_ns != ns:
                     continue
             out.append(dict(row))
@@ -424,8 +412,8 @@ class ObjectStorageObjectsResource:
 
     # Resolve bucket rows from CLI scopes, DB cache, or live listing.
     def resolve_bucket_rows(self, *, compartment_id: str, namespaces: List[str], buckets: List[str]) -> List[Dict[str, Any]]:
-        bucket_names = self._uniq_strs(buckets)
-        namespace_names = self._uniq_strs(namespaces)
+        bucket_names = uniq_strs(buckets)
+        namespace_names = uniq_strs(namespaces)
 
         if bucket_names:
             if not namespace_names:
@@ -526,12 +514,12 @@ class ObjectStorageObjectsResource:
         rows: List[Dict[str, Any]] = []
 
         for bucket_row in bucket_rows:
-            namespace = self._s(bucket_row.get("namespace"))
-            bucket_name = self._s(bucket_row.get("name"))
+            namespace = _s(bucket_row.get("namespace"))
+            bucket_name = _s(bucket_row.get("name"))
             if not namespace or not bucket_name:
                 continue
 
-            region = self._s(bucket_row.get("region")) or self._s(getattr(self.session, "region", ""))
+            region = _s(bucket_row.get("region")) or _s(getattr(self.session, "region", ""))
             region_client = build_object_storage_client(self.session, region=region)
 
             start = None
@@ -571,7 +559,7 @@ class ObjectStorageObjectsResource:
                     if not isinstance(item, dict):
                         continue
 
-                    obj_name = self._s(item.get("name"))
+                    obj_name = _s(item.get("name"))
                     if not obj_name:
                         continue
 
@@ -656,17 +644,12 @@ class ObjectStorageObjectsResource:
         }
 
         if sse_c_key_b64 is not None:
-            if isinstance(sse_c_key_b64, (str, Path)) and Path(str(sse_c_key_b64)).exists():
-                sse_c_key_b64 = Path(str(sse_c_key_b64)).read_text().strip()
-
-            if isinstance(sse_c_key_b64, (bytes, bytearray)):
-                sse_c_key_b64 = sse_c_key_b64.decode("ascii")
-
-            key_raw = base64.b64decode(sse_c_key_b64)
-            if len(key_raw) != 32:
-                raise ValueError("sse_c_key_b64 must decode to exactly 32 bytes (AES-256).")
-
-            sha_b64 = base64.b64encode(hashlib.sha256(key_raw).digest()).decode("ascii")
+            try:
+                sse_c_key_b64, sha_b64 = normalize_sse_c_key(sse_c_key_b64)
+            except Exception as err:
+                debug = bool(getattr(self.session, "individual_run_debug", False) or getattr(self.session, "debug", False))
+                UtilityTools.dlog(debug, "invalid sse_c_key_b64", object_name=object_name, err=f"{type(err).__name__}: {err}")
+                return False
             kwargs.update(
                 {
                     "opc_sse_customer_algorithm": "AES256",
@@ -677,11 +660,44 @@ class ObjectStorageObjectsResource:
 
         try:
             resp = client.get_object(**kwargs)
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(out_path, "wb") as handle:
-                for chunk in resp.data.raw.stream(1024 * 1024, decode_content=False):
-                    if chunk:
-                        handle.write(chunk)
-            return True
+            return write_response_stream_to_file(getattr(resp, "data", None), str(out_path))
         except Exception:
             return False
+
+
+class ObjectStoragePreauthenticatedRequestsResource:
+    """Pre-Authenticated Requests (PARs) per bucket.
+
+    PARs are time-boxed, UNAUTHENTICATED URLs granting read/write to a bucket or object
+    -- a common data-exfil / backdoor surface. The list API returns only metadata (the
+    secret access URI is shown once at creation and is never re-retrievable), which is
+    exactly what we surface: which PARs exist, their access type, target object, and
+    expiry. Enumerated per bucket (child of the buckets already listed)."""
+
+    TABLE_NAME = "object_storage_preauthenticated_requests"
+    COLUMNS = [
+        "namespace", "bucket_name", "id", "name", "access_type", "object_name",
+        "time_created", "time_expires", "bucket_listing_action",
+    ]
+
+    def __init__(self, session, region: Optional[str] = None):
+        self.session = session
+        self.client = build_object_storage_client(session=session, region=region)
+
+    def list(self, *, namespace: str, bucket_name: str) -> List[Dict[str, Any]]:
+        resp = oci.pagination.list_call_get_all_results(
+            self.client.list_preauthenticated_requests,
+            namespace_name=namespace, bucket_name=bucket_name,
+        )
+        rows = oci.util.to_dict(resp.data) or []
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            row.setdefault("namespace", namespace)
+            row.setdefault("bucket_name", bucket_name)
+            out.append(row)
+        return out
+
+    def save(self, rows: List[Dict[str, Any]]) -> None:
+        self.session.save_resources([r for r in (rows or []) if isinstance(r, dict)], self.TABLE_NAME)

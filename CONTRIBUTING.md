@@ -28,7 +28,8 @@ This document covers the practical workflow for local development, testing, and 
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-python -m pip install .[dev]
+python -m pip install .[dev]          # base + pytest/ruff/mypy
+python -m pip install ".[dev,excel]"  # add this if you touch Excel export
 ```
 
 ## Run Tests
@@ -39,7 +40,22 @@ Run unit tests (same scope as CI):
 python -m pytest -q -ra tests/unit
 ```
 
-If you are working on integration behavior, run only the relevant integration tests for your change.
+Excel-export tests skip automatically unless the optional `[excel]` extra is
+installed. If you are working on integration behavior, run only the relevant
+integration tests for your change.
+
+## Lint and Type-Check
+
+Ruff is a **blocking** CI gate; mypy is informational (scoped to `ocinferno/core`).
+Run both before opening a PR:
+
+```bash
+ruff check .   # must pass
+mypy           # informational; drive core errors toward zero
+```
+
+Ruff is intentionally limited to real-bug rules (`E9`, `F`) so it stays green
+without restyling the codebase — don't mix broad formatting changes into a PR.
 
 ## Python Versions
 
@@ -63,7 +79,26 @@ Please avoid introducing version-specific behavior unless guarded and tested.
 - [ ] New behavior is covered by tests.
 - [ ] Docs updated where needed (`README.md`, `wiki/`).
 - [ ] No unrelated formatting or broad refactors mixed into the PR.
-- [ ] Changelog/roadmap notes added when relevant.
+
+## Adding a Module
+
+Every runnable module exposes `def run_module(user_args, session)`. In short:
+
+1. Put the real OCI API logic in `modules/<service>/utilities/helpers.py` as
+   Resource classes (`TABLE_NAME`, `COLUMNS`, `list()/get()/save()`).
+2. Keep `modules/<service>/enumeration/enum_<service>.py` a thin wrapper that
+   parses args with `core/utils/service_runtime.parse_wrapper_args` and drives
+   components through `run_standard_enum_component` — do **not** hand-roll a new
+   `argparse.ArgumentParser` or a bespoke list→get→print→save loop.
+3. Add any new resource tables to `mappings/database_info.json`.
+4. Register the module in `mappings/module_mappings.json` (`module_name`,
+   `module_category`, `info_blurb`, `author`, `location`, `service`).
+5. Set run-once vs per-compartment behavior in
+   `cli/module_actions.MODULE_POLICY_REGISTRY`.
+6. Add unit tests under `tests/unit/`.
+
+Prefer the shared runtime and existing helpers over new per-module boilerplate —
+consolidating duplication is a feature, not a regression.
 
 ## Submitting Privilege Escalation or Lateral Movement Routes
 

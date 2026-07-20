@@ -109,12 +109,47 @@ def test_enum_all_all_scope_keeps_recursive_default(monkeypatch):
     assert session.target_root_cids == ["__ALL_DISCOVERED__"]
 
 
-def test_enum_all_current_cid_selector_forces_no_recursive(monkeypatch):
-    compartment = "ocid1.compartment.oc1..example"
-    rows = [{"name": "single", "compartment_id": compartment}]
-    session = _session(compartment, rows)
+def _raise_if_called(*_args, **_kwargs):
+    raise AssertionError(
+        "ask_all_or_current_with_preview should not be called when the runner "
+        "already specified scope via --all-cids/--current-cid/--cids -- an explicit "
+        "scope flag must skip the interactive prompt, not just be consulted after it "
+        "(the prompt raises EOFError under any non-interactive invocation)."
+    )
+
+
+def test_enum_all_all_cids_flag_skips_interactive_prompt(monkeypatch):
+    tenancy = "ocid1.tenancy.oc1..example"
+    rows = [
+        {"name": "tenant", "compartment_id": tenancy},
+        {"name": "child", "compartment_id": "ocid1.compartment.oc1..child"},
+    ]
+    session = _session(tenancy, rows)
     capture = _CaptureModule()
     _install_import_stub(monkeypatch, capture)
+    monkeypatch.setattr(module_actions.UtilityTools, "ask_all_or_current_with_preview", _raise_if_called)
+
+    rc = module_actions.interact_with_module(
+        session,
+        "ocinferno.modules/everything/enumeration/enum_all",
+        ["--all-cids"],
+    )
+
+    assert rc == 0
+    assert len(capture.calls) == 1
+    assert session.target_root_cids == ["__ALL_DISCOVERED__"]
+
+
+def test_enum_all_current_cid_flag_skips_interactive_prompt_with_multiple_compartments(monkeypatch):
+    tenancy = "ocid1.tenancy.oc1..example"
+    rows = [
+        {"name": "tenant", "compartment_id": tenancy},
+        {"name": "child", "compartment_id": "ocid1.compartment.oc1..child"},
+    ]
+    session = _session(tenancy, rows)
+    capture = _CaptureModule()
+    _install_import_stub(monkeypatch, capture)
+    monkeypatch.setattr(module_actions.UtilityTools, "ask_all_or_current_with_preview", _raise_if_called)
 
     rc = module_actions.interact_with_module(
         session,
@@ -124,8 +159,8 @@ def test_enum_all_current_cid_selector_forces_no_recursive(monkeypatch):
 
     assert rc == 0
     assert len(capture.calls) == 1
+    assert session.target_root_cids == [tenancy]
     assert "--no-recursive-compartments" in capture.calls[0]
-    assert session.target_root_cids == [compartment]
 
 
 def test_enum_all_implicit_current_does_not_force_no_recursive(monkeypatch):

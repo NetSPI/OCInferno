@@ -14,6 +14,36 @@ from ocinferno.modules.opengraph.utilities.helpers.constants import (
 
 
 # -----------------------------------------------------------------------------
+# Display helpers
+# -----------------------------------------------------------------------------
+
+def _short_ocid(ocid: str, keep_head: int = 8, keep_tail: int = 6) -> str:
+    """
+    Shorten an OCI OCID for display: ocid1.*..TOKEN -> TOKEN[:keep_head]...TOKEN[-keep_tail:].
+    Falls back safely for non-OCID strings.
+    """
+    s = _s(ocid)
+    if not s:
+        return ""
+
+    if not s.startswith("ocid1."):
+        # non-ocid: still trim if huge
+        return s if len(s) <= (keep_head + keep_tail + 3) else f"{s[:keep_head]}...{s[-keep_tail:]}"
+
+    # ocid1.<type>.<realm>..<token>
+    token = ""
+    if ".." in s:
+        token = s.split("..", 1)[1]
+    else:
+        token = s.rsplit(".", 1)[-1]
+
+    token = token or s
+    if len(token) <= (keep_head + keep_tail + 3):
+        return token
+    return f"{token[:keep_head]}...{token[-keep_tail:]}"
+
+
+# -----------------------------------------------------------------------------
 # OpenGraph in-memory state helpers
 # -----------------------------------------------------------------------------
 # These functions centralize dedupe/index state used by OpenGraph builders.

@@ -5,11 +5,12 @@ from types import SimpleNamespace
 from ocinferno.cli import module_actions
 
 
-def test_module_parse_meta_detects_wrapper_save_for_enum_identity():
+def test_module_parse_meta_does_not_surface_save_for_enum_identity():
     module_actions._module_parse_meta.cache_clear()
     meta = module_actions._module_parse_meta("ocinferno.modules.identityclient.enumeration.enum_identity")
 
-    assert "--save" in meta.supported_common_flags
+    # --save has been removed entirely; enumeration always persists.
+    assert "--save" not in meta.supported_common_flags
     # enum_identity sets include_get=False in parse_wrapper_args(...)
     assert "--get" not in meta.supported_common_flags
 
@@ -23,7 +24,7 @@ class _CaptureModule:
         return {"ok": True}
 
 
-def test_enum_identity_auto_save_passthrough(monkeypatch):
+def test_enum_identity_no_save_passthrough(monkeypatch):
     module_actions._module_parse_meta.cache_clear()
     capture = _CaptureModule()
     real_import = module_actions.importlib.import_module
@@ -54,4 +55,5 @@ def test_enum_identity_auto_save_passthrough(monkeypatch):
 
     assert rc == 0
     assert len(capture.calls) == 1
-    assert "--save" in capture.calls[0]
+    # --save was removed; the runner must never inject it into the module args.
+    assert "--save" not in capture.calls[0]

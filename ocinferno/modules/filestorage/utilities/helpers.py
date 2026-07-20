@@ -6,6 +6,7 @@ import oci
 
 from ocinferno.core.utils.module_helpers import dedupe_strs
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
 def build_file_storage_clients(session, region: Optional[str] = None):
@@ -32,7 +33,7 @@ def build_file_storage_clients(session, region: Optional[str] = None):
     return fs_client, id_client
 
 
-class FileStorageFileSystemsResource:
+class FileStorageFileSystemsResource(ResourceBase):
     TABLE_NAME = "file_storage_file_systems"
     COLUMNS = ["id", "display_name", "availability_domain", "lifecycle_state", "metered_bytes", "region"]
 
@@ -91,17 +92,9 @@ class FileStorageFileSystemsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.fs_client.get_file_system(file_system_id=resource_id).data) or {}
 
-    # Save file-system rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for file-system rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class FileStorageMountTargetsResource:
+class FileStorageMountTargetsResource(ResourceBase):
     TABLE_NAME = "file_storage_mount_targets"
     COLUMNS = ["id", "display_name", "availability_domain", "lifecycle_state", "subnet_id", "region"]
 
@@ -139,17 +132,9 @@ class FileStorageMountTargetsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.fs_client.get_mount_target(mount_target_id=resource_id).data) or {}
 
-    # Save mount-target rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for mount-target rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class FileStorageExportSetsResource:
+class FileStorageExportSetsResource(ResourceBase):
     TABLE_NAME = "file_storage_export_sets"
     COLUMNS = ["id", "display_name", "availability_domain", "lifecycle_state", "region"]
 
@@ -187,17 +172,9 @@ class FileStorageExportSetsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.fs_client.get_export_set(export_set_id=resource_id).data) or {}
 
-    # Save export-set rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for export-set rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class FileStorageExportsResource:
+class FileStorageExportsResource(ResourceBase):
     TABLE_NAME = "file_storage_exports"
     COLUMNS = ["id", "path", "export_set_id", "file_system_id", "lifecycle_state", "region"]
 
@@ -273,17 +250,9 @@ class FileStorageExportsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.fs_client.get_export(export_id=resource_id).data) or {}
 
-    # Save export rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for export rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class FileStorageSnapshotsResource:
+class FileStorageSnapshotsResource(ResourceBase):
     TABLE_NAME = "file_storage_snapshots"
     COLUMNS = ["id", "name", "file_system_id", "lifecycle_state", "region", "time_created"]
 
@@ -359,11 +328,4 @@ class FileStorageSnapshotsResource:
     def get(self, *, resource_id: str) -> Dict[str, Any]:
         return oci.util.to_dict(self.fs_client.get_snapshot(snapshot_id=resource_id).data) or {}
 
-    # Save snapshot rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for snapshot rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False

@@ -116,13 +116,21 @@ def _match_regex(value: Any, rhs: Any | None) -> bool:
 
 
 def _resource_type_alias_closure(resource_type: str) -> set[str]:
+    """Full alias-equivalence set for a resource-type token, regardless of which
+    member of the group ``resource_type`` is. RESOURCE_TYPE_ALIASES keys map to a
+    tuple of synonyms (e.g. "fn-function" -> ("fnfunction", "fnfunc", "fnfnc")); a
+    caller may pass in the key OR any one of its values and must get the same
+    complete set back -- e.g. starting from "fnfunction" must still include
+    "fnfunc" (the literal token real OCI dynamic-group matching-rule text uses),
+    not just the key "fn-function" it was found under."""
     rt = str(resource_type or "").strip().lower()
     if not rt:
         return set()
     out = {rt, *RESOURCE_TYPE_ALIASES.get(rt, ())}
     for alias, vals in RESOURCE_TYPE_ALIASES.items():
-        if rt in vals:
+        if rt == alias or rt in vals:
             out.add(alias)
+            out.update(vals)
     out.discard("")
     return out
 
@@ -251,6 +259,16 @@ def _eval_pred(*, pred: Pred, row: Dict[str, Any]) -> bool:
     value = _resolve_var(var=pred.var, row=row)
     if pred.op == OP_EXISTS:
         return value is not None
+    if pred.var == VAR_RESOURCE_TYPE and pred.op in (OP_EQ, OP_NEQ):
+        # Resource-type tokens have multiple valid synonyms between what real OCI
+        # matching-rule text uses (e.g. "fnfunc") and what a row's resource_type
+        # ends up holding (e.g. "fnfunction", from resource_scope_map.json's
+        # dg_type) -- compare via the alias-equivalence set, not a raw string, or
+        # rows in the synonym-mismatched spelling can never match.
+        value_aliases = _resource_type_alias_closure(value) if value else set()
+        rhs_list = pred.rhs if isinstance(pred.rhs, list) else [pred.rhs]
+        matched = any(str(r or "").strip().lower() in value_aliases for r in rhs_list)
+        return matched if pred.op == OP_EQ else not matched
     if pred.op == OP_EQ:
         return (value in pred.rhs) if isinstance(pred.rhs, list) else (value == pred.rhs)
     if pred.op == OP_NEQ:
@@ -394,6 +412,21 @@ class DynamicGroupRuleEvaluator:
         self.debug_max_pred_logs = 30
         self._pred_log_count = 0
         self._row_log_count = 0
+        # Per-(table, compartment) row cache: dynamic-group matching re-scans the same
+        # resource tables per predicate per DG (and across the DG-membership + advanced
+        # builders when one evaluator is reused), so read each table at most once per
+        # compartment. Rows are read-only here, so sharing the cached list is safe.
+        self._table_row_cache: dict = {}
+
+    def _fetch_scoped_rows(self, tname, *, compartment_id, compartment_key):
+        """Cached ``get_resource_fields(tname, where={compartment_key: compartment_id})``."""
+        key = (tname, compartment_id or "", compartment_key or "")
+        cached = self._table_row_cache.get(key)
+        if cached is None:
+            where_conditions = {compartment_key: compartment_id} if compartment_id and compartment_key else None
+            cached = self.session.get_resource_fields(tname, where_conditions=where_conditions) or []
+            self._table_row_cache[key] = cached
+        return cached
 
     def _merge(self, acc: Dict[str, Dict[str, Any]], m: Dict[str, Any]) -> None:
         rid = m["id"]
@@ -470,10 +503,9 @@ class DynamicGroupRuleEvaluator:
             tname, id_key, compartment_key = spec.get("table"), spec.get("id_col"), spec.get("compartment_col")
             if not id_key:
                 continue
-            where_conditions = {compartment_key: compartment_id} if compartment_id and compartment_key else None
-            if compartment_id and not where_conditions:
+            if compartment_id and not compartment_key:
                 continue
-            rows = self.session.get_resource_fields(tname, where_conditions=where_conditions) or []
+            rows = self._fetch_scoped_rows(tname, compartment_id=compartment_id, compartment_key=compartment_key)
 
             if self.debug:
                 _core_dlog(self.debug, "dg-eval: scan: table", table=tname, rows=len(rows))

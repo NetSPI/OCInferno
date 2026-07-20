@@ -10,9 +10,11 @@ from ocinferno.modules.kubernetes.utilities.helpers import (
     KubernetesVirtualNodePoolsResource,
 )
 from ocinferno.core.utils.service_runtime import (
+    SOFT_SKIP_STATUSES,
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -56,6 +58,9 @@ def run_module(user_args, session):
 
     component_order = [key for key, _suffix, _help in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
+    compartment_id = getattr(session, "compartment_id", None)
+    if not compartment_id:
+        raise ValueError("session.compartment_id is not set")
 
     resource_map = {
         "clusters": KubernetesClustersResource(session=session),
@@ -68,14 +73,10 @@ def run_module(user_args, session):
             continue
         if key == "virtual_node_pools":
             vnp_resource = resource_map[key]
-            compartment_id = getattr(session, "compartment_id", None)
-            if not compartment_id:
-                raise ValueError("session.compartment_id is not set")
-
             try:
                 pools = vnp_resource.list(compartment_id=compartment_id) or []
             except oci.exceptions.ServiceError as err:
-                if getattr(err, "status", None) == 404 and getattr(err, "code", None) == "NotAuthorizedOrNotFound":
+                if getattr(err, "status", None) in SOFT_SKIP_STATUSES:
                     print("[*] Skipping virtual node pools in this compartment (not authorized or not found).")
                     results.append(
                         {
@@ -120,8 +121,7 @@ def run_module(user_args, session):
             if pools:
                 UtilityTools.print_limited_table(pools, vnp_resource.COLUMNS)
 
-            if args.save:
-                vnp_resource.save(pools)
+            vnp_resource.save(pools)
 
             nodes_rows = []
             if args.list_nodes:
@@ -150,7 +150,7 @@ def run_module(user_args, session):
                     "ok": True,
                     "virtual_node_pools": len(pools),
                     "virtual_nodes": len(nodes_rows),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                     "list_nodes": bool(args.list_nodes),
                     "saved_nodes": bool(args.save_nodes),
@@ -158,35 +158,15 @@ def run_module(user_args, session):
             )
             continue
 
-        compartment_id = getattr(session, "compartment_id", None)
-        if not compartment_id:
-            raise ValueError("session.compartment_id is not set")
-
         resource = resource_map[key]
-        rows = resource.list(compartment_id=compartment_id) or []
-        rows = [row for row in rows if isinstance(row, dict)]
-        for row in rows:
-            row.setdefault("compartment_id", compartment_id)
-
-        if args.get:
-            for row in rows:
-                resource_id = row.get("id")
-                if not resource_id:
-                    continue
-                try:
-                    meta = resource.get(resource_id=resource_id) or {}
-                except Exception as err:
-                    UtilityTools.dlog(debug, f"get_{key} failed", resource_id=resource_id, err=f"{type(err).__name__}: {err}")
-                    continue
-                fill_missing_fields(row, meta)
-
-        if rows:
-            UtilityTools.print_limited_table(rows, resource.COLUMNS)
-
-        if args.save:
-            resource.save(rows)
-
-        results.append({"ok": True, key: len(rows), "saved": bool(args.save), "get": bool(args.get)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key=key,
+            list_rows=lambda cid, _r=resource: _r.list(compartment_id=cid),
+            get_row=lambda row, _r=resource: _r.get(resource_id=row.get("id")),
+            save_rows_fn=resource.save,
+            print_columns=resource.COLUMNS,
+            module_name="enum_kubernetes",
+        ))
 
     append_cached_component_counts(
         results=results,

@@ -1,166 +1,57 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
 import oci
-from ocinferno.core.utils.service_runtime import _init_client
+
+from ocinferno.core.resource import OciListResource
 
 
-def build_devops_client(session, region: Optional[str] = None):
-    """Initialize a DevOps client with shared signer/proxy/session behavior."""
-    client = _init_client(
-        oci.devops.DevopsClient,
-        session=session,
-        service_name="DevOps",
-    )
-    target_region = region or getattr(session, "region", None)
-    if target_region:
-        try:
-            client.base_client.set_region(target_region)
-        except Exception:
-            pass
-    return client
-
-
-class DevOpsProjectsResource:
+class DevOpsProjectsResource(OciListResource):
+    CLIENT_CLS = oci.devops.DevopsClient
+    SERVICE_NAME = "DevOps"
     TABLE_NAME = "devops_projects"
+    LIST_METHOD = "list_projects"
+    GET_METHOD = "get_project"
+    GET_ID_PARAM = "project_id"
     COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_devops_client(session=session, region=region)
 
-    # List projects in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_projects, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one project by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_project(project_id=resource_id).data) or {}
-
-    # Save project rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for project rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class DevOpsConnectionsResource:
+class DevOpsConnectionsResource(OciListResource):
+    CLIENT_CLS = oci.devops.DevopsClient
+    SERVICE_NAME = "DevOps"
     TABLE_NAME = "devops_connections"
+    LIST_METHOD = "list_connections"
+    GET_METHOD = "get_connection"
+    GET_ID_PARAM = "connection_id"
     COLUMNS = ["id", "display_name", "connection_type", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_devops_client(session=session, region=region)
 
-    # List connections in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_connections, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one connection by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_connection(connection_id=resource_id).data) or {}
-
-    # Save connection rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for connection rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class DevOpsRepositoriesResource:
+class DevOpsRepositoriesResource(OciListResource):
+    CLIENT_CLS = oci.devops.DevopsClient
+    SERVICE_NAME = "DevOps"
     TABLE_NAME = "devops_repositories"
+    LIST_METHOD = "list_repositories"
+    GET_METHOD = "get_repository"
+    GET_ID_PARAM = "repository_id"
     COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_devops_client(session=session, region=region)
 
-    # List repositories in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_repositories, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one repository by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_repository(repository_id=resource_id).data) or {}
-
-    # Save repository rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for repository rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class DevOpsBuildPipelinesResource:
+class DevOpsBuildPipelinesResource(OciListResource):
+    CLIENT_CLS = oci.devops.DevopsClient
+    SERVICE_NAME = "DevOps"
     TABLE_NAME = "devops_build_pipelines"
+    LIST_METHOD = "list_build_pipelines"
+    GET_METHOD = "get_build_pipeline"
+    GET_ID_PARAM = "build_pipeline_id"
     COLUMNS = ["id", "display_name", "project_id", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_devops_client(session=session, region=region)
 
-    # List build pipelines in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_build_pipelines, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one build pipeline by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_build_pipeline(build_pipeline_id=resource_id).data) or {}
-
-    # Save build-pipeline rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for build-pipeline rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class DevOpsDeployPipelinesResource:
+class DevOpsDeployPipelinesResource(OciListResource):
+    # Nested under projects: list(compartment_id=, project_id=) fans out via
+    # nested_list_fn; OciListResource forwards the extra project_id kwarg to the SDK.
+    CLIENT_CLS = oci.devops.DevopsClient
+    SERVICE_NAME = "DevOps"
     TABLE_NAME = "devops_deploy_pipelines"
+    LIST_METHOD = "list_deploy_pipelines"
+    GET_METHOD = "get_deploy_pipeline"
+    GET_ID_PARAM = "deploy_pipeline_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "project_id"]
-
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_devops_client(session=session, region=region)
-
-    # List projects in a compartment (used for project-scoped deploy pipeline loops).
-    def list_projects(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_projects, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # List deploy pipelines for a project.
-    def list(self, *, compartment_id: str, project_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(
-            self.client.list_deploy_pipelines,
-            compartment_id=compartment_id,
-            project_id=project_id,
-        )
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one deploy pipeline by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_deploy_pipeline(deploy_pipeline_id=resource_id).data) or {}
-
-    # Save deploy-pipeline rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for deploy-pipeline rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False

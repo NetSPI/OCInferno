@@ -1,48 +1,49 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import json
 
 import oci
-from ocinferno.core.utils.service_runtime import _init_client
+
+from ocinferno.core.resource import OciListResource
 
 
-def build_container_instances_client(session, region: Optional[str] = None):
-    """Build a configured OCI Container Instances client."""
-    client = _init_client(
-        oci.container_instances.ContainerInstanceClient,
-        session=session,
-        service_name="ContainerInstances",
-    )
-    target_region = region or getattr(session, "region", None)
-    if target_region:
-        try:
-            client.base_client.set_region(target_region)
-        except Exception:
-            pass
-    return client
-
-
-class ContainerInstancesResource:
+class ContainerInstancesResource(OciListResource):
+    CLIENT_CLS = oci.container_instances.ContainerInstanceClient
+    SERVICE_NAME = "ContainerInstances"
     TABLE_NAME = "container_instances"
+    LIST_METHOD = "list_container_instances"
+    GET_METHOD = "get_container_instance"
+    GET_ID_PARAM = "container_instance_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_container_instances_client(session=session, region=region)
+    def download_container_configs(self, *, resource_id: str, out_path) -> bool:
+        """Export the developer-supplied container config for one container instance.
 
-    # List container instances in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(
-            self.client.list_container_instances,
-            compartment_id=compartment_id,
-        )
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one container instance by OCID.
-    def get(self, *, container_instance_id: str) -> Dict[str, Any]:
-        resp = self.client.get_container_instance(container_instance_id=container_instance_id)
-        return oci.util.to_dict(resp.data) or {}
-
-    # Persist container instances to the service table.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+        A container instance holds a ``containers`` list of refs (each just a
+        ``container_id``); the actual environment variables / command / arguments
+        live on the per-container object fetched via ``get_container``. This walks
+        every container in the instance, collects its config, and writes the combined
+        list to ``out_path`` as pretty JSON. Returns True if a file was written.
+        """
+        if not resource_id:
+            return False
+        inst = self.client.get_container_instance(container_instance_id=resource_id).data
+        configs = []
+        for ref in (getattr(inst, "containers", None) or []):
+            container_id = getattr(ref, "container_id", None)
+            if not container_id:
+                continue
+            container = self.client.get_container(container_id=container_id).data
+            configs.append({
+                "id": getattr(container, "id", container_id),
+                "display_name": getattr(container, "display_name", None),
+                "image_url": getattr(container, "image_url", None),
+                "environment_variables": getattr(container, "environment_variables", None),
+                "command": getattr(container, "command", None),
+                "arguments": getattr(container, "arguments", None),
+            })
+        if not configs:
+            return False
+        with open(out_path, "w") as fh:
+            fh.write(json.dumps(configs, indent=2, default=str))
+        return True

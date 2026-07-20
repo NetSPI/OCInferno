@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import oci
+from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
 def build_database_client(session, service: str, region: Optional[str] = None):
@@ -11,7 +13,15 @@ def build_database_client(session, service: str, region: Optional[str] = None):
     service_map = {
         "mysql": (oci.mysql.DbSystemClient, "MySQL"),
         "postgresql": (oci.psql.PostgresqlClient, "PostgreSQL"),
-        "cache": (oci.redis.RedisClusterClient, "Cache"),
+        # "cache" is only ever requested by DatabasesCacheUsersResource below,
+        # whose list_oci_cache_users/get_oci_cache_user calls live on
+        # oci.redis.OciCacheUserClient -- confirmed via
+        # oci/redis/oci_cache_user_client.py. RedisClusterClient (the cache
+        # *cluster* client) has neither method; DatabasesCacheClustersResource
+        # builds its own client directly via CLIENT_CLS and does not go
+        # through this function, so this key has no other consumer.
+        "cache": (oci.redis.OciCacheUserClient, "Cache"),
+        "database": (oci.database.DatabaseClient, "Database"),
     }
     client_cls, service_name = service_map[service]
     client = _init_client(client_cls, session=session, service_name=service_name)
@@ -24,34 +34,16 @@ def build_database_client(session, service: str, region: Optional[str] = None):
     return client
 
 
-class DatabasesCacheClustersResource:
+class DatabasesCacheClustersResource(OciListResource):
+    CLIENT_CLS = oci.redis.RedisClusterClient
+    SERVICE_NAME = "Cache"
     TABLE_NAME = "cache_clusters"
+    LIST_METHOD = "list_redis_clusters"
+    GET_METHOD = "get_redis_cluster"
+    GET_ID_PARAM = "redis_cluster_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "node_count"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_database_client(session=session, service="cache", region=region)
-
-    # List Redis cache clusters in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_redis_clusters, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one cache cluster by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_redis_cluster(redis_cluster_id=resource_id).data) or {}
-
-    # Save cache-cluster rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for cache-cluster rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class DatabasesCacheUsersResource:
+class DatabasesCacheUsersResource(ResourceBase):
     TABLE_NAME = "cache_users"
     COLUMNS = ["id", "display_name", "lifecycle_state", "description"]
 
@@ -86,65 +78,48 @@ class DatabasesCacheUsersResource:
             resp = fn(user_id=resource_id)
         return oci.util.to_dict(resp.data) or {}
 
-    # Save cache-user rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for cache-user rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
 
-
-class DatabasesMysqlResource:
+class DatabasesMysqlResource(OciListResource):
+    CLIENT_CLS = oci.mysql.DbSystemClient
+    SERVICE_NAME = "MySQL"
     TABLE_NAME = "db_mysql_db_systems"
+    LIST_METHOD = "list_db_systems"
+    GET_METHOD = "get_db_system"
+    GET_ID_PARAM = "db_system_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "shape_name", "mysql_version", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_database_client(session=session, service="mysql", region=region)
-
-    # List MySQL DB systems in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_db_systems, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one MySQL DB system by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_db_system(db_system_id=resource_id).data) or {}
-
-    # Save MySQL rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-    # No binary download endpoint for MySQL rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class DatabasesPostgresResource:
+class DatabasesPostgresResource(OciListResource):
+    CLIENT_CLS = oci.psql.PostgresqlClient
+    SERVICE_NAME = "PostgreSQL"
     TABLE_NAME = "db_psql_db_systems"
+    LIST_METHOD = "list_db_systems"
+    GET_METHOD = "get_db_system"
+    GET_ID_PARAM = "db_system_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "shape", "db_version", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_database_client(session=session, service="postgresql", region=region)
+class DatabasesAutonomousResource(OciListResource):
+    """Autonomous Databases (ADB) via oci.database. High value: --get exposes
+    connection_strings / connection_urls (APEX, SQL Dev Web, database console)."""
 
-    # List PostgreSQL DB systems in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_db_systems, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
+    CLIENT_CLS = oci.database.DatabaseClient
+    SERVICE_NAME = "Database"
+    TABLE_NAME = "db_autonomous_databases"
+    LIST_METHOD = "list_autonomous_databases"
+    GET_METHOD = "get_autonomous_database"
+    GET_ID_PARAM = "autonomous_database_id"
+    COLUMNS = ["id", "display_name", "db_name", "lifecycle_state", "db_workload", "is_free_tier", "time_created"]
 
-    # Get one PostgreSQL DB system by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_db_system(db_system_id=resource_id).data) or {}
 
-    # Save PostgreSQL rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+class DatabasesDbSystemsResource(OciListResource):
+    """Base Database Service DB Systems (VM/BM/Exadata) via oci.database. --get
+    exposes shape, hostname, listener/scan details, and licensing."""
 
-    # No binary download endpoint for PostgreSQL rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
+    CLIENT_CLS = oci.database.DatabaseClient
+    SERVICE_NAME = "Database"
+    TABLE_NAME = "db_db_systems"
+    LIST_METHOD = "list_db_systems"
+    GET_METHOD = "get_db_system"
+    GET_ID_PARAM = "db_system_id"
+    COLUMNS = ["id", "display_name", "lifecycle_state", "shape", "database_edition", "hostname", "time_created"]
+

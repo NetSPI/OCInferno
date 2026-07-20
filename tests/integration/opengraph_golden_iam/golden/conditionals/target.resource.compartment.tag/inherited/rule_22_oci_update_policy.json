@@ -35,8 +35,10 @@
         },
         "kind": "OCI_UPDATE_POLICY",
         "properties": {
+          "authz_source": "OCI IAM policy permission (POLICY_UPDATE)",
           "description": "Update IAM policies in scope (can modify existing policy statements to escalate).",
           "edge_category": "PERMISSION",
+          "example_command": "modules run exploit_write_policy --append-to policies@ocid1.compartment.oc1..app --self  # append an admin grant to an existing policy",
           "has_direct": false,
           "has_impossible_conditionals": false,
           "has_inherited": true,

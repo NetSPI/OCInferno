@@ -167,6 +167,37 @@ def test_user_manager_excludes_identity_and_user_admin_targets():
     assert ctx.edges[0]["destination_id"] == "ocid1.user.oc1..eligible"
 
 
+def test_run_idd_role_emitters_skips_unmodeled_role_without_crashing():
+    """--include-all bypasses the allowlist gate that normally restricts callers to
+    APP_ROLE_MODELS's 3 keys, so any other built-in IDCS role (Application
+    Administrator, Security Administrator, etc.) can reach this function. It must
+    not crash (AttributeError on None.get(...)) -- it should just emit nothing."""
+    ctx = _EdgeCaptureCtx()
+    did = "ocid1.domain.oc1..demo"
+    ctx._idd_users_by_domain_cache = {did: [("ocid1.user.oc1..eligible", NODE_USER)]}  # noqa: SLF001
+
+    stats = Counter()
+    _run_idd_role_emitters(
+        session=None,
+        ctx=ctx,
+        raw_role_name="Application Administrator",
+        role_nid="iddrole::demo::app-admin",
+        role_name="DemoDomain/Application Administrator",
+        app_id="IDCSAppId",
+        app_name="DemoDomain/IDCS Application",
+        did=did,
+        role_scope={"scope_mode": "all_users_or_default"},
+        groups_by_domain={},
+        idd_admin_groups_by_domain={},
+        user_admin_groups_by_domain={},
+        stats=stats,
+        stats_prefix="include_all_",
+        debug=False,
+    )
+
+    assert ctx.edges == []
+
+
 def test_default_allow_rules_include_expected_identity_edge():
     edge_labels = {rule.edge_label for rule in DEFAULT_ALLOW_EDGE_RULES}
     assert "OCI_CREATE_USER_API_KEY" in edge_labels

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.enum_framework import nested_list_fn
 from ocinferno.core.utils.module_helpers import fill_missing_fields, unique_rows_by_id
 from ocinferno.modules.networkfirewall.utilities.helpers import (
     NetworkFirewallFirewallsResource,
@@ -13,6 +14,7 @@ from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -30,13 +32,7 @@ CACHE_TABLES = {
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -79,31 +75,22 @@ def run_module(user_args, session):
                 if not compartment_id and not firewall_id:
                     raise ValueError("Need session.compartment_id unless --firewall-id is provided")
 
-                if firewall_id:
-                    row = firewalls_resource.get(resource_id=firewall_id) or {}
-                    rows = [row] if row else []
-                else:
-                    rows = firewalls_resource.list(compartment_id=compartment_id or "") or []
+                # --firewall-id scopes to a single get(); otherwise list per compartment.
+                def _list_firewalls(cid, _fid=firewall_id, _res=firewalls_resource):
+                    if _fid:
+                        row = _res.get(resource_id=_fid) or {}
+                        return [row] if row else []
+                    return _res.list(compartment_id=cid or "") or []
 
-                rows = [row for row in rows if isinstance(row, dict)]
-                for row in rows:
-                    row.setdefault("compartment_id", compartment_id)
-
-                if args.get:
-                    for row in rows:
-                        row_id = row.get("id")
-                        if not row_id:
-                            continue
-                        meta = firewalls_resource.get(resource_id=row_id) or {}
-                        fill_missing_fields(row, meta)
-
-                if rows:
-                    UtilityTools.print_limited_table(rows, firewalls_resource.COLUMNS)
-
-                if args.save:
-                    firewalls_resource.save(rows)
-
-                results.append({"ok": True, "firewalls": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+                results.append(run_standard_enum_component(
+                    user_args=args, session=session, component_key="firewalls",
+                    list_rows=_list_firewalls,
+                    get_row=lambda row, _res=firewalls_resource: _res.get(resource_id=row.get("id")),
+                    save_rows_fn=firewalls_resource.save,
+                    print_columns=firewalls_resource.COLUMNS,
+                    module_name="enum_networkfirewall",
+                    require_compartment=False,
+                ))
             elif key == "policies":
                 policies_resource = resource_map[key]
                 compartment_id = getattr(session, "compartment_id", None)
@@ -112,34 +99,29 @@ def run_module(user_args, session):
                 if not compartment_id and not policy_ids:
                     raise ValueError("Need session.compartment_id unless --policy-ids are provided")
 
-                rows = []
-                if policy_ids:
-                    for policy_id in policy_ids:
-                        item = policies_resource.get(resource_id=policy_id) or {}
-                        if item:
-                            rows.append(item)
-                else:
-                    rows = policies_resource.list(compartment_id=compartment_id or "") or []
+                # --policy-ids scopes to get()-per-id; otherwise list per compartment. Dedup either way.
+                def _list_policies(cid, _ids=policy_ids, _res=policies_resource):
+                    if _ids:
+                        got = []
+                        for pid in _ids:
+                            try:
+                                got.append(_res.get(resource_id=pid) or {})
+                            except Exception as err:
+                                UtilityTools.dlog(True, "get policy failed", policy_id=pid, err=f"{type(err).__name__}: {err}")
+                        rows = [r for r in got if r]
+                    else:
+                        rows = _res.list(compartment_id=cid or "") or []
+                    return unique_rows_by_id([r for r in rows if isinstance(r, dict)])
 
-                rows = unique_rows_by_id([row for row in rows if isinstance(row, dict)])
-                for row in rows:
-                    row.setdefault("compartment_id", compartment_id)
-
-                if args.get:
-                    for row in rows:
-                        policy_id = row.get("id")
-                        if not policy_id:
-                            continue
-                        meta = policies_resource.get(resource_id=policy_id) or {}
-                        fill_missing_fields(row, meta)
-
-                if rows:
-                    UtilityTools.print_limited_table(rows, policies_resource.COLUMNS)
-
-                if args.save:
-                    policies_resource.save(rows)
-
-                results.append({"ok": True, "policies": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+                results.append(run_standard_enum_component(
+                    user_args=args, session=session, component_key="policies",
+                    list_rows=_list_policies,
+                    get_row=lambda row, _res=policies_resource: _res.get(resource_id=row.get("id")),
+                    save_rows_fn=policies_resource.save,
+                    print_columns=policies_resource.COLUMNS,
+                    module_name="enum_networkfirewall",
+                    require_compartment=False,
+                ))
             elif key == "security_rules":
                 security_rules_resource = resource_map[key]
                 compartment_id = getattr(session, "compartment_id", None)
@@ -147,17 +129,15 @@ def run_module(user_args, session):
                     raise ValueError("Need session.compartment_id unless --policy-ids are provided")
 
                 policy_ids = security_rules_resource.resolve_policy_ids(compartment_id, args)
-                rows = []
-                for policy_id in policy_ids:
-                    listed = security_rules_resource.list(policy_id=policy_id) or []
-                    for row in listed:
-                        if not isinstance(row, dict):
-                            continue
-                        row.setdefault("network_firewall_policy_id", policy_id)
-                        row.setdefault("compartment_id", compartment_id)
-                        rows.append(row)
-
-                rows = security_rules_resource.unique_security_rule_rows(rows)
+                # resolve_policy_ids already covers manual --policy-ids/DB-cache/live-list; reuse
+                # its result via manual_parent_ids so nested_list_fn only does the fan-out+stamp.
+                list_rows = nested_list_fn(
+                    parent_resource_cls=NetworkFirewallPoliciesResource,
+                    parent_id_field="network_firewall_policy_id",
+                    manual_parent_ids=policy_ids,
+                    child_takes_compartment=False,
+                )(session, args, security_rules_resource)
+                rows = security_rules_resource.unique_security_rule_rows(list_rows(compartment_id))
 
                 if args.get:
                     for row in rows:
@@ -171,21 +151,19 @@ def run_module(user_args, session):
                 if rows:
                     UtilityTools.print_limited_table(rows, security_rules_resource.COLUMNS)
 
-                if args.save:
-                    security_rules_resource.save(rows)
+                security_rules_resource.save(rows)
 
                 results.append(
                     {
                         "ok": True,
                         "security_rules": len(rows),
                         "policy_ids": policy_ids,
-                        "saved": bool(args.save),
+                        "saved": True,
                         "get": bool(args.get),
                     }
                 )
         except Exception as err:
-            print(f"[*] enum_networkfirewall.{key}: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": key, "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component=key, module_name="enum_networkfirewall"))
 
     append_cached_component_counts(
         results=results,

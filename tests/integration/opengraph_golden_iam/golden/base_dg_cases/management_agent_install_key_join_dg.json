@@ -1,0 +1,197 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..agent_enrollers_manage_instances:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..agent_enrollers_manage_instances"
+          ],
+          "resolved_statements": [
+            "Allow dynamic-group AgentEnrollers to manage instances in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.dynamicgroup.oc1..agentenrollers"
+        }
+      },
+      {
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..agentenrollers"
+        },
+        "kind": "INSTALL_KEY_CAN_JOIN_DG",
+        "properties": {
+          "attack": "management_agent_install_key_registration",
+          "created_by_principal_id": "ocid1.user.oc1..admin",
+          "edge_category": "GROUP_MEMBERSHIP",
+          "evaluated_location": "ocid1.compartment.oc1..app",
+          "evaluated_resource_type": "managementagent",
+          "is_unlimited": false,
+          "note": "Holder of this install key can register a rogue management agent (from any host, on- or off-OCI) into this compartment; the agent matches this dynamic group and inherits its IAM policy grants.",
+          "time_expires": "2099-12-31T23:59:59Z"
+        },
+        "start": {
+          "value": "ocid1.managementagentinstallkey.oc1..usable"
+        }
+      },
+      {
+        "end": {
+          "value": "new-compute-instance@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_CREATE_INSTANCE",
+        "properties": {
+          "description": "Launch compute instances in scope (instances prerequisite).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..agent_enrollers_manage_instances"
+          ],
+          "resolved_statements": [
+            "Allow dynamic-group AgentEnrollers to manage instances in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..agent_enrollers_manage_instances:0"
+        }
+      },
+      {
+        "end": {
+          "value": "instances@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Allows managing Compute Instances in scope (e.g., modify/attach/move/create/delete depending on permissions).",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..agent_enrollers_manage_instances"
+          ],
+          "resolved_statements": [
+            "Allow dynamic-group AgentEnrollers to manage instances in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..agent_enrollers_manage_instances:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ocid1.dynamicgroup.oc1..agentenrollers",
+        "kinds": [
+          "OCIDynamicGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "matching_rule": "Any {resource.type = 'managementagent'}",
+          "name": "AgentEnrollers",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.managementagentinstallkey.oc1..usable",
+        "kinds": [
+          "OCIManagementAgentInstallKey",
+          "OCIResource"
+        ],
+        "properties": {
+          "allowed_key_install_count": "1000",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "created_by_principal_id": "ocid1.user.oc1..admin",
+          "current_key_install_count": "3",
+          "display_name": "prod-agent-key",
+          "id": "ocid1.managementagentinstallkey.oc1..usable",
+          "is_unlimited": "0",
+          "lifecycle_state": "ACTIVE",
+          "name": "prod-agent-key",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant",
+          "time_created": "2026-01-01T00:00:00Z",
+          "time_expires": "2099-12-31T23:59:59Z",
+          "workspace_id": "10099"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..agent_enrollers_manage_instances:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "AgentEnrollersPolicy:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..agent_enrollers_manage_instances",
+          "policy_name": "AgentEnrollersPolicy",
+          "raw_statement": "Allow dynamic-group AgentEnrollers to manage instances in compartment AppTeam",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "instances@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "instances@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "new-compute-instance@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIResource",
+          "OCIResourceGroup"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "new-compute-instance@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

@@ -198,7 +198,7 @@
         "token": "users"
       },
       "edge": {
-        "description": "Create an API key for another user (requires USER_UPDATE + USER_APIKEY_ADD and enables API access as that user).",
+        "description": "Create an API signing key for another user, enabling API access AS that user. Authorization comes from OCI IAM POLICY permissions (USER_UPDATE + USER_APIKEY_ADD) -- the identity-domain analog, where authz comes from an IDD admin app-role, is IDD_CREATE_USER_API_KEY (collapsed into IDD_USER_ADMIN / IDD_IDENTITY_ADMIN_USER). Exploit: `modules run exploit_add_user_api_key` (see the edge's example_command).",
         "label": "OCI_CREATE_USER_API_KEY"
       },
       "id": "CREATE_USER_API_KEY",
@@ -671,7 +671,7 @@
       "fn-invocation"
     ],
     "instance-agent-command-execution-family": [
-      "instance-agent-commands"
+      "instance-agent-command-executions"
     ],
     "instance-agent-command-family": [
       "instance-agent-commands"

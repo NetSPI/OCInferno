@@ -102,7 +102,7 @@ class TestResourceManagerBlobWrite(unittest.TestCase):
                 out_file.unlink()
             self.addCleanup(lambda: out_file.unlink(missing_ok=True))
 
-            ok = module.ResourceManagerTemplatesResource._write_blob(_ResponseLike(b"PK\x03\x04zip-bytes"), str(out_file))
+            ok = module._write_blob(_ResponseLike(b"PK\x03\x04zip-bytes"), str(out_file))
 
         self.assertTrue(ok)
         self.assertTrue(out_file.exists())
@@ -117,7 +117,7 @@ class TestResourceManagerBlobWrite(unittest.TestCase):
             self.addCleanup(lambda: out_file.unlink(missing_ok=True))
 
             wrapped = _WrapperLike(_ResponseLike(b"\x89PNG\r\nbinary"))
-            ok = module.ResourceManagerTemplatesResource._write_blob(wrapped, str(out_file))
+            ok = module._write_blob(wrapped, str(out_file))
 
         self.assertTrue(ok)
         self.assertTrue(out_file.exists())

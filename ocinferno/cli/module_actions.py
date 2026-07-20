@@ -6,7 +6,6 @@ import argparse
 import ast
 import importlib
 import importlib.util
-import inspect
 import traceback
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -18,6 +17,7 @@ from typing import Optional, Sequence, List, Dict, Any, Set
 from ocinferno.core.contracts import ErrorCode
 from ocinferno.core.contracts import OperationResult
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.service_runtime import invoke_run_module as _invoke_run_module
 
 
 # =============================================================================
@@ -64,8 +64,6 @@ class RunnerArgs:
     all_cids: bool
     proxy: Optional[str]
     debug: bool
-    save: bool
-    no_save: bool
     get: bool
     download: bool
     download_values: List[str] = field(default_factory=list)
@@ -89,7 +87,6 @@ class ExecutionPlan:
 
 
 COMMON_MODULE_FLAGS = (
-    ("--save", "save"),
     ("--get", "get"),
     ("--download", "download"),
 )
@@ -111,7 +108,58 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.DEFAULT,
         accepts_cid_flags=True,
     ),
-    "enum_oracle_cloud_hound_data": ModulePolicySpec(
+    "process_oracle_cloud_hound_data": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    # Process module: sweeps the whole workspace DB once, not per-compartment.
+    "get_network_resources": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    # Tenancy-global: list_region_subscriptions is per-tenant, not per-compartment.
+    # Standalone BloodHound styling push; no compartment context.
+    "process_og_node_color_images": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "enum_regions": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    # Exploit: a single targeted write (upload key to one user OCID); no per-compartment loop.
+    "exploit_add_user_api_key": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    # Exploit: create one user (tenancy/domain global); no per-compartment loop.
+    "exploit_create_user": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    # Exploit: edit/reset a single user; no per-compartment loop.
+    "exploit_update_user": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_reset_password": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_add_self_to_group": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_write_policy": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
@@ -138,8 +186,6 @@ def _parse_runner_args(argv: Sequence[str]) -> RunnerArgs:
         return False
 
     explicit_common_flags: Set[str] = set()
-    if _flag_present("--save"):
-        explicit_common_flags.add("--save")
     if _flag_present("--get"):
         explicit_common_flags.add("--get")
     if _flag_present("--download"):
@@ -158,8 +204,6 @@ def _parse_runner_args(argv: Sequence[str]) -> RunnerArgs:
     p.add_argument("--all-cids", action="store_true", help="Target ALL already-discovered CIDs (no prompts).")
 
     p.add_argument("--proxy", help="Proxy address (e.g. http://127.0.0.1:8080).")
-    p.add_argument("--save", action="store_true", help="Pass --save to modules that support it.")
-    p.add_argument("--no-save", action="store_true", help="Do not pass --save for this run.")
     p.add_argument("--get", action="store_true", help="Pass --get to modules that support it.")
     p.add_argument(
         "--download",
@@ -173,9 +217,6 @@ def _parse_runner_args(argv: Sequence[str]) -> RunnerArgs:
     p.add_argument("-v", "--debug", action="store_true", help="Enable verbose debug output.")
 
     known, rest = p.parse_known_args(list(argv))
-    save_effective = bool(getattr(known, "save", False))
-    if bool(getattr(known, "no_save", False)):
-        save_effective = False
 
     return RunnerArgs(
         cids=_normalize_cids(known.cids or []),
@@ -183,8 +224,6 @@ def _parse_runner_args(argv: Sequence[str]) -> RunnerArgs:
         all_cids=bool(known.all_cids),
         proxy=known.proxy,
         debug=bool(known.debug),
-        save=save_effective,
-        no_save=bool(getattr(known, "no_save", False)),
         get=bool(getattr(known, "get", False)),
         download=(getattr(known, "download", None) is not None),
         download_values=[
@@ -222,7 +261,7 @@ def _module_parse_meta(module_import_path: str) -> ModuleParseMeta:
             if isinstance(func, ast.Name) and func.id == "parse_known_args":
                 accepts_unknown = True
             # Wrapper helper pattern used by many enum modules.
-            # parse_wrapper_args(...) supports include_get/include_save/include_download
+            # parse_wrapper_args(...) supports include_get/include_download
             # and internally uses parse_known_args.
             is_wrapper_call = False
             if isinstance(func, ast.Name) and func.id == "parse_wrapper_args":
@@ -232,7 +271,6 @@ def _module_parse_meta(module_import_path: str) -> ModuleParseMeta:
             if is_wrapper_call:
                 accepts_unknown = True
                 include_get = True
-                include_save = True
                 include_download = False
                 for kw in (node.keywords or []):
                     if not isinstance(kw, ast.keyword) or not kw.arg:
@@ -240,14 +278,10 @@ def _module_parse_meta(module_import_path: str) -> ModuleParseMeta:
                     if isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, bool):
                         if kw.arg == "include_get":
                             include_get = bool(kw.value.value)
-                        elif kw.arg == "include_save":
-                            include_save = bool(kw.value.value)
                         elif kw.arg == "include_download":
                             include_download = bool(kw.value.value)
                 if include_get:
                     parsed_flags.add("--get")
-                if include_save:
-                    parsed_flags.add("--save")
                 if include_download:
                     parsed_flags.add("--download")
             if not (isinstance(func, ast.Attribute) and func.attr == "add_argument"):
@@ -395,7 +429,7 @@ def _ask_scope_choice(session, current_cid: Optional[str], rows: Sequence[Dict[s
     return UtilityTools.ask_all_or_current_with_preview(None, rows, max_preview=10)
 
 
-def resolve_context_cid(session, *, mode: ContextMode) -> Optional[str]:
+def resolve_context_cid(session, *, mode: ContextMode, runner: Optional["RunnerArgs"] = None) -> Optional[str]:
     """
     Returns ONE cid for ONCE modules, but ALSO stores the user's scope choice on session:
       session.last_scope_choice = "all" | "current" | None
@@ -425,6 +459,27 @@ def resolve_context_cid(session, *, mode: ContextMode) -> Optional[str]:
     # DEFAULT
     rows = getattr(session, "global_compartment_list", None) or []
     cur = getattr(session, "compartment_id", None)
+
+    # An explicit --all-cids/--current-cid/--cids runner flag already answers the
+    # "all or current" question the interactive prompt below would ask -- skip it.
+    # Without this, a ONCE+DEFAULT module (e.g. enum_all) with >1 known compartment
+    # always prompts interactively regardless of runner flags, crashing with
+    # EOFError under any non-interactive invocation (--module drive-through, CI)
+    # even though the caller already told us the intended scope.
+    if runner is not None and (runner.all_cids or runner.current_cid or runner.cids):
+        if runner.all_cids:
+            try:
+                session.last_scope_choice = "all"
+                session.last_scope_choice_explicit = True
+            except Exception:
+                pass
+            return _deterministic_context(session, _all_known_cids(session))
+        try:
+            session.last_scope_choice = "current"
+            session.last_scope_choice_explicit = True
+        except Exception:
+            pass
+        return cur or _deterministic_context(session, _all_known_cids(session))
 
     if cur:
         if len(rows) > 1:
@@ -503,32 +558,6 @@ def resolve_targets_for_per_target(session, runner: RunnerArgs) -> List[str]:
 
     cid = _choose_one_compartment(session)
     return [cid] if cid else []
-
-
-def _invoke_run_module(module, passthrough_args: Sequence[str], session):
-    fn = getattr(module, "run_module", None)
-    if not callable(fn):
-        raise AttributeError("Module does not export run_module")
-
-    sig = inspect.signature(fn)
-    params = list(sig.parameters.values())
-
-    def _pname(i: int) -> str:
-        return params[i].name if i < len(params) else ""
-
-    if len(params) >= 2:
-        p0, p1 = _pname(0), _pname(1)
-
-        if p0 in ("user_args", "argv", "args") and p1 in ("session",):
-            return fn(list(passthrough_args), session)
-
-        if p0 in ("session",) and p1 in ("args", "argv", "user_args", "namespace", "parsed"):
-            return fn(session, list(passthrough_args))
-
-    try:
-        return fn(list(passthrough_args), session)
-    except TypeError:
-        return fn(session, list(passthrough_args))
 
 
 def _execute_module_for_target(session, module, *, mod_short: str, target_cid: Optional[str], passthrough_args: Sequence[str]) -> OperationResult:
@@ -622,7 +651,7 @@ def _apply_enum_all_scope_defaults(
 
 def _plan_execution(session, action: ModuleAction, runner: RunnerArgs, mod_short: str) -> tuple[Optional[ExecutionPlan], Optional[str]]:
     if action.exec_mode == ExecMode.ONCE:
-        ctx = resolve_context_cid(session, mode=action.context_mode)
+        ctx = resolve_context_cid(session, mode=action.context_mode, runner=runner)
         if action.context_mode != ContextMode.NONE and ctx is None:
             return None, f"{UtilityTools.RED}[X] No compartment selected.{UtilityTools.RESET}"
 
@@ -678,13 +707,6 @@ def interact_with_module(session, module_path: str, module_args: Sequence[str]) 
     try:
         runner = _parse_runner_args(module_args)
         passthrough_args = list(runner.passthrough)
-
-        # Workspace default: auto-pass --save unless explicitly disabled for this run.
-        if not runner.save and not runner.no_save:
-            try:
-                runner.save = bool(getattr(session, "config_module_auto_save", True))
-            except Exception:
-                runner.save = True
 
         # Apply runner-level flags globally
         if runner.debug:

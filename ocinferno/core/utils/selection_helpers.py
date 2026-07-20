@@ -14,24 +14,6 @@ def _s(value: Any) -> str:
     return value.strip() if isinstance(value, str) else str(value)
 
 
-def _row_label(row: Dict[str, Any], *, display_keys: Sequence[str]) -> str:
-    display = ""
-    for key in display_keys:
-        display = _s(row.get(key))
-        if display:
-            break
-    if not display:
-        display = _s(row.get("ocid") or row.get("id") or "<unknown>")
-
-    ocid = _s(row.get("ocid"))
-    row_id = _s(row.get("id"))
-    if ocid:
-        return f"{display} | ocid={ocid}"
-    if row_id:
-        return f"{display} | id={row_id}"
-    return display
-
-
 def load_identity_domains_from_db(session, *, compartment_id: str | None = None) -> list[dict[str, Any]]:
     if not compartment_id:
         return session.get_resource_fields(TABLE_IDENTITY_DOMAINS) or []
@@ -52,7 +34,7 @@ def choose_identity_domain(
     all_saved_domains: bool = False,
     no_prompt: bool = False,
     prompt_title: str = "Identity Domains",
-    missing_hint: str = "modules run enum_identity --domains --save",
+    missing_hint: str = "modules run enum_identity --domains",
 ) -> Optional[Dict[str, Any]]:
     domains = load_identity_domains_from_db(
         session,
@@ -120,49 +102,130 @@ def find_row_by_ocid_or_id(
     return None
 
 
-def choose_domain_row(
-    session,
+def paged_search_select(
+    items: Sequence[Any],
     *,
-    table_name: str,
-    domain_ocid: str,
-    target_ocid: str = "",
-    target_id: str = "",
-    no_prompt: bool = False,
-    prompt_title: str = "Identity Domain Resources",
-    entity_plural: str = "resources",
-    missing_hint: str = "modules run enum_identity --principals --save",
-    display_keys: Sequence[str] = ("display_name", "name", "ocid", "id"),
-) -> Optional[Dict[str, Any]]:
-    rows = get_domain_rows(session, table_name=table_name, domain_ocid=domain_ocid)
-    if not rows:
-        print(
-            f"{UtilityTools.RED}[X] No saved {entity_plural} for domain {domain_ocid}. "
-            f"Run: {missing_hint}{UtilityTools.RESET}"
-        )
+    title: str,
+    label_fn,
+    page_size: int = 20,
+):
+    """Interactively pick one item from a (possibly large) list.
+
+    Renders one page at a time and accepts: a number to select, ``n``/``p`` to page,
+    ``/<term>`` to filter by label substring, ``c`` to clear the filter, ``ENTER`` to
+    cancel. Returns the selected item or ``None``. Small lists (<= page_size) behave
+    like a plain numbered menu.
+    """
+    view = [it for it in items]
+    if not view:
+        print(f"{UtilityTools.RED}[X] Nothing to choose from.{UtilityTools.RESET}")
         return None
 
-    selected = find_row_by_ocid_or_id(rows, target_ocid=target_ocid, target_id=target_id)
-    if selected:
-        return selected
+    page = 0
+    filt = ""
+    while True:
+        shown = [it for it in view if filt.lower() in label_fn(it).lower()] if filt else view
+        if not shown:
+            print(f"{UtilityTools.YELLOW}[!] No matches for '/{filt}'.{UtilityTools.RESET}")
+            filt = ""
+            continue
+        pages = max(1, (len(shown) + page_size - 1) // page_size)
+        page = max(0, min(page, pages - 1))
+        start = page * page_size
+        chunk = shown[start:start + page_size]
 
-    if _s(target_ocid) or _s(target_id):
-        print(
-            f"{UtilityTools.RED}[X] Requested {entity_plural.rstrip('s')} was not found in cached {entity_plural} "
-            f"for this domain.{UtilityTools.RESET}"
-        )
+        hdr = f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] {title}{UtilityTools.RESET}"
+        state = f" (page {page + 1}/{pages}, {len(shown)} match" + ("" if len(shown) == 1 else "es")
+        state += f", filter='{filt}'" if filt else ""
+        state += ")"
+        print(f"{hdr}{UtilityTools.BRIGHT_BLACK}{state}{UtilityTools.RESET}")
+        for i, it in enumerate(chunk, start + 1):
+            print(f"  [{i}] {label_fn(it)}")
+        hint = "Select # | 'n'ext | 'p'rev | '/term' filter | 'c'lear | ENTER cancel" if pages > 1 or filt \
+            else "Select a number (or ENTER to cancel)"
+        choice = input(f"{hint}: ").strip()
+
+        if choice == "":
+            print("[*] Cancelled.")
+            return None
+        low = choice.lower()
+        if low in ("n", "next"):
+            page += 1
+            continue
+        if low in ("p", "prev"):
+            page -= 1
+            continue
+        if low in ("c", "clear"):
+            filt = ""
+            page = 0
+            continue
+        if choice.startswith("/"):
+            filt = choice[1:].strip()
+            page = 0
+            continue
+        if choice.isdigit():
+            idx = int(choice)
+            if start + 1 <= idx <= start + len(chunk):
+                return chunk[idx - start - 1]
+            # allow selecting any absolute index within the current filtered view
+            if 1 <= idx <= len(shown):
+                return shown[idx - 1]
+            print(f"{UtilityTools.RED}[X] Out of range.{UtilityTools.RESET}")
+            continue
+        print(f"{UtilityTools.RED}[X] Unrecognized input.{UtilityTools.RESET}")
+
+
+def select_from_db_or_manual(
+    *,
+    rows: Sequence[Dict[str, Any]],
+    entity: str,
+    label_fn,
+    manual_prompt: str,
+    manual_validate=None,
+    page_size: int = 20,
+    empty_hint: str = "",
+):
+    """Top-level interactive picker: choose a saved row from the workspace DB, or enter a
+    value manually. Returns ``("row", row)`` | ``("manual", value)`` | ``None`` (cancel).
+
+    When ``rows`` is empty it goes straight to manual entry (showing ``empty_hint``).
+    Large ``rows`` are handled by :func:`paged_search_select` (search + paging).
+    ``manual_validate(value) -> bool`` gates manual input (re-prompts on False).
+    """
+    usable = [r for r in rows if isinstance(r, dict)]
+
+    def _manual():
+        while True:
+            val = _s(input(f"{manual_prompt}: "))
+            if not val:
+                print("[*] Cancelled.")
+                return None
+            if manual_validate and not manual_validate(val):
+                print(f"{UtilityTools.RED}[X] Invalid value, try again (ENTER to cancel).{UtilityTools.RESET}")
+                continue
+            return ("manual", val)
+
+    if not usable:
+        if empty_hint:
+            print(f"{UtilityTools.YELLOW}[!] No saved {entity} in the workspace DB. {empty_hint}{UtilityTools.RESET}")
+        return _manual()
+
+    print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Select {entity}:{UtilityTools.RESET}")
+    print(f"  [1] Choose from {len(usable)} {entity} saved in the workspace DB")
+    print("  [2] Enter a value manually")
+    choice = _s(input("Select 1 or 2 (ENTER to cancel): "))
+    if choice == "":
+        print("[*] Cancelled.")
         return None
-
-    if no_prompt:
-        print(
-            f"{UtilityTools.RED}[X] --no-prompt requires explicit target for {entity_plural.rstrip('s')} selection."
-            f"{UtilityTools.RESET}"
-        )
-        return None
-
-    return UtilityTools._choose_from_list(
-        prompt_title,
-        rows,
-        lambda row: _row_label(row, display_keys=display_keys),
+    if choice == "2":
+        return _manual()
+    if choice == "1":
+        picked = paged_search_select(usable, title=f"{entity.title()} (workspace DB)", label_fn=label_fn, page_size=page_size)
+        return ("row", picked) if picked is not None else None
+    print(f"{UtilityTools.RED}[X] Enter 1 or 2.{UtilityTools.RESET}")
+    return select_from_db_or_manual(
+        rows=rows, entity=entity, label_fn=label_fn, manual_prompt=manual_prompt,
+        manual_validate=manual_validate, page_size=page_size, empty_hint=empty_hint,
     )
 
 

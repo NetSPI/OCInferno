@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.enum_framework import nested_list_fn
 from ocinferno.core.utils.module_helpers import fill_missing_fields, unique_rows_by_id
 from ocinferno.modules.managedkafka.utilities.helpers import (
     ManagedKafkaClusterConfigsResource,
@@ -13,6 +14,7 @@ from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -30,13 +32,7 @@ CACHE_TABLES = {
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -85,31 +81,24 @@ def run_module(user_args, session):
                 if not compartment_id and not cluster_ids:
                     raise ValueError("Need session.compartment_id unless --cluster-ids are provided")
 
-                if cluster_ids:
-                    rows = [clusters_resource.get(resource_id=cluster_id) for cluster_id in cluster_ids]
-                    rows = [row for row in rows if isinstance(row, dict) and row]
-                else:
-                    rows = clusters_resource.list(compartment_id=compartment_id) or []
+                # --cluster-ids scopes to get()-per-id; otherwise list per compartment. Dedup either way.
+                def _list_clusters(cid, _ids=cluster_ids, _res=clusters_resource):
+                    if _ids:
+                        got = [_res.get(resource_id=cid_) for cid_ in _ids]
+                        rows = [r for r in got if isinstance(r, dict) and r]
+                    else:
+                        rows = _res.list(compartment_id=cid) or []
+                    return unique_rows_by_id([r for r in rows if isinstance(r, dict)])
 
-                rows = unique_rows_by_id([row for row in rows if isinstance(row, dict)])
-                for row in rows:
-                    row.setdefault("compartment_id", compartment_id)
-
-                if args.get:
-                    for row in rows:
-                        resource_id = row.get("id")
-                        if not resource_id:
-                            continue
-                        meta = clusters_resource.get(resource_id=resource_id) or {}
-                        fill_missing_fields(row, meta)
-
-                if rows:
-                    UtilityTools.print_limited_table(rows, clusters_resource.COLUMNS)
-
-                if args.save:
-                    clusters_resource.save(rows)
-
-                results.append({"ok": True, "clusters": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+                results.append(run_standard_enum_component(
+                    user_args=args, session=session, component_key="clusters",
+                    list_rows=_list_clusters,
+                    get_row=lambda row, _res=clusters_resource: _res.get(resource_id=row.get("id")),
+                    save_rows_fn=clusters_resource.save,
+                    print_columns=clusters_resource.COLUMNS,
+                    module_name="enum_managedkafka",
+                    require_compartment=False,
+                ))
             elif key == "cluster_configs":
                 cfg_resource = resource_map[key]
                 compartment_id = getattr(session, "compartment_id", None)
@@ -118,31 +107,24 @@ def run_module(user_args, session):
                 if not compartment_id and not config_ids:
                     raise ValueError("Need session.compartment_id unless --cluster-config-ids are provided")
 
-                if config_ids:
-                    rows = [cfg_resource.get(resource_id=config_id) for config_id in config_ids]
-                    rows = [row for row in rows if isinstance(row, dict) and row]
-                else:
-                    rows = cfg_resource.list(compartment_id=compartment_id) or []
+                # --cluster-config-ids scopes to get()-per-id; otherwise list per compartment. Dedup either way.
+                def _list_cluster_configs(cid, _ids=config_ids, _res=cfg_resource):
+                    if _ids:
+                        got = [_res.get(resource_id=cid_) for cid_ in _ids]
+                        rows = [r for r in got if isinstance(r, dict) and r]
+                    else:
+                        rows = _res.list(compartment_id=cid) or []
+                    return unique_rows_by_id([r for r in rows if isinstance(r, dict)])
 
-                rows = unique_rows_by_id([row for row in rows if isinstance(row, dict)])
-                for row in rows:
-                    row.setdefault("compartment_id", compartment_id)
-
-                if args.get:
-                    for row in rows:
-                        resource_id = row.get("id")
-                        if not resource_id:
-                            continue
-                        meta = cfg_resource.get(resource_id=resource_id) or {}
-                        fill_missing_fields(row, meta)
-
-                if rows:
-                    UtilityTools.print_limited_table(rows, cfg_resource.COLUMNS)
-
-                if args.save:
-                    cfg_resource.save(rows)
-
-                results.append({"ok": True, "cluster_configs": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+                results.append(run_standard_enum_component(
+                    user_args=args, session=session, component_key="cluster_configs",
+                    list_rows=_list_cluster_configs,
+                    get_row=lambda row, _res=cfg_resource: _res.get(resource_id=row.get("id")),
+                    save_rows_fn=cfg_resource.save,
+                    print_columns=cfg_resource.COLUMNS,
+                    module_name="enum_managedkafka",
+                    require_compartment=False,
+                ))
             elif key == "cluster_config_versions":
                 cfg_ver_resource = resource_map[key]
                 compartment_id = getattr(session, "compartment_id", None)
@@ -151,17 +133,17 @@ def run_module(user_args, session):
 
                 config_ids = cfg_ver_resource.resolve_cluster_config_ids(compartment_id, args)
 
-                rows = []
-                for config_id in config_ids:
-                    listed = cfg_ver_resource.list(kafka_cluster_config_id=config_id) or []
-                    for row in listed:
-                        if not isinstance(row, dict):
-                            continue
-                        row.setdefault("config_id", config_id)
-                        row.setdefault("compartment_id", compartment_id)
-                        rows.append(row)
-
-                rows = cfg_ver_resource.unique_cfg_version_rows(rows)
+                # resolve_cluster_config_ids already covers manual --cluster-config-ids/DB-cache/
+                # live-list; reuse its result via manual_parent_ids so nested_list_fn only fans out
+                # + stamps. parent_id_field stays "config_id" (the existing row-stamp field name);
+                # the real SDK kwarg is remapped separately via LIST_SCOPE_KWARG on the resource.
+                list_rows = nested_list_fn(
+                    parent_resource_cls=ManagedKafkaClusterConfigsResource,
+                    parent_id_field="config_id",
+                    manual_parent_ids=config_ids,
+                    child_takes_compartment=False,
+                )(session, args, cfg_ver_resource)
+                rows = cfg_ver_resource.unique_cfg_version_rows(list_rows(compartment_id))
 
                 if args.get:
                     for row in rows:
@@ -179,21 +161,19 @@ def run_module(user_args, session):
                 if rows:
                     UtilityTools.print_limited_table(rows, cfg_ver_resource.COLUMNS)
 
-                if args.save:
-                    cfg_ver_resource.save(rows)
+                cfg_ver_resource.save(rows)
 
                 results.append(
                     {
                         "ok": True,
                         "cluster_config_versions": len(rows),
                         "cluster_config_ids": config_ids,
-                        "saved": bool(args.save),
+                        "saved": True,
                         "get": bool(args.get),
                     }
                 )
         except Exception as err:
-            print(f"[*] enum_managedkafka.{key}: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": key, "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component=key, module_name="enum_managedkafka"))
 
     append_cached_component_counts(
         results=results,

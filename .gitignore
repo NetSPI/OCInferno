@@ -5,6 +5,24 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.python-version
+
+# Environment / secrets
+.env
+.env.*
+
+# AI-assistant scratch and config
+.claude/
+.aider*
+.cursor/
+.cursorrules
+CLAUDE.md
 
 # Packaging / build
 build/
@@ -41,3 +59,6 @@ ocinferno_output/
 .DS_Store
 .idea/
 .vscode/
+*.swp
+*.swo
+*.log

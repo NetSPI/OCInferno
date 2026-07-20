@@ -6,7 +6,7 @@ from typing import Any, Dict, Sequence
 
 import oci
 from ocinferno.core.console import UtilityTools
-from ocinferno.modules.core.utilities.virtual_network_helpers import (
+from ocinferno.modules.core.utilities.helpers import (
     DhcpOptionsResource,
     DrgAttachmentsResource,
     DrgsResource,
@@ -18,7 +18,6 @@ from ocinferno.modules.core.utilities.virtual_network_helpers import (
     ServiceGatewaysResource,
     SubnetsResource,
     VcnsResource,
-    VirtualNetworkResourceClient,
     print_section_table,
 )
 from ocinferno.core.utils.module_helpers import fill_missing_fields, cached_table_count, resolve_component_flags
@@ -42,11 +41,10 @@ def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--vcn-id", default="", help="Filter by VCN OCID (used by VCN-scoped resources)")
     parser.add_argument("--drg-id", default="", help="Filter by DRG OCID (used by DRG attachments)")
 
-    # --get/--save are runner-level common flags; parse module-specific args only.
+    # --get is a runner-level common flag; parse module-specific args only.
     args, _ = parser.parse_known_args(list(user_args))
     raw_args = {str(x) for x in (list(user_args) if user_args is not None else [])}
     args.get = "--get" in raw_args
-    args.save = "--save" in raw_args
     return args
 
 
@@ -74,44 +72,43 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "dhcp_options",
         ],
     )
-    ops = VirtualNetworkResourceClient(session=session)
     summary: Dict[str, int] = {}
 
     vcn_id = (args.vcn_id or "").strip() or None
     drg_id = (args.drg_id or "").strip() or None
 
     component_specs = [
-        {"key": "vcns", "resource": VcnsResource(ops), "cache_table": "virtual_network_vcns", "list_kwargs": {}},
-        {"key": "subnets", "resource": SubnetsResource(ops), "cache_table": "virtual_network_subnets", "list_kwargs": {"vcn_id": vcn_id}},
-        {"key": "route_tables", "resource": RouteTablesResource(ops), "cache_table": "virtual_network_route_tables", "list_kwargs": {"vcn_id": vcn_id}},
-        {"key": "security_lists", "resource": SecurityListsResource(ops), "cache_table": "virtual_network_security_lists", "list_kwargs": {"vcn_id": vcn_id}},
+        {"key": "vcns", "resource": VcnsResource(session), "cache_table": "virtual_network_vcns", "list_kwargs": {}},
+        {"key": "subnets", "resource": SubnetsResource(session), "cache_table": "virtual_network_subnets", "list_kwargs": {"vcn_id": vcn_id}},
+        {"key": "route_tables", "resource": RouteTablesResource(session), "cache_table": "virtual_network_route_tables", "list_kwargs": {"vcn_id": vcn_id}},
+        {"key": "security_lists", "resource": SecurityListsResource(session), "cache_table": "virtual_network_security_lists", "list_kwargs": {"vcn_id": vcn_id}},
         {
             "key": "network_security_groups",
-            "resource": NetworkSecurityGroupsResource(ops),
+            "resource": NetworkSecurityGroupsResource(session),
             "cache_table": "virtual_network_network_security_groups",
             "list_kwargs": {"vcn_id": vcn_id},
         },
         {
             "key": "internet_gateways",
-            "resource": InternetGatewaysResource(ops),
+            "resource": InternetGatewaysResource(session),
             "cache_table": "virtual_network_internet_gateways",
             "list_kwargs": {"vcn_id": vcn_id},
         },
-        {"key": "nat_gateways", "resource": NatGatewaysResource(ops), "cache_table": "virtual_network_nat_gateways", "list_kwargs": {"vcn_id": vcn_id}},
+        {"key": "nat_gateways", "resource": NatGatewaysResource(session), "cache_table": "virtual_network_nat_gateways", "list_kwargs": {"vcn_id": vcn_id}},
         {
             "key": "service_gateways",
-            "resource": ServiceGatewaysResource(ops),
+            "resource": ServiceGatewaysResource(session),
             "cache_table": "virtual_network_service_gateways",
             "list_kwargs": {"vcn_id": vcn_id},
         },
-        {"key": "drgs", "resource": DrgsResource(ops), "cache_table": "virtual_network_drgs", "list_kwargs": {}},
+        {"key": "drgs", "resource": DrgsResource(session), "cache_table": "virtual_network_drgs", "list_kwargs": {}},
         {
             "key": "drg_attachments",
-            "resource": DrgAttachmentsResource(ops),
+            "resource": DrgAttachmentsResource(session),
             "cache_table": "virtual_network_drg_attachments",
             "list_kwargs": {"drg_id": drg_id},
         },
-        {"key": "dhcp_options", "resource": DhcpOptionsResource(ops), "cache_table": "virtual_network_dhcp_options", "list_kwargs": {"vcn_id": vcn_id}},
+        {"key": "dhcp_options", "resource": DhcpOptionsResource(session), "cache_table": "virtual_network_dhcp_options", "list_kwargs": {"vcn_id": vcn_id}},
     ]
 
     # Resource loop: network components (VCNs, subnets, gateways, DRGs, ACL objects).
@@ -155,8 +152,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
         if rows:
             print_section_table(resource.SECTION_TITLE, rows, resource.COLUMNS)
-            if args.save:
-                resource.save(rows)
+            resource.save(rows)
 
         summary[key] = len(rows)
 

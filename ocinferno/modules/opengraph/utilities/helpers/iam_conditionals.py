@@ -53,6 +53,7 @@ from ocinferno.modules.opengraph.utilities.helpers.constants import (
     PERMISSION_MAPPING,
     DEFAULT_RESOURCE_FAMILIES,
 )
+from ocinferno.core.utils import hierarchy as _hierarchy
 
 
 def _build_operation_indexes_shared(*, api_sources, core_sources, norm_s, norm_l):
@@ -1757,16 +1758,9 @@ class StatementConditionalsEngine:
         return None
 
     def _expand_descendants(self, *, roots: set[str], children_by_compartment_id: dict[str, set[str]]) -> set[str]:
-        expanded: set[str] = set()
-        stack = list(roots)
-        while stack:
-            cur = stack.pop()
-            if cur in expanded:
-                continue
-            expanded.add(cur)
-            for ch in children_by_compartment_id.get(cur, ()):
-                if ch not in expanded:
-                    stack.append(ch)
+        expanded: set[str] = set(roots)
+        for root in roots:
+            expanded.update(_hierarchy.descendants(children_by_compartment_id, root))
         return expanded
 
     # db extraction + mapping
@@ -2662,6 +2656,17 @@ class StatementConditionalsEngine:
         ctx: EvalContext,
         reason_prefix: str,
     ) -> ContextDelta:
+        if d.unresolved or d.tri == BoolTri.UNKNOWN:
+            # Propagate the upstream unresolved/unknown state (e.g. _match_resources_
+            # across_tables returning unresolved=True for an empty ctx.location_ids)
+            # instead of collapsing it to a hard FALSE below -- an AND-combinator
+            # must see "cannot determine" here, not "definitely no match", or it
+            # silently prunes an edge that should have surfaced as unresolved.
+            return _delta_unknown(
+                f"{reason_prefix}: upstream compartment match unresolved ({d.reason or 'no reason given'})",
+                unresolved=True,
+            )
+
         matched_roots = set(getattr(d, "matched_resource_node_ids", set()) or ())
         if not matched_roots:
             return ContextDelta(

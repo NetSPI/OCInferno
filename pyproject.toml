@@ -13,19 +13,13 @@ license-files = ["LICENSE"]
 authors = [
   { name = "NetSPI" }
 ]
-dependencies = [
-  "PyYAML==6.0.3",
-  "oci==2.181.1",
-  "requests==2.34.2",
-  "prettytable==3.17.0",
-  "oci-lexer-parser==0.1.2",
-  "pandas==2.3.3; python_version < '3.11'",
-  "pandas==3.0.1; python_version >= '3.11'",
-  "xlsxwriter==3.2.9"
-]
+dynamic = ["dependencies"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
   "Intended Audience :: Information Technology",
   "Topic :: Security",
@@ -33,11 +27,25 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.0"
+  "pytest>=8.0",
+  "ruff==0.15.21",
+  "mypy==2.2.0"
+]
+excel = [
+  "pandas==2.3.3; python_version < '3.11'",
+  "pandas==3.0.1; python_version >= '3.11'",
+  "xlsxwriter==3.2.9"
+]
+# Prettier boxed tables. Optional: without it, output falls back to a plain ASCII table.
+table = [
+  "prettytable==3.17.0"
 ]
 
 [project.scripts]
 ocinferno = "ocinferno.cli.main:main"
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools]
 include-package-data = true
@@ -48,5 +56,36 @@ include = ["ocinferno*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-"ocinferno.mappings" = ["*.json", "*.yaml"]
+"ocinferno.mappings" = ["*.json"]
 "ocinferno.modules.opengraph.utilities.helpers" = ["data/*.json"]
+
+# -----------------------------
+# Lint / type-check configuration
+# -----------------------------
+# Ruff is the BLOCKING CI gate. The rule set is intentionally conservative
+# (real-bug rules only, no style/formatting churn) so it stays green on the
+# existing large codebase. Grow `select` over time (B, UP, SIM, ...) as the
+# code is cleaned up.
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+extend-exclude = ["tests/**/data"]
+
+[tool.ruff.lint]
+# E9 = syntax/IndentationError/IO errors (always real)
+# F  = pyflakes: undefined names, unused imports, f-string bugs, redefinitions
+select = ["E9", "F"]
+
+# Mypy is currently NON-BLOCKING in CI (informational). It is scoped to the
+# core package, where type hints are richest and the logic is most critical.
+# Goal: drive `ocinferno/core` to zero errors, then flip CI to blocking and
+# widen the scope to cli and modules.
+[tool.mypy]
+python_version = "3.10"
+files = ["ocinferno/core"]
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_redundant_casts = true

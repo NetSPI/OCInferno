@@ -9,14 +9,22 @@ import types
 from pathlib import Path
 from typing import Any
 
-if "oci_lexer_parser" not in sys.modules:
+try:
+    import oci_lexer_parser  # noqa: F401
+except ImportError:
+    # Only stub when the real package is genuinely unavailable -- this file is
+    # imported before test collection order is known, and unconditionally
+    # installing a fake module here would permanently shadow the real
+    # oci_lexer_parser for the rest of the pytest session (this test's actual
+    # behavior comes from the per-scenario monkeypatch.setattr calls on the
+    # consuming modules below, not from this module's own functions).
     parser_stub = types.ModuleType("oci_lexer_parser")
     parser_stub.parse_dynamic_group_matching_rules = lambda *_a, **_k: {"rules": []}
     parser_stub.parse_policy_statements = lambda *_a, **_k: ({"statements": []}, {"errors": [], "error_count": 0})
     sys.modules["oci_lexer_parser"] = parser_stub
 
 import ocinferno.modules.opengraph.utilities.iam_policy_base_relation_graph_builder as iam_base_builder
-from ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data import run_module
+from ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data import run_module
 from ocinferno.modules.opengraph.utilities.helpers import matching_rules_engine
 from tests.integration.opengraph_test_harness import IntegrationTestDataController, OpenGraphTestSession
 
@@ -249,6 +257,8 @@ def _apply_parser_stubs(monkeypatch, scenario: dict[str, Any]) -> None:
 
 
 def _seed_tables(dc: IntegrationTestDataController, *, workspace_id: int, seed_tables: dict[str, Any]) -> None:
+    # Satisfy the workspace_id FK (service tables cascade off workspace_index).
+    dc.ensure_workspace(workspace_id, name="opengraph-golden")
     for table_name, rows in seed_tables.items():
         if not isinstance(table_name, str) or not table_name:
             continue
@@ -279,7 +289,7 @@ def run_scenario(scenario: dict[str, Any], *, tmp_path: Path, monkeypatch) -> di
     compartment_ocid = str(workspace.get("compartment_ocid") or "ocid1.compartment.oc1..golden")
 
     dc = IntegrationTestDataController(tmp_path)
-    if not dc.create_service_tables_from_yaml():
+    if not dc.create_service_tables_from_schema():
         raise AssertionError("failed to create service tables for scenario")
 
     session = OpenGraphTestSession(

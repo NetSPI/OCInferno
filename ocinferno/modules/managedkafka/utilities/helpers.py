@@ -4,94 +4,39 @@ from argparse import Namespace
 from typing import Any, Dict, List, Optional
 
 import oci
+from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import ids_from_db, parse_csv_args, save_rows
-from ocinferno.core.utils.service_runtime import _init_client
 
 
-def build_managed_kafka_client(session, region: Optional[str] = None):
-    """Initialize a Managed Kafka client with shared signer/proxy/session behavior."""
-    client = _init_client(
-        oci.managed_kafka.KafkaClusterClient,
-        session=session,
-        service_name="Managed Kafka",
-    )
-    target_region = region or getattr(session, "region", None)
-    if target_region:
-        try:
-            client.base_client.set_region(target_region)
-        except Exception:
-            pass
-    return client
-
-
-class ManagedKafkaClustersResource:
+class ManagedKafkaClustersResource(OciListResource):
+    CLIENT_CLS = oci.managed_kafka.KafkaClusterClient
+    SERVICE_NAME = "Managed Kafka"
     TABLE_NAME = "kafka_clusters"
+    LIST_METHOD = "list_kafka_clusters"
+    GET_METHOD = "get_kafka_cluster"
+    GET_ID_PARAM = "kafka_cluster_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "kafka_version", "cluster_type", "cluster_config_id", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_managed_kafka_client(session=session, region=region)
-
-    # List Kafka clusters in a compartment.
-    def list(self, *, compartment_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        kwargs: Dict[str, Any] = {}
-        if compartment_id:
-            kwargs["compartment_id"] = compartment_id
-        resp = oci.pagination.list_call_get_all_results(self.client.list_kafka_clusters, **kwargs)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one Kafka cluster by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_kafka_cluster(kafka_cluster_id=resource_id).data) or {}
-
-    # Save cluster rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        save_rows(self.session, self.TABLE_NAME, rows)
-
-    # No binary download endpoint for cluster rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class ManagedKafkaClusterConfigsResource:
+class ManagedKafkaClusterConfigsResource(OciListResource):
+    CLIENT_CLS = oci.managed_kafka.KafkaClusterClient
+    SERVICE_NAME = "Managed Kafka"
     TABLE_NAME = "kafka_cluster_configs"
+    LIST_METHOD = "list_kafka_cluster_configs"
+    GET_METHOD = "get_kafka_cluster_config"
+    GET_ID_PARAM = "kafka_cluster_config_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created", "time_updated"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_managed_kafka_client(session=session, region=region)
-
-    # List Kafka cluster configs in a compartment.
-    def list(self, *, compartment_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        kwargs: Dict[str, Any] = {}
-        if compartment_id:
-            kwargs["compartment_id"] = compartment_id
-        resp = oci.pagination.list_call_get_all_results(self.client.list_kafka_cluster_configs, **kwargs)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one Kafka cluster config by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_kafka_cluster_config(kafka_cluster_config_id=resource_id).data) or {}
-
-    # Save cluster-config rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        save_rows(self.session, self.TABLE_NAME, rows)
-
-    # No binary download endpoint for cluster-config rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
-
-class ManagedKafkaClusterConfigVersionsResource:
+class ManagedKafkaClusterConfigVersionsResource(OciListResource):
+    # Nested under a cluster config: list_kafka_cluster_config_versions is scoped by
+    # kafka_cluster_config_id ALONE (no compartment_id), so LIST_SCOPE_KWARG remaps it.
+    # Rows are stamped with "config_id" (not "kafka_cluster_config_id") -- see enum_managedkafka.py.
+    CLIENT_CLS = oci.managed_kafka.KafkaClusterClient
+    SERVICE_NAME = "Managed Kafka"
     TABLE_NAME = "kafka_cluster_config_versions"
     TABLE_CLUSTER_CONFIGS = "kafka_cluster_configs"
+    LIST_METHOD = "list_kafka_cluster_config_versions"
+    LIST_SCOPE_KWARG = "kafka_cluster_config_id"
     COLUMNS = ["config_id", "version_number", "time_created"]
-
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_managed_kafka_client(session=session, region=region)
 
     # Resolve config IDs from CLI, cache, or live list.
     def resolve_cluster_config_ids(self, comp_id: Optional[str], args: Namespace) -> List[str]:
@@ -122,14 +67,6 @@ class ManagedKafkaClusterConfigVersionsResource:
             out.append(row)
         return out
 
-    # List versions for one config OCID.
-    def list(self, *, kafka_cluster_config_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(
-            self.client.list_kafka_cluster_config_versions,
-            kafka_cluster_config_id=kafka_cluster_config_id,
-        )
-        return oci.util.to_dict(resp.data) or []
-
     # Get one config version.
     def get(self, *, kafka_cluster_config_id: str, version_number: int) -> Dict[str, Any]:
         resp = self.client.get_kafka_cluster_config_version(
@@ -143,10 +80,6 @@ class ManagedKafkaClusterConfigVersionsResource:
         save_rows(self.session, self.TABLE_NAME, rows)
 
     # No binary download endpoint for config-version rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
-
 
 normalize_csv_args = parse_csv_args
 db_ids = ids_from_db

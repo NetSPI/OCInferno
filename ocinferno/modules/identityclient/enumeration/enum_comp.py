@@ -48,10 +48,7 @@ def _parse_args(user_args):
             "Useful when you want full GetCompartment metadata across the discovered set."
         ),
     )
-    # --save is a runner-level common flag; parse module-specific args only.
     args, _ = parser.parse_known_args(list(user_args))
-    raw_args = {str(x) for x in (list(user_args) if user_args is not None else [])}
-    args.save = "--save" in raw_args
     return args
 
 
@@ -72,8 +69,7 @@ def run_module(user_args, session):
     seen: set[str] = set()
 
     def _maybe_save(row: dict[str, Any]) -> None:
-        if args.save:
-            ops.save_compartment(row)
+        ops.save_compartment(row)
 
     def _add_row(row: Any) -> Optional[str]:
         """

@@ -1,4 +1,4 @@
-name: Unit Tests
+name: CI
 
 on:
   push:
@@ -10,6 +10,39 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 1
+          # Don't leave the GITHUB_TOKEN in the runner's git config where PR code
+          # could reuse it (defense-in-depth; the token is read-only here anyway).
+          persist-credentials: false
+
+      - name: Setup Python
+        # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+
+      - name: Install lint tools
+        # ruff/mypy do not need the project's runtime deps (mypy uses
+        # ignore_missing_imports), so skip the heavy OCI SDK install here.
+        run: python -m pip install ruff==0.15.21 mypy==2.2.0
+
+      - name: Ruff (blocking)
+        run: ruff check .
+
+      - name: Mypy (informational, non-blocking)
+        # Scoped to ocinferno/core. Drive those errors to zero, then remove
+        # continue-on-error to make it a blocking gate.
+        continue-on-error: true
+        run: mypy
+
   unit-tests:
     name: Unit Tests (py${{ matrix.python-version }}) [${{ github.ref_name }}]
     runs-on: ubuntu-latest
@@ -23,6 +56,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 1
+          # Don't leave the GITHUB_TOKEN in the runner's git config where PR code
+          # could reuse it (defense-in-depth; the token is read-only here anyway).
+          persist-credentials: false
 
       - name: Setup Python
         # v6.2.0
@@ -37,5 +73,61 @@ jobs:
           python -m pip install -U pip
           python -m pip install .[dev]
 
-      - name: Run unit tests
-        run: python -m pytest -q -ra tests/unit
+      - name: Run tests
+        # unit + module-contract + per-module enum harness + opengraph integration/golden.
+        run: python -m pytest -q -ra tests/unit tests/module_contracts tests/enum_modules tests/integration
+
+  package:
+    name: Package smoke (wheel builds, installs, bundles data)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 1
+          # Don't leave the GITHUB_TOKEN in the runner's git config where PR code
+          # could reuse it (defense-in-depth; the token is read-only here anyway).
+          persist-credentials: false
+
+      - name: Setup Python
+        # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+
+      - name: Build and install the wheel
+        run: |
+          python -m pip install -U pip build
+          python -m build --wheel
+          python -m pip install dist/*.whl
+
+      - name: Smoke the installed package from outside the source tree
+        # Run from $RUNNER_TEMP so we import the INSTALLED package, not ./ocinferno.
+        # Verifies the entry point, the bundled data files (mappings + a per-module
+        # OpenGraph data file), and that the databases path is writable (never under
+        # the read-only site-packages install dir). The CLI dispatch chain imports
+        # `oci` at module load time, so `ocinferno --help` needs the full runtime
+        # deps installed (no `--no-deps` shortcut here).
+        working-directory: ${{ runner.temp }}
+        run: |
+          ocinferno --help >/dev/null
+          python - <<'PY'
+          import json, tempfile, os
+          from importlib import resources
+          for name in ("database_info.json", "module_mappings.json"):
+              data = json.loads(resources.files("ocinferno.mappings").joinpath(name).read_text())
+              assert data, f"{name} is empty/unbundled"
+          assert resources.files("ocinferno.modules.opengraph.utilities.helpers").joinpath(
+              "data/static_constants.json"
+          ).is_file(), "per-module OpenGraph data not bundled"
+          from ocinferno.core.db import DataController
+          assert "site-packages" not in DataController.database_path, "databases path under site-packages"
+          d = tempfile.mkdtemp()
+          DataController.database_path = os.path.join(d, "ocinferno.db")
+          DataController.metadata_db = DataController.service_db = DataController.database_path
+          dc = DataController()
+          assert dc.create_service_tables_from_schema(), "service tables failed to build"
+          dc.close()
+          print("package smoke OK")
+          PY

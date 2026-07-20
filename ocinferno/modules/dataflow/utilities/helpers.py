@@ -1,154 +1,134 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import os
+from typing import Optional, Tuple
 
 import oci
+
+from ocinferno.core.resource import OciListResource
+from ocinferno.core.utils.module_helpers import write_response_stream_to_file
 from ocinferno.core.utils.service_runtime import _init_client
 
 
-def build_dataflow_client(session, region: Optional[str] = None):
-    """Initialize a Data Flow client with shared signer/proxy/session behavior."""
-    client = _init_client(
-        oci.data_flow.DataFlowClient,
-        session=session,
-        service_name="DataFlow",
-    )
-    target_region = region or getattr(session, "region", None)
-    if target_region:
-        try:
-            client.base_client.set_region(target_region)
-        except Exception:
-            pass
-    return client
+def _parse_oci_uri(uri: str) -> Optional[Tuple[str, str, str]]:
+    """Parse an OCI HDFS-connector URI into (namespace, bucket, object_name).
+
+    Data Flow ``file_uri``/``archive_uri`` use the Object Storage URI form
+    ``oci://<bucket>@<namespace>/<object-path>`` (see the OCI HDFS connector
+    URI format). Returns ``None`` if the string is not that shape.
+    """
+    if not uri or not isinstance(uri, str) or not uri.startswith("oci://"):
+        return None
+    rest = uri[len("oci://"):]
+    if "/" not in rest:
+        return None
+    authority, object_name = rest.split("/", 1)
+    if "@" not in authority or not object_name:
+        return None
+    bucket, namespace = authority.split("@", 1)
+    if not bucket or not namespace:
+        return None
+    return namespace, bucket, object_name
 
 
-class DataFlowApplicationsResource:
+class DataFlowApplicationsResource(OciListResource):
+    CLIENT_CLS = oci.data_flow.DataFlowClient
+    SERVICE_NAME = "DataFlow"
     TABLE_NAME = "dataflow_applications"
+    LIST_METHOD = "list_applications"
+    GET_METHOD = "get_application"
+    GET_ID_PARAM = "application_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_dataflow_client(session=session, region=region)
+    def download_script(self, *, resource_id: str, out_path_dir: str) -> int:
+        """Export an application's developer-supplied Spark/PySpark script + archive.
 
-    # List applications in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_applications, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
+        Fetches the application, resolves its ``file_uri`` (the driver script) and
+        ``archive_uri`` (dependency bundle, if any) from their Object Storage
+        ``oci://<bucket>@<namespace>/<object>`` URIs, downloads each object, and writes
+        it to a file named after the object basename under ``out_path_dir``. Returns the
+        number of files successfully written (0-2).
+        """
+        if not resource_id:
+            return 0
+        try:
+            app = self.get(resource_id=resource_id) or {}
+        except Exception:
+            return 0
+        if not isinstance(app, dict):
+            return 0
 
-    # Get a single application.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_application(application_id=resource_id).data) or {}
+        os_client = _init_client(
+            oci.object_storage.ObjectStorageClient,
+            session=self.session,
+            service_name="data-flow",
+        )
 
-    # Save application rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+        written = 0
+        for uri in (app.get("file_uri"), app.get("archive_uri")):
+            parsed = _parse_oci_uri(uri)
+            if not parsed:
+                continue
+            namespace, bucket, object_name = parsed
+            basename = object_name.rsplit("/", 1)[-1] or "object"
+            try:
+                resp = os_client.get_object(
+                    namespace_name=namespace, bucket_name=bucket, object_name=object_name,
+                )
+                out_path = os.path.join(out_path_dir, basename)
+                if write_response_stream_to_file(getattr(resp, "data", None), out_path):
+                    written += 1
+            except Exception:
+                continue
+        return written
 
 
-class DataFlowRunsResource:
+class DataFlowRunsResource(OciListResource):
+    CLIENT_CLS = oci.data_flow.DataFlowClient
+    SERVICE_NAME = "DataFlow"
     TABLE_NAME = "dataflow_runs"
+    LIST_METHOD = "list_runs"
+    GET_METHOD = "get_run"
+    GET_ID_PARAM = "run_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_dataflow_client(session=session, region=region)
 
-    # List runs in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_runs, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a single run.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_run(run_id=resource_id).data) or {}
-
-    # Save run rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataFlowPoolsResource:
+class DataFlowPoolsResource(OciListResource):
+    CLIENT_CLS = oci.data_flow.DataFlowClient
+    SERVICE_NAME = "DataFlow"
     TABLE_NAME = "dataflow_pools"
+    LIST_METHOD = "list_pools"
+    GET_METHOD = "get_pool"
+    GET_ID_PARAM = "pool_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_dataflow_client(session=session, region=region)
 
-    # List pools in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_pools, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a single pool.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_pool(pool_id=resource_id).data) or {}
-
-    # Save pool rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataFlowPrivateEndpointsResource:
+class DataFlowPrivateEndpointsResource(OciListResource):
+    CLIENT_CLS = oci.data_flow.DataFlowClient
+    SERVICE_NAME = "DataFlow"
     TABLE_NAME = "dataflow_private_endpoints"
+    LIST_METHOD = "list_private_endpoints"
+    GET_METHOD = "get_private_endpoint"
+    GET_ID_PARAM = "private_endpoint_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_dataflow_client(session=session, region=region)
 
-    # List private endpoints in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_private_endpoints, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one private endpoint.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_private_endpoint(private_endpoint_id=resource_id).data) or {}
-
-    # Save private endpoint rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataFlowSqlEndpointsResource:
+class DataFlowSqlEndpointsResource(OciListResource):
+    CLIENT_CLS = oci.data_flow.DataFlowClient
+    SERVICE_NAME = "DataFlow"
     TABLE_NAME = "dataflow_sql_endpoints"
+    LIST_METHOD = "list_sql_endpoints"
+    GET_METHOD = "get_sql_endpoint"
+    GET_ID_PARAM = "sql_endpoint_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_dataflow_client(session=session, region=region)
 
-    # List SQL endpoints in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_sql_endpoints, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one SQL endpoint.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_sql_endpoint(sql_endpoint_id=resource_id).data) or {}
-
-    # Save SQL endpoint rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataFlowWorkRequestsResource:
+class DataFlowWorkRequestsResource(OciListResource):
+    CLIENT_CLS = oci.data_flow.DataFlowClient
+    SERVICE_NAME = "DataFlow"
     TABLE_NAME = "dataflow_work_requests"
+    LIST_METHOD = "list_work_requests"
+    GET_METHOD = "get_work_request"
+    GET_ID_PARAM = "work_request_id"
     COLUMNS = ["id", "operation_type", "status", "time_accepted", "time_finished"]
-
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_dataflow_client(session=session, region=region)
-
-    # List work requests in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_work_requests, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one work request.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_work_request(work_request_id=resource_id).data) or {}
-
-    # Save work request rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)

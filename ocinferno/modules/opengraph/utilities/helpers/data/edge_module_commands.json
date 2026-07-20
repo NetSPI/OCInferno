@@ -1,0 +1,52 @@
+{
+  "_comment": "Maps an OpenGraph edge KIND -> an `ocinferno` module command that traverses that edge. A post-pass (edge_command_annotator.annotate_edge_module_commands) runs at export time, fills the {placeholders} from the edge's own endpoint NODE data, and writes the resolved string into the edge's `example_command` property (+ any `includes_edges` into `includes_other_edges`). Add an entry here to give any edge a runnable example -- no builder changes needed. Placeholders resolved from the edge + its destination node: {source_id} {destination_id} {dest_ocid} {dest_domain_url} {dest_compartment} {dest_name}. A placeholder with no value in the graph is left as an <UPPERCASE> hint.",
+  "commands": {
+    "OCI_CREATE_USER_API_KEY": {
+      "module": "exploit_add_user_api_key",
+      "authz": "OCI IAM policy permissions (USER_UPDATE + USER_APIKEY_ADD)",
+      "template": "modules run exploit_add_user_api_key --user-ocid <TARGET_USER_OCID>  # any user in {dest_compartment}; omit flags for interactive user selection"
+    },
+    "IDD_USER_ADMIN": {
+      "module": "exploit_add_user_api_key",
+      "authz": "Identity Domain app-role: User Administrator",
+      "includes_edges": ["IDD_CREATE_USER_API_KEY"],
+      "template": "modules run exploit_add_user_api_key --user-ocid {destination_id} --idd --domain-url {dest_domain_url} --yes"
+    },
+    "IDD_IDENTITY_ADMIN_USER": {
+      "module": "exploit_add_user_api_key",
+      "authz": "Identity Domain app-role: Identity Domain Administrator",
+      "includes_edges": ["IDD_CREATE_USER_API_KEY"],
+      "template": "modules run exploit_add_user_api_key --user-ocid {destination_id} --idd --domain-url {dest_domain_url} --yes"
+    },
+    "OCI_CREATE_USER": {
+      "module": "exploit_create_user",
+      "authz": "OCI IAM policy permission (USER_CREATE)",
+      "template": "modules run exploit_create_user --name <NEW_USERNAME> --with-api-key  # new user in {dest_compartment}"
+    },
+    "IDD_CREATE_USER": {
+      "module": "exploit_create_user",
+      "authz": "Identity Domain admin app-role (USER_CREATE)",
+      "template": "modules run exploit_create_user --name <NEW_USERNAME> --idd --domain-url {dest_domain_url} --with-api-key"
+    },
+    "OCI_ADD_SELF_TO_GROUP": {
+      "module": "exploit_add_self_to_group",
+      "authz": "OCI IAM policy permission (GROUP_UPDATE)",
+      "template": "modules run exploit_add_self_to_group --group-ocid {destination_id} --self"
+    },
+    "IDD_ADD_SELF_TO_GROUP": {
+      "module": "exploit_add_self_to_group",
+      "authz": "Identity Domain group-management app-role",
+      "template": "modules run exploit_add_self_to_group --group-ocid {destination_id} --idd --domain-url {dest_domain_url} --self"
+    },
+    "OCI_CREATE_POLICY": {
+      "module": "exploit_write_policy",
+      "authz": "OCI IAM policy permission (POLICY_CREATE)",
+      "template": "modules run exploit_write_policy --self  # or --any-user / --group NAME ; grant scoped to {dest_compartment}"
+    },
+    "OCI_UPDATE_POLICY": {
+      "module": "exploit_write_policy",
+      "authz": "OCI IAM policy permission (POLICY_UPDATE)",
+      "template": "modules run exploit_write_policy --append-to {destination_id} --self  # append an admin grant to an existing policy"
+    }
+  }
+}

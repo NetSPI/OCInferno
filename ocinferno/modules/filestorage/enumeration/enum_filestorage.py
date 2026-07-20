@@ -16,6 +16,7 @@ from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -37,13 +38,7 @@ CACHE_TABLES = {
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -79,111 +74,43 @@ def run_module(user_args, session):
     ex_resource = FileStorageExportsResource(session=session)
     snap_resource = FileStorageSnapshotsResource(session=session)
 
-    availability_domains = fs_resource.list_availability_domains()
+    try:
+        availability_domains = fs_resource.list_availability_domains()
+    except Exception as err:
+        component_soft_skip_or_error(err, component="availability_domains", module_name="enum_filestorage")
+        availability_domains = []
 
     results = []
 
     if selected.get("file_systems", False):
-        try:
-            rows = fs_resource.list(
-                compartment_id=compartment_id,
-                availability_domains=availability_domains,
-                limit=max(0, int(args.limit or 0)),
-                region=region,
-            )
-
-            if args.get:
-                for row in rows:
-                    rid = row.get("id")
-                    if not rid:
-                        continue
-                    fill_missing_fields(row, fs_resource.get(resource_id=rid) or {})
-
-            if rows:
-                UtilityTools.print_limited_table(rows, fs_resource.COLUMNS)
-            if args.save:
-                fs_resource.save(rows)
-
-            results.append(
-                {
-                    "ok": True,
-                    "cid": compartment_id,
-                    "file_systems": len(rows),
-                    "saved": bool(args.save),
-                    "get": bool(args.get),
-                }
-            )
-        except Exception as err:
-            print(f"[*] enum_filestorage.file_systems: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "file_systems", "error": _component_error_summary(err)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="file_systems",
+            list_rows=lambda cid: fs_resource.list(compartment_id=cid, availability_domains=availability_domains, limit=max(0, int(args.limit or 0)), region=region),
+            get_row=lambda row: fs_resource.get(resource_id=row.get("id")),
+            save_rows_fn=fs_resource.save,
+            print_columns=fs_resource.COLUMNS,
+            module_name="enum_filestorage",
+        ))
 
     if selected.get("mount_targets", False):
-        try:
-            rows = mt_resource.list(
-                compartment_id=compartment_id,
-                availability_domains=availability_domains,
-                limit=max(0, int(args.limit or 0)),
-                region=region,
-            )
-
-            if args.get:
-                for row in rows:
-                    rid = row.get("id")
-                    if not rid:
-                        continue
-                    fill_missing_fields(row, mt_resource.get(resource_id=rid) or {})
-
-            if rows:
-                UtilityTools.print_limited_table(rows, mt_resource.COLUMNS)
-            if args.save:
-                mt_resource.save(rows)
-
-            results.append(
-                {
-                    "ok": True,
-                    "cid": compartment_id,
-                    "mount_targets": len(rows),
-                    "saved": bool(args.save),
-                    "get": bool(args.get),
-                }
-            )
-        except Exception as err:
-            print(f"[*] enum_filestorage.mount_targets: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "mount_targets", "error": _component_error_summary(err)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="mount_targets",
+            list_rows=lambda cid: mt_resource.list(compartment_id=cid, availability_domains=availability_domains, limit=max(0, int(args.limit or 0)), region=region),
+            get_row=lambda row: mt_resource.get(resource_id=row.get("id")),
+            save_rows_fn=mt_resource.save,
+            print_columns=mt_resource.COLUMNS,
+            module_name="enum_filestorage",
+        ))
 
     if selected.get("export_sets", False):
-        try:
-            rows = es_resource.list(
-                compartment_id=compartment_id,
-                availability_domains=availability_domains,
-                limit=max(0, int(args.limit or 0)),
-                region=region,
-            )
-
-            if args.get:
-                for row in rows:
-                    rid = row.get("id")
-                    if not rid:
-                        continue
-                    fill_missing_fields(row, es_resource.get(resource_id=rid) or {})
-
-            if rows:
-                UtilityTools.print_limited_table(rows, es_resource.COLUMNS)
-            if args.save:
-                es_resource.save(rows)
-
-            results.append(
-                {
-                    "ok": True,
-                    "cid": compartment_id,
-                    "export_sets": len(rows),
-                    "saved": bool(args.save),
-                    "get": bool(args.get),
-                }
-            )
-        except Exception as err:
-            print(f"[*] enum_filestorage.export_sets: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "export_sets", "error": _component_error_summary(err)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="export_sets",
+            list_rows=lambda cid: es_resource.list(compartment_id=cid, availability_domains=availability_domains, limit=max(0, int(args.limit or 0)), region=region),
+            get_row=lambda row: es_resource.get(resource_id=row.get("id")),
+            save_rows_fn=es_resource.save,
+            print_columns=es_resource.COLUMNS,
+            module_name="enum_filestorage",
+        ))
 
     if selected.get("exports", False):
         try:
@@ -214,8 +141,7 @@ def run_module(user_args, session):
 
             if rows:
                 UtilityTools.print_limited_table(rows, ex_resource.COLUMNS)
-            if args.save:
-                ex_resource.save(rows)
+            ex_resource.save(rows)
 
             results.append(
                 {
@@ -223,13 +149,12 @@ def run_module(user_args, session):
                     "cid": compartment_id,
                     "exports": len(rows),
                     "export_sets": len(export_set_ids),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                 }
             )
         except Exception as err:
-            print(f"[*] enum_filestorage.exports: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "exports", "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component="exports", module_name="enum_filestorage"))
 
     if selected.get("snapshots", False):
         try:
@@ -260,8 +185,7 @@ def run_module(user_args, session):
 
             if rows:
                 UtilityTools.print_limited_table(rows, snap_resource.COLUMNS)
-            if args.save:
-                snap_resource.save(rows)
+            snap_resource.save(rows)
 
             results.append(
                 {
@@ -269,13 +193,12 @@ def run_module(user_args, session):
                     "cid": compartment_id,
                     "snapshots": len(rows),
                     "file_systems": len(file_system_ids),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                 }
             )
         except Exception as err:
-            print(f"[*] enum_filestorage.snapshots: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "snapshots", "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component="snapshots", module_name="enum_filestorage"))
 
     append_cached_component_counts(
         results=results,

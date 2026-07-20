@@ -9,8 +9,10 @@ class IntegrationTestDataController(DataController):
     """Isolated DB controller for integration tests."""
 
     def __init__(self, db_root: Path):
-        self.metadata_db = str(db_root / "organization_metadata.db")
-        self.service_db = str(db_root / "service_info.db")
+        # Single unified DB file (matches DataController's one-file model).
+        self.database_path = str(db_root / "ocinferno.db")
+        self.metadata_db = self.database_path
+        self.service_db = self.database_path
         super().__init__()
 
 
@@ -33,6 +35,12 @@ class OpenGraphTestSession:
         self.data_master = dc
         self.workspace_id = workspace_id
         self.workspace_name = workspace_name
+        # Ensure the workspace_index parent row exists so node/edge writes satisfy
+        # the workspace_id FK (service tables cascade off workspace_index).
+        try:
+            dc.ensure_workspace(workspace_id, name=workspace_name)
+        except Exception:
+            pass
         self.compartment_id = compartment_id
         self.tenant_id = tenant_id
         self.debug = False

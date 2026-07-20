@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import oci
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import fill_missing_fields
 from ocinferno.modules.dns.utilities.helpers import (
@@ -10,9 +9,11 @@ from ocinferno.modules.dns.utilities.helpers import (
     DnsZonesResource,
 )
 from ocinferno.core.utils.service_runtime import (
+    SOFT_SKIP_STATUSES,
     append_cached_component_counts,
-    parse_wrapper_args,
+    make_parse_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -30,12 +31,7 @@ CACHE_TABLES = {
 }
 
 
-def _parse_args(user_args):
-    return parse_wrapper_args(
-        user_args=user_args,
-        description="Enumerate DNS resources",
-        components=COMPONENTS,
-    )
+_parse_args = make_parse_args("Enumerate DNS resources", COMPONENTS)
 
 
 def run_module(user_args, session):
@@ -59,29 +55,30 @@ def run_module(user_args, session):
             continue
         if key == "zones":
             zones_resource = resource_map[key]
-            rows = zones_resource.list(compartment_id=compartment_id) or []
-            rows = [row for row in rows if isinstance(row, dict)]
-            for row in rows:
-                row.setdefault("compartment_id", compartment_id)
-
-            if args.get:
-                for row in rows:
-                    zone_id = row.get("id")
-                    if not zone_id:
-                        continue
-                    meta = zones_resource.get(resource_id=zone_id) or {}
-                    fill_missing_fields(row, meta)
-
-            if rows:
-                UtilityTools.print_limited_table(rows, zones_resource.COLUMNS)
-
-            if args.save:
-                zones_resource.save(rows)
-
-            results.append({"ok": True, "zones": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+            results.append(run_standard_enum_component(
+                user_args=args, session=session, component_key="zones",
+                list_rows=lambda cid: zones_resource.list(compartment_id=cid),
+                get_row=lambda row: zones_resource.get(resource_id=row.get("id")),
+                save_rows_fn=zones_resource.save,
+                print_columns=zones_resource.COLUMNS,
+                module_name="enum_dns",
+                soft_skip_statuses=SOFT_SKIP_STATUSES,
+            ))
         elif key == "zone_records":
             zone_records_resource = resource_map[key]
-            zones = zone_records_resource.list_zones(compartment_id=compartment_id) or []
+            # DNS is often not authorized/enabled for a given compartment -> a bare
+            # list_zones would raise a 404 NotAuthorizedOrNotFound and crash the module;
+            # treat it (and 401/403) as an empty result, like the per-zone calls below.
+            try:
+                zones = zone_records_resource.list_zones(compartment_id=compartment_id) or []
+            except Exception as err:
+                if getattr(err, "status", None) in SOFT_SKIP_STATUSES:
+                    UtilityTools.dlog(debug, "list_zones unavailable for scope", status=getattr(err, "status", None))
+                    results.append({"ok": True, "zone_records": 0, "saved": True, "get": bool(args.get), "skipped": True})
+                    continue
+                UtilityTools.dlog(True, "list_zones failed", err=f"{type(err).__name__}: {err}")
+                results.append({"ok": False, "component": "zone_records", "error": f"{type(err).__name__}: {err}"})
+                continue
             zones = [zone for zone in zones if isinstance(zone, dict)]
 
             rows = []
@@ -121,32 +118,20 @@ def run_module(user_args, session):
             if rows:
                 UtilityTools.print_limited_table(rows, zone_records_resource.COLUMNS)
 
-            if args.save:
-                zone_records_resource.save(rows)
+            zone_records_resource.save(rows)
 
-            results.append({"ok": True, "zone_records": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+            results.append({"ok": True, "zone_records": len(rows), "saved": True, "get": bool(args.get)})
         elif key == "private_resolvers":
             resolvers_resource = resource_map[key]
-            rows = resolvers_resource.list(compartment_id=compartment_id) or []
-            rows = [row for row in rows if isinstance(row, dict)]
-            for row in rows:
-                row.setdefault("compartment_id", compartment_id)
-
-            if args.get:
-                for row in rows:
-                    resolver_id = row.get("id")
-                    if not resolver_id:
-                        continue
-                    meta = resolvers_resource.get(resource_id=resolver_id) or {}
-                    fill_missing_fields(row, meta)
-
-            if rows:
-                UtilityTools.print_limited_table(rows, resolvers_resource.COLUMNS)
-
-            if args.save:
-                resolvers_resource.save(rows)
-
-            results.append({"ok": True, "private_resolvers": len(rows), "saved": bool(args.save), "get": bool(args.get)})
+            results.append(run_standard_enum_component(
+                user_args=args, session=session, component_key="private_resolvers",
+                list_rows=lambda cid: resolvers_resource.list(compartment_id=cid),
+                get_row=lambda row: resolvers_resource.get(resource_id=row.get("id")),
+                save_rows_fn=resolvers_resource.save,
+                print_columns=resolvers_resource.COLUMNS,
+                module_name="enum_dns",
+                soft_skip_statuses=SOFT_SKIP_STATUSES,
+            ))
 
     append_cached_component_counts(
         results=results,

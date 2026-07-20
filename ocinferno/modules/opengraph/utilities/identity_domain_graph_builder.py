@@ -40,7 +40,9 @@ from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     get_og_state as _og_shared,
     ensure_scope_node as _ensure_scope_node_shared,
     fetch_rows_cached as _fetch_rows_cached,
+    _short_ocid,
 )
+from ocinferno.core.utils.selection_helpers import _s
 
 
 # Tables
@@ -68,12 +70,6 @@ EDGE_USER_SMTP_CRED = "USER_SMTP_CRED"
 EDGE_SMTP_AUTH_TO_EMAIL_SERVICE = "SMTP_AUTH_TO_EMAIL_SERVICE"
 EDGE_IDD_CREATE_USER = "IDD_CREATE_USER"
 EDGE_SCOPE_MEMBER_OF = "OCI_SCOPE_MEMBER_OF"
-
-
-def _s(x):
-    if x is None:
-        return ""
-    return x.strip() if isinstance(x, str) else str(x)
 
 
 def _json_obj_or_list(value):
@@ -120,25 +116,8 @@ def _write_edge_json(
     )
 
 
-def _domain_display(row: dict) -> str:
-    return _s(row.get("display_name") or row.get("name") or row.get("id") or "IdentityDomain")
-
-
 def _domain_url(row: dict) -> str:
     return _s(row.get("url") or row.get("home_region_url") or "")
-
-
-def _short_ocid(ocid: str, keep_head: int = 8, keep_tail: int = 6) -> str:
-    s = _s(ocid)
-    if not s:
-        return ""
-    if not s.startswith("ocid1."):
-        return s if len(s) <= (keep_head + keep_tail + 3) else f"{s[:keep_head]}...{s[-keep_tail:]}"
-    token = s.split("..", 1)[1] if ".." in s else s.rsplit(".", 1)[-1]
-    token = token or s
-    if len(token) <= (keep_head + keep_tail + 3):
-        return token
-    return f"{token[:keep_head]}...{token[-keep_tail:]}"
 
 
 def _ensure_email_service_node(ctx, *, loc: str, tenant_id: str) -> str:
@@ -509,6 +488,13 @@ EDGE_IDD_USER_ADMIN = "IDD_USER_ADMIN"
 EDGE_IDD_USER_MANAGER = "IDD_USER_MANAGER"
 EDGE_IDD_ADD_SELF_TO_GROUP = "IDD_ADD_SELF_TO_GROUP"
 
+# IDD-authz analog of the OCI-policy edge OCI_CREATE_USER_API_KEY: adding an API signing
+# key to a domain user comes from an Identity Domain APP-ROLE (not an OCI policy). For the
+# broad admin roles below it is a COLLAPSED sub-capability (listed in includes_other_edges +
+# named in their descriptions); reserved as a standalone edge for any future role granted
+# api-key creation specifically without full user-admin.
+EDGE_IDD_CREATE_USER_API_KEY = "IDD_CREATE_USER_API_KEY"
+
 
 # -----------------------------
 # Edge descriptions (flat: EDGE_NAME -> [descriptions])
@@ -526,13 +512,26 @@ EDGE_DESCRIPTIONS = {
         (
             "Identity Domain Administrator can administer users in the same identity domain.\n"
             "This includes high-impact account-control actions such as credential resets, MFA reset/bypass operations, "
-            " and moving users between groups."
+            "moving users between groups, and CREATING AN API SIGNING KEY for the user "
+            "(collapsed IDD_CREATE_USER_API_KEY -- authz comes from this identity-domain app-role, not an OCI policy). "
+            "Exploit: `modules run exploit_add_user_api_key` (see the edge's example_command)."
         ),
     ],
     EDGE_IDD_USER_ADMIN: [
         (
             "User Administrator can administer users in the same identity domain.\n"
-            "This includes high-impact account-control actions such as credential resets, MFA reset/bypass operations."
+            "This includes high-impact account-control actions such as credential resets, MFA reset/bypass operations, "
+            "and CREATING AN API SIGNING KEY for the user "
+            "(collapsed IDD_CREATE_USER_API_KEY -- authz comes from this identity-domain app-role, not an OCI policy). "
+            "Exploit: `modules run exploit_add_user_api_key` (see the edge's example_command)."
+        ),
+    ],
+    EDGE_IDD_CREATE_USER_API_KEY: [
+        (
+            "Add an API signing key to a domain user via the Identity Domains (SCIM) admin API, "
+            "yielding credential access AS that user. Authorization comes from an IDENTITY-DOMAIN "
+            "app-role (e.g. User Administrator / Identity Domain Administrator) -- this is the IDD "
+            "analog of the OCI-policy edge OCI_CREATE_USER_API_KEY. Exploit: exploit_add_user_api_key --idd."
         ),
     ],
     EDGE_IDD_USER_MANAGER: [
@@ -1074,6 +1073,11 @@ def _run_idd_role_emitters(
     debug: bool,
 ):
     model = APP_ROLE_MODELS.get(raw_role_name)
+    if model is None:
+        # Unmodeled role (only reachable via --include-all, which bypasses the
+        # allowlist gate that normally restricts callers to the 3 keys in
+        # APP_ROLE_MODELS) -- nothing to emit here, not an error.
+        return
 
     user_edge_type = _s(model.get("user_edge_type"))
 
@@ -1938,7 +1942,10 @@ def build_idd_app_role_graph_offline(
 
     res = {
         "ok": True,
-        "allowlist": allowlist,
+        # JSON-safe: allowlist is a frozenset of (app_id, role_name) tuples internally
+        # (used for `pair in allowlist` membership checks above) -- stats/debug-report
+        # output needs a serializable form, not the working set itself.
+        "allowlist": sorted(list(pair) for pair in allowlist) if allowlist else [],
         "apps_loaded": len(apps),
         "roles_loaded": len(roles),
         "grants_loaded": len(grants),

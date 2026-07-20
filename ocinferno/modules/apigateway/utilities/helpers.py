@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
 import oci
-import yaml
 
+from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import (
     dedupe_strs,
     download_url_to_file,
@@ -21,7 +21,7 @@ from ocinferno.core.utils.module_helpers import (
     unique_rows_by_id,
     write_bytes_file,
 )
-from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 _PATH_PARAM_RE = re.compile(r"\{([^}]+)\}")
@@ -39,32 +39,14 @@ def build_apigateway_client(session, client_cls, service_name: str = "API Gatewa
     return client
 
 
-class ApiGatewayGatewaysResource:
+class ApiGatewayGatewaysResource(OciListResource):
+    CLIENT_CLS = oci.apigateway.GatewayClient
+    SERVICE_NAME = "API Gateway"
     TABLE_NAME = "apigw_gateways"
+    LIST_METHOD = "list_gateways"
+    GET_METHOD = "get_gateway"
+    GET_ID_PARAM = "gateway_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "endpoint_type", "subnet_id", "time_created"]
-
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_apigateway_client(session, oci.apigateway.GatewayClient, region=region)
-
-    # List gateways in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_gateways, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one gateway by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_gateway(gateway_id=resource_id).data) or {}
-
-    # Save gateway rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        save_rows(self.session, self.TABLE_NAME, rows)
-
-    # No binary download endpoint for gateway rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class ApiGatewayApisResource:
     TABLE_NAME = "apigw_apis"
@@ -111,10 +93,21 @@ class ApiGatewayApisResource:
         text = (blob or b"").decode("utf-8", errors="ignore")
         if not text.strip():
             return None
+        # OpenAPI specs are usually JSON (a subset of YAML) -- try the stdlib parser
+        # first so the common case needs no third-party dependency. Fall back to a
+        # lazily-imported PyYAML only for genuinely YAML-formatted specs; if PyYAML
+        # isn't installed we simply skip YAML specs rather than failing the module.
         try:
-            parsed = yaml.safe_load(text)
+            parsed = json.loads(text)
         except Exception:
-            return None
+            try:
+                import yaml
+            except ImportError:
+                return None
+            try:
+                parsed = yaml.safe_load(text)
+            except Exception:
+                return None
         return parsed if isinstance(parsed, dict) else None
 
     @staticmethod
@@ -343,10 +336,13 @@ class ApiGatewayApisResource:
         return bool(blob) and write_bytes_file(out_path, blob)
 
 
-class ApiGatewayDeploymentsResource:
+class ApiGatewayDeploymentsResource(ResourceBase):
     TABLE_NAME = "apigw_deployments"
     TABLE_GATEWAYS = "apigw_gateways"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "gateway_id", "path_prefix", "time_created"]
+    # specification (routes, request_policies incl. authentication) only appears on
+    # the full get_deployment response -- list_deployments summaries omit it. Run
+    # with --get to populate it; config_audit's authentication check relies on this.
+    COLUMNS = ["id", "display_name", "lifecycle_state", "gateway_id", "path_prefix", "time_created", "specification"]
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
@@ -401,10 +397,6 @@ class ApiGatewayDeploymentsResource:
         save_rows(self.session, self.TABLE_NAME, rows)
 
     # No binary download endpoint for deployment rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
-
 
 class ApiGatewaySdksResource:
     TABLE_NAME = "apigw_sdks"

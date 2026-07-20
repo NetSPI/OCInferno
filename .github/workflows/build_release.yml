@@ -1,0 +1,266 @@
+name: Build Release Executables
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: "Run unit tests before building binaries"
+        required: true
+        type: boolean
+        default: true
+      release_tag:
+        description: "Release tag to create/update (example: v0.5.2)"
+        required: true
+        type: string
+      release_title:
+        description: "Release title shown on GitHub Releases page"
+        required: true
+        type: string
+      release_notes:
+        description: "Release notes/body text for the GitHub Release"
+        required: true
+        type: string
+      build_linux:
+        description: "Build Linux binary (ubuntu-latest)"
+        required: true
+        type: boolean
+        default: true
+      build_macos:
+        description: "Build macOS binary (macos-latest)"
+        required: true
+        type: boolean
+        default: true
+      build_windows:
+        description: "Build Windows binary (windows-latest)"
+        required: true
+        type: boolean
+        default: true
+
+# Least privilege by default; only the jobs that publish release assets opt up to write.
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+# Every job re-asserts the same authorization guard (GitHub Actions has no shared
+# anchors) as defense-in-depth: only WebbinRoot, on NetSPI/OCInferno, on refs/heads/main.
+# Downstream jobs also chain via `needs`, so an unauthorized run stops at preflight.
+jobs:
+  preflight-tests:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'NetSPI/OCInferno' &&
+      github.actor == 'WebbinRoot' &&
+      github.triggering_actor == 'WebbinRoot' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        # v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        # v6.3.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # Job always runs when authorized so downstream can use plain `needs`; the
+      # tests themselves are what run_tests toggles. A no-op job here still succeeds.
+      - name: Install dependencies
+        if: inputs.run_tests
+        run: python -m pip install .[dev]
+
+      - name: Run unit tests
+        if: inputs.run_tests
+        run: python -m pytest -q -ra tests/unit tests/module_contracts
+
+  resolve-build-targets:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'NetSPI/OCInferno' &&
+      github.actor == 'WebbinRoot' &&
+      github.triggering_actor == 'WebbinRoot' &&
+      github.ref == 'refs/heads/main'
+    needs: preflight-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      os_matrix: ${{ steps.set-matrix.outputs.os_matrix }}
+    steps:
+      - name: Resolve selected OS targets
+        id: set-matrix
+        shell: bash
+        run: |
+          sel=()
+          if [ "${{ inputs.build_linux }}" = "true" ];   then sel+=('"ubuntu-latest"'); fi
+          if [ "${{ inputs.build_macos }}" = "true" ];   then sel+=('"macos-latest"'); fi
+          if [ "${{ inputs.build_windows }}" = "true" ]; then sel+=('"windows-latest"'); fi
+          if [ ${#sel[@]} -eq 0 ]; then
+            echo "Select at least one build target OS (linux/macos/windows)." >&2
+            exit 1
+          fi
+          IFS=,
+          echo "os_matrix=[${sel[*]}]" >> "$GITHUB_OUTPUT"
+          echo "Resolved build targets: [${sel[*]}]"
+
+  # Manual gate + release creation in one job: the protected `release` environment must
+  # be approved before this job runs, so the approval directly gates the contents:write.
+  # Fails closed if that environment exists without protection rules, then creates/updates
+  # the GitHub Release.
+  create-release:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'NetSPI/OCInferno' &&
+      github.actor == 'WebbinRoot' &&
+      github.triggering_actor == 'WebbinRoot' &&
+      github.ref == 'refs/heads/main'
+    needs: resolve-build-targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: release
+    permissions:
+      contents: write
+    steps:
+      - name: Assert protected release environment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Guard against implicit, unprotected environment creation: if 'release'
+          # exists without protection rules, fail closed (no approval actually gated us).
+          RULE_COUNT="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" --jq '.protection_rules | length')"
+          if [ "${RULE_COUNT}" -lt 1 ]; then
+            echo "Release environment exists but has no protection rules configured."
+            exit 1
+          fi
+
+      - name: Create or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TITLE: ${{ inputs.release_title }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          RELEASE_TARGET: ${{ github.sha }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TITLE" --notes "$RELEASE_NOTES"
+          else
+            gh release create "$RELEASE_TAG" --target "$RELEASE_TARGET" --title "$RELEASE_TITLE" --notes "$RELEASE_NOTES"
+          fi
+
+  build-executables:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'NetSPI/OCInferno' &&
+      github.actor == 'WebbinRoot' &&
+      github.triggering_actor == 'WebbinRoot' &&
+      github.ref == 'refs/heads/main'
+    needs:
+      - create-release
+      - resolve-build-targets
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.resolve-build-targets.outputs.os_matrix) }}
+        variant:
+          - { label: base, extras: "" }
+          - { label: table, extras: "table" }
+          - { label: excel, extras: "excel" }
+          - { label: table_excel, extras: "table,excel" }
+    name: Build (${{ matrix.os }} | ${{ matrix.variant.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        # v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        # v6.3.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          EXTRAS="${{ matrix.variant.extras }}"
+          if [ -n "$EXTRAS" ]; then
+            python -m pip install ".[${EXTRAS}]" pyinstaller==6.21.0
+          else
+            python -m pip install . pyinstaller==6.21.0
+          fi
+
+      - name: Build executable
+        shell: bash
+        run: |
+          # OCInferno's per-service modules are imported DYNAMICALLY by dotted path
+          # (from mappings/module_mappings.json) and live in PEP-420 namespace packages
+          # (only ocinferno/__init__.py, ocinferno/mappings/__init__.py, and one
+          # opengraph helpers/__init__.py exist). PyInstaller's static analysis and
+          # --collect-submodules CANNOT discover them, so we enumerate the full module
+          # set by walking the source tree and pass each as --hidden-import. Importing
+          # each also pulls in the third-party deps it uses (e.g. the oci SDK).
+          #   --onefile: single-file executable.  --collect-data ocinferno: bundle the
+          #   runtime data files (the mappings JSON + any per-module data).
+          MODS="$RUNNER_TEMP/ocinferno_hidden_imports.txt"
+          python - <<'PY' > "$MODS"
+          from pathlib import Path
+          names = {"ocinferno"}
+          for py in Path("ocinferno").rglob("*.py"):
+              if "__pycache__" in py.parts:
+                  continue
+              parts = list(py.relative_to("ocinferno").with_suffix("").parts)
+              if parts and parts[-1] == "__init__":
+                  parts = parts[:-1]
+              names.add(".".join(["ocinferno", *parts]))
+          print("\n".join(sorted(names)))
+          PY
+          HIDDEN_ARGS=()
+          while IFS= read -r mod; do
+            HIDDEN_ARGS+=(--hidden-import "$mod")
+          done < "$MODS"
+          echo "Collected $(( ${#HIDDEN_ARGS[@]} / 2 )) ocinferno hidden-import modules"
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --onefile \
+            --name ocinferno \
+            --collect-data ocinferno \
+            "${HIDDEN_ARGS[@]}" \
+            ocinferno/__main__.py
+
+      - name: Verify and upload binary to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          # PyInstaller appends .exe on Windows; dist/ocinferno elsewhere.
+          EXT=""
+          if [ "$RUNNER_OS" = "Windows" ]; then EXT=".exe"; fi
+          BIN="dist/ocinferno${EXT}"
+          test -f "$BIN"
+          "$BIN" --help >/dev/null
+          ASSET="ocinferno-${{ matrix.os }}-${{ matrix.variant.label }}${EXT}"
+          cp "$BIN" "$ASSET"
+          gh release upload "$RELEASE_TAG" "$ASSET" --clobber
+          echo "Uploaded $ASSET"

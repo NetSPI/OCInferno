@@ -1,333 +1,157 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
 import oci
-from ocinferno.core.utils.service_runtime import _init_client
+
+from ocinferno.core.resource import OciListResource
+from ocinferno.core.utils.module_helpers import write_response_stream_to_file
 
 
-def build_data_science_client(session, region: Optional[str] = None):
-    """Initialize a Data Science client with shared signer/proxy/session behavior."""
-    client = _init_client(
-        oci.data_science.DataScienceClient,
-        session=session,
-        service_name="DataScience",
-    )
-    target_region = region or getattr(session, "region", None)
-    if target_region:
-        try:
-            client.base_client.set_region(target_region)
-        except Exception:
-            pass
-    return client
-
-
-class DataScienceProjectsResource:
+class DataScienceProjectsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_projects"
+    LIST_METHOD = "list_projects"
+    GET_METHOD = "get_project"
+    GET_ID_PARAM = "project_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List projects in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_projects, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a project by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_project(project_id=resource_id).data) or {}
-
-    # Save project rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceNotebookSessionsResource:
+class DataScienceNotebookSessionsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_notebook_sessions"
+    LIST_METHOD = "list_notebook_sessions"
+    GET_METHOD = "get_notebook_session"
+    GET_ID_PARAM = "notebook_session_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List notebook sessions in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_notebook_sessions, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a notebook session by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_notebook_session(notebook_session_id=resource_id).data) or {}
-
-    # Save notebook session rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceModelsResource:
+class DataScienceModelsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_models"
+    LIST_METHOD = "list_models"
+    GET_METHOD = "get_model"
+    GET_ID_PARAM = "model_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
-
-    # List models in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_models, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a model by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_model(model_id=resource_id).data) or {}
-
-    # Save model rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+    def download_artifact(self, *, resource_id, out_path) -> bool:
+        """Export the developer-supplied model artifact (code/model binary) bytes."""
+        resp = self.client.get_model_artifact_content(model_id=resource_id)
+        return write_response_stream_to_file(getattr(resp, "data", None), out_path)
 
 
-class DataScienceModelVersionSetsResource:
+class DataScienceModelVersionSetsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_model_version_sets"
+    LIST_METHOD = "list_model_version_sets"
+    GET_METHOD = "get_model_version_set"
+    GET_ID_PARAM = "model_version_set_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List model version sets in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_model_version_sets, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a model version set by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_model_version_set(model_version_set_id=resource_id).data) or {}
-
-    # Save model version set rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceModelGroupsResource:
+class DataScienceModelGroupsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_model_groups"
+    LIST_METHOD = "list_model_groups"
+    GET_METHOD = "get_model_group"
+    GET_ID_PARAM = "model_group_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List model groups in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_model_groups, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a model group by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_model_group(model_group_id=resource_id).data) or {}
-
-    # Save model group rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceModelDeploymentsResource:
+class DataScienceModelDeploymentsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_model_deployments"
+    LIST_METHOD = "list_model_deployments"
+    GET_METHOD = "get_model_deployment"
+    GET_ID_PARAM = "model_deployment_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List model deployments in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_model_deployments, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a model deployment by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_model_deployment(model_deployment_id=resource_id).data) or {}
-
-    # Save model deployment rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceJobsResource:
+class DataScienceJobsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_jobs"
+    LIST_METHOD = "list_jobs"
+    GET_METHOD = "get_job"
+    GET_ID_PARAM = "job_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
-
-    # List jobs in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_jobs, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a job by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_job(job_id=resource_id).data) or {}
-
-    # Save job rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+    def download_artifact(self, *, resource_id, out_path) -> bool:
+        """Export the developer-supplied job artifact (code/script bundle) bytes."""
+        resp = self.client.get_job_artifact_content(job_id=resource_id)
+        return write_response_stream_to_file(getattr(resp, "data", None), out_path)
 
 
-class DataScienceJobRunsResource:
+class DataScienceJobRunsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_job_runs"
+    LIST_METHOD = "list_job_runs"
+    GET_METHOD = "get_job_run"
+    GET_ID_PARAM = "job_run_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List job runs in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_job_runs, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a job run by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_job_run(job_run_id=resource_id).data) or {}
-
-    # Save job run rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataSciencePipelinesResource:
+class DataSciencePipelinesResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_pipelines"
+    LIST_METHOD = "list_pipelines"
+    GET_METHOD = "get_pipeline"
+    GET_ID_PARAM = "pipeline_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List pipelines in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_pipelines, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a pipeline by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_pipeline(pipeline_id=resource_id).data) or {}
-
-    # Save pipeline rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataSciencePipelineRunsResource:
+class DataSciencePipelineRunsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_pipeline_runs"
+    LIST_METHOD = "list_pipeline_runs"
+    GET_METHOD = "get_pipeline_run"
+    GET_ID_PARAM = "pipeline_run_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List pipeline runs in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_pipeline_runs, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a pipeline run by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_pipeline_run(pipeline_run_id=resource_id).data) or {}
-
-    # Save pipeline run rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceSchedulesResource:
+class DataScienceSchedulesResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_schedules"
+    LIST_METHOD = "list_schedules"
+    GET_METHOD = "get_schedule"
+    GET_ID_PARAM = "schedule_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List schedules in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_schedules, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get a schedule by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_schedule(schedule_id=resource_id).data) or {}
-
-    # Save schedule rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataSciencePrivateEndpointsResource:
+class DataSciencePrivateEndpointsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_private_endpoints"
+    LIST_METHOD = "list_data_science_private_endpoints"
+    GET_METHOD = "get_data_science_private_endpoint"
+    GET_ID_PARAM = "data_science_private_endpoint_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List private endpoints in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(
-            self.client.list_data_science_private_endpoints,
-            compartment_id=compartment_id,
-        )
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one private endpoint by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_data_science_private_endpoint(data_science_private_endpoint_id=resource_id).data) or {}
-
-    # Save private endpoint rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceWorkRequestsResource:
+class DataScienceWorkRequestsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_work_requests"
+    LIST_METHOD = "list_work_requests"
+    GET_METHOD = "get_work_request"
+    GET_ID_PARAM = "work_request_id"
     COLUMNS = ["id", "operation_type", "status", "time_accepted", "time_finished"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
 
-    # List work requests in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_work_requests, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one work request by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_work_request(work_request_id=resource_id).data) or {}
-
-    # Save work request rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
-
-class DataScienceMlApplicationsResource:
+class DataScienceMlApplicationsResource(OciListResource):
+    CLIENT_CLS = oci.data_science.DataScienceClient
+    SERVICE_NAME = "DataScience"
     TABLE_NAME = "data_science_ml_applications"
+    LIST_METHOD = "list_ml_applications"
+    GET_METHOD = "get_ml_application"
+    GET_ID_PARAM = "ml_application_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
-
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_data_science_client(session=session, region=region)
-
-    # List ML applications in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.client.list_ml_applications, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one ML application by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        return oci.util.to_dict(self.client.get_ml_application(ml_application_id=resource_id).data) or {}
-
-    # Save ML application rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)

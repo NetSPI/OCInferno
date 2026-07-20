@@ -9,8 +9,15 @@ from pathlib import Path
 
 
 def _install_oci_stub() -> None:
-    if "oci" in sys.modules:
+    # Only stub when the real SDK is genuinely not installed -- unconditionally
+    # installing a fake module here would permanently shadow the real `oci` for
+    # the rest of the pytest session for any other test file that needs it
+    # (collection-order dependent).
+    try:
+        import oci  # noqa: F401
         return
+    except ImportError:
+        pass
 
     class _DynamicStub:
         def __init__(self, name: str = "stub"):

@@ -14,8 +14,15 @@ from unittest.mock import patch
 
 
 def _install_oci_stub() -> None:
-    if "oci" in sys.modules:
+    # Only stub when the real SDK is genuinely not installed -- unconditionally
+    # installing a fake module here would permanently shadow the real `oci` for
+    # the rest of the pytest session for any other test file that needs it
+    # (collection-order dependent).
+    try:
+        import oci  # noqa: F401
         return
+    except ImportError:
+        pass
 
     class _DynamicStub:
         def __init__(self, name: str = "stub"):
@@ -144,6 +151,7 @@ def _import_session_module():
 
 
 SESSION_MOD = _import_session_module()
+AUTH_MOD = importlib.import_module("ocinferno.core.auth")
 SessionUtility = SESSION_MOD.SessionUtility
 
 
@@ -201,7 +209,7 @@ class TestSessionExplicitApiKeyAndSessionToken(unittest.TestCase):
 
     def test_add_api_key_accepts_explicit_values(self):
         session = self._make_session()
-        with patch.object(SESSION_MOD, "validate_config", return_value=True):
+        with patch.object(AUTH_MOD, "validate_config", return_value=True):
             rc = session.add_api_key(
                 "api_inline",
                 {
@@ -233,7 +241,7 @@ class TestSessionExplicitApiKeyAndSessionToken(unittest.TestCase):
         token = _jwt_with_tenancy(tenancy)
 
         with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
-            with patch.object(SESSION_MOD, "SecurityTokenSigner", _FakeSigner):
+            with patch.object(AUTH_MOD, "SecurityTokenSigner", _FakeSigner):
                 rc = session.add_session_token(
                     "st_inline",
                     {
@@ -283,7 +291,7 @@ class TestSessionExplicitApiKeyAndSessionToken(unittest.TestCase):
             )
 
             with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
-                with patch.object(SESSION_MOD, "SecurityTokenSigner", _FakeSigner):
+                with patch.object(AUTH_MOD, "SecurityTokenSigner", _FakeSigner):
                     rc = session.load_stored_creds("st_reload", force_refresh=True)
 
         self.assertEqual(rc, 1)
@@ -336,10 +344,10 @@ class TestSessionExplicitApiKeyAndSessionToken(unittest.TestCase):
 
         with patch.dict(os.environ, {}, clear=True):
             with patch.object(SESSION_MOD.requests, "Session", _FakeRequestsSession):
-                with patch.object(SESSION_MOD, "PEMStringCertificateRetriever", _FakePemRetriever):
-                    with patch.object(SESSION_MOD, "SessionKeySupplier", _FakeSessionKeySupplier):
-                        with patch.object(SESSION_MOD, "X509FederationClient", _FakeFederationClient):
-                            with patch.object(SESSION_MOD, "X509FederationClientBasedSecurityTokenSigner", _FakeFederationSigner):
+                with patch.object(AUTH_MOD, "PEMStringCertificateRetriever", _FakePemRetriever):
+                    with patch.object(AUTH_MOD, "SessionKeySupplier", _FakeSessionKeySupplier):
+                        with patch.object(AUTH_MOD, "X509FederationClient", _FakeFederationClient):
+                            with patch.object(AUTH_MOD, "X509FederationClientBasedSecurityTokenSigner", _FakeFederationSigner):
                                 signer, cfg, err = session._build_instance_profile_signer(
                                     ref_cfg={
                                         "leaf_cert_file": "leaf.pem",

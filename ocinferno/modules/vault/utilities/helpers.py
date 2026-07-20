@@ -8,8 +8,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import oci
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import dedupe_strs
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
 def build_vault_client(session, client_cls, service_name: str, region: Optional[str] = None, endpoint: Optional[str] = None):
@@ -27,7 +29,27 @@ def build_vault_client(session, client_cls, service_name: str, region: Optional[
     return client
 
 
-class VaultVaultsResource:
+def _to_dict_list(data: Any) -> List[Dict[str, Any]]:
+    if not data:
+        return []
+    try:
+        value = oci.util.to_dict(data)
+        return value if isinstance(value, list) else (value or [])
+    except Exception:
+        out: List[Dict[str, Any]] = []
+        if isinstance(data, list):
+            for entry in data:
+                if isinstance(entry, dict):
+                    out.append(entry)
+                else:
+                    try:
+                        out.append(oci.util.to_dict(entry))
+                    except Exception:
+                        pass
+        return out
+
+
+class VaultVaultsResource(ResourceBase):
     COLUMNS = ["id", "display_name", "vault_type", "lifecycle_state", "time_created", "management_endpoint", "crypto_endpoint"]
     TABLE_NAME = "vault_vaults"
 
@@ -41,32 +63,19 @@ class VaultVaultsResource:
         )
         self.client = build_vault_client(session, oci.key_management.KmsVaultClient, "Vault", region=self.region)
 
-    @staticmethod
-    def _to_dict_list(data: Any) -> List[Dict[str, Any]]:
-        if not data:
-            return []
-        try:
-            value = oci.util.to_dict(data)
-            return value if isinstance(value, list) else (value or [])
-        except Exception:
-            out: List[Dict[str, Any]] = []
-            if isinstance(data, list):
-                for entry in data:
-                    if isinstance(entry, dict):
-                        out.append(entry)
-                    else:
-                        try:
-                            out.append(oci.util.to_dict(entry))
-                        except Exception:
-                            pass
-            return out
-
     # List vaults in current compartment.
     def list(self) -> List[Dict[str, Any]]:
         if not self.compartment_id:
             raise ValueError("No compartment_id/tenancy_id available")
-        resp = oci.pagination.list_call_get_all_results(self.client.list_vaults, compartment_id=self.compartment_id)
-        return self._to_dict_list(resp.data)
+        # KMS is frequently not authorized/enabled for a compartment; treat 401/403/404
+        # as an empty result (per-scope) instead of crashing the module.
+        try:
+            resp = oci.pagination.list_call_get_all_results(self.client.list_vaults, compartment_id=self.compartment_id)
+        except Exception as err:
+            if getattr(err, "status", None) in (401, 403, 404):
+                return []
+            raise
+        return _to_dict_list(resp.data)
 
     # Get one vault by OCID (best-effort via list cache).
     def get(self, *, resource_id: str) -> Dict[str, Any]:
@@ -75,17 +84,9 @@ class VaultVaultsResource:
                 return row
         return {}
 
-    # Save vault rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for vault rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class VaultKeysResource:
+class VaultKeysResource(ResourceBase):
     COLUMNS = ["display_name", "id", "vault_id", "protection_mode", "is_auto_rotation_enabled", "lifecycle_state", "time_created"]
     VERSION_COLUMNS = ["id", "key_id", "vault_id", "lifecycle_state", "time_created", "is_auto_rotated"]
     TABLE_VAULTS = "vault_vaults"
@@ -108,26 +109,6 @@ class VaultKeysResource:
         self._mgmt_by_endpoint: Dict[str, Any] = {}
         self._vault_id_by_key_id: Dict[str, str] = {}
         self._endpoint_by_key_id: Dict[str, str] = {}
-
-    @staticmethod
-    def _to_dict_list(data: Any) -> List[Dict[str, Any]]:
-        if not data:
-            return []
-        try:
-            value = oci.util.to_dict(data)
-            return value if isinstance(value, list) else (value or [])
-        except Exception:
-            out: List[Dict[str, Any]] = []
-            if isinstance(data, list):
-                for entry in data:
-                    if isinstance(entry, dict):
-                        out.append(entry)
-                    else:
-                        try:
-                            out.append(oci.util.to_dict(entry))
-                        except Exception:
-                            pass
-            return out
 
     def seed_vault_endpoint(self, *, vault_id: str, management_endpoint: str) -> None:
         if vault_id and management_endpoint:
@@ -189,7 +170,7 @@ class VaultKeysResource:
             try:
                 mgmt = self._mgmt_client_for_vault_id(vid)
                 resp = paginator(mgmt.list_keys, compartment_id=self.compartment_id)
-                rows = self._to_dict_list(resp.data)
+                rows = _to_dict_list(resp.data)
 
                 endpoint = (self._vault_cache.get(vid) or {}).get("management_endpoint")
                 for row in rows:
@@ -243,7 +224,7 @@ class VaultKeysResource:
                     mgmt = self._mgmt_client_for_vault_id(vid)
 
                 resp = paginator(mgmt.list_key_versions, key_id=kid)
-                rows = self._to_dict_list(resp.data)
+                rows = _to_dict_list(resp.data)
                 for kv in rows:
                     if isinstance(kv, dict):
                         kv.setdefault("key_id", kid)
@@ -285,12 +266,8 @@ class VaultKeysResource:
             self.session.save_resources(rows, self.TABLE_KEYS)
 
     # No binary download endpoint for key rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class VaultSecretsResource:
+class VaultSecretsResource(ResourceBase):
     COLUMNS = ["id", "secret_name", "lifecycle_state", "current_version_number", "rotation_status"]
     VERSION_COLUMNS = ["secret_id", "version_number", "stages", "name"]
     DUMP_COLUMNS = ["secret_id", "secret_name", "version_number", "file_path", "mode", "vault_id"]
@@ -314,26 +291,6 @@ class VaultSecretsResource:
 
         self._secret_id_to_vault_id: Dict[str, str] = {}
         self._secret_id_to_name: Dict[str, str] = {}
-
-    @staticmethod
-    def _to_dict_list(data: Any) -> List[Dict[str, Any]]:
-        if not data:
-            return []
-        try:
-            value = oci.util.to_dict(data)
-            return value if isinstance(value, list) else (value or [])
-        except Exception:
-            out: List[Dict[str, Any]] = []
-            if isinstance(data, list):
-                for entry in data:
-                    if isinstance(entry, dict):
-                        out.append(entry)
-                    else:
-                        try:
-                            out.append(oci.util.to_dict(entry))
-                        except Exception:
-                            pass
-            return out
 
     @staticmethod
     def _sanitize_filename(value: str, max_len: int = 120) -> str:
@@ -499,7 +456,7 @@ class VaultSecretsResource:
         for vid in vault_ids:
             try:
                 resp = paginator(self.vaults_client.list_secrets, compartment_id=cid, vault_id=vid)
-                rows = self._to_dict_list(resp.data)
+                rows = _to_dict_list(resp.data)
 
                 for s in rows:
                     if not isinstance(s, dict):
@@ -546,7 +503,7 @@ class VaultSecretsResource:
         for sid in secret_ids:
             try:
                 resp = paginator(self.vaults_client.list_secret_versions, secret_id=sid)
-                rows = self._to_dict_list(list(resp.data or [])[:max_versions_per_secret])
+                rows = _to_dict_list(list(resp.data or [])[:max_versions_per_secret])
 
                 if do_get_requests:
                     enriched: List[Dict[str, Any]] = []
@@ -703,13 +660,17 @@ class VaultSecretsResource:
         if secret_name:
             if not vault_id_for_name:
                 raise ValueError("dump by name requires vault_id_for_name")
-            bundle = self._get_secret_bundle_by_name(
-                secret_name=secret_name,
-                vault_id=vault_id_for_name,
-                stage=stage,
-                secret_version_name=secret_version_name,
-                version_number=version_number,
-            )
+            try:
+                bundle = self._get_secret_bundle_by_name(
+                    secret_name=secret_name,
+                    vault_id=vault_id_for_name,
+                    stage=stage,
+                    secret_version_name=secret_version_name,
+                    version_number=version_number,
+                )
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "get_secret_bundle_by_name failed", secret_name=secret_name, err=f"{type(e).__name__}: {e}")
+                return []
             raw = self._secret_bundle_content_bytes(bundle)
             if raw is None:
                 return []
@@ -766,17 +727,27 @@ class VaultSecretsResource:
         if not targets:
             return []
 
+        # Per-unit wall-clock cap (--download-timeout): once the secret-dump unit
+        # runs past the session budget, skip the remaining secrets and move on.
+        budget = DownloadBudget(self.session, label="vault secret bundles")
+
         for sid, sname in targets:
+            if budget.exceeded():
+                break
             sid_vault_id = self._resolve_vault_id_for_secret(sid)
 
             # single selector fetch
             if stage or secret_version_name or (version_number is not None):
-                bundle = self._get_secret_bundle_by_id(
-                    secret_id=sid,
-                    stage=stage,
-                    secret_version_name=secret_version_name,
-                    version_number=version_number,
-                )
+                try:
+                    bundle = self._get_secret_bundle_by_id(
+                        secret_id=sid,
+                        stage=stage,
+                        secret_version_name=secret_version_name,
+                        version_number=version_number,
+                    )
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "get_secret_bundle failed", secret_id=sid, err=f"{type(e).__name__}: {e}")
+                    continue
                 raw = self._secret_bundle_content_bytes(bundle)
                 if raw is None:
                     continue
@@ -827,7 +798,11 @@ class VaultSecretsResource:
                 version_numbers = []
 
             if not version_numbers:
-                bundle = self._get_secret_bundle_by_id(secret_id=sid)
+                try:
+                    bundle = self._get_secret_bundle_by_id(secret_id=sid)
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "get_secret_bundle failed", secret_id=sid, err=f"{type(e).__name__}: {e}")
+                    continue
                 raw = self._secret_bundle_content_bytes(bundle)
                 if raw is None:
                     continue
@@ -924,6 +899,3 @@ class VaultSecretsResource:
             self.session.save_resources(out, self.TABLE_SECRET_BUNDLES)
 
     # No binary download endpoint for secret rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False

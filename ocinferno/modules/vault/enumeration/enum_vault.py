@@ -49,6 +49,7 @@ def _parse_args(user_args):
         parser.add_argument("--secret-version-name", default=None, help="Secret version name label for retrieval")
         parser.add_argument("--version-number", default=None, help="Secret version number for retrieval (int)")
         parser.add_argument("--version-range", default=None, help="Version range list for retrieval, e.g. 1-5 or 1,3,5-7")
+        parser.add_argument("--download-timeout", type=int, default=0, help="Wall-clock cap in seconds for the secret-dump unit (0 = unlimited)")
 
     return parse_wrapper_args(
         user_args=user_args,
@@ -62,6 +63,8 @@ def _parse_args(user_args):
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
     debug = bool(getattr(session, "individual_run_debug", False) or getattr(session, "debug", False))
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
 
     component_order = [key for key, _suffix, _help in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
@@ -77,8 +80,7 @@ def run_module(user_args, session):
         vault_rows = [r for r in (vaults_resource.list() or []) if isinstance(r, dict)]
         if vault_rows:
             UtilityTools.print_limited_table(vault_rows, vaults_resource.COLUMNS, resource_type="Vaults")
-            if args.save:
-                vaults_resource.save(vault_rows)
+            vaults_resource.save(vault_rows)
             runtime_vault_ids = dedupe_strs([r.get("id") for r in vault_rows if isinstance(r.get("id"), str)])
 
         results.append(
@@ -86,14 +88,14 @@ def run_module(user_args, session):
                 "ok": True,
                 "component": "vaults",
                 "vaults": vault_rows,
-                "saved": bool(args.save),
+                "saved": True,
             }
         )
 
     if selected.get("keys", False):
         vault_ids = keys_resource.resolve_vault_ids(vault_ids=runtime_vault_ids or (args.vault_id or []), vault_endpoint=args.vault_endpoint)
 
-        if args.save and args.persist_manual_ids and (args.vault_id or []):
+        if args.persist_manual_ids and (args.vault_id or []):
             try:
                 keys_resource.save_manual_vaults(vault_ids=(args.vault_id or []), vault_endpoint=args.vault_endpoint)
             except Exception as e:
@@ -107,7 +109,7 @@ def run_module(user_args, session):
             if len(vault_ids) == 1:
                 for kid in key_ids:
                     vault_id_by_key_id[kid] = vault_ids[0]
-            if args.save and args.persist_manual_ids:
+            if args.persist_manual_ids:
                 try:
                     keys_resource.save_manual_keys(
                         key_ids=key_ids,
@@ -119,8 +121,7 @@ def run_module(user_args, session):
             keys = [r for r in (keys_resource.list(vault_ids=vault_ids) or []) if isinstance(r, dict)]
             if keys:
                 UtilityTools.print_limited_table(keys, keys_resource.COLUMNS, resource_type="Keys")
-                if args.save:
-                    keys_resource.save(keys)
+                keys_resource.save(keys)
                 key_ids = dedupe_strs([k.get("id") for k in keys if isinstance(k.get("id"), str)])
                 for row in keys:
                     kid = row.get("id")
@@ -136,11 +137,10 @@ def run_module(user_args, session):
             ]
             if key_versions:
                 UtilityTools.print_limited_table(key_versions, keys_resource.VERSION_COLUMNS, resource_type="Key Versions")
-                if args.save:
-                    try:
-                        keys_resource.save_versions(key_versions)
-                    except Exception as e:
-                        UtilityTools.dlog(debug, "save_key_versions failed (non-fatal)", err=f"{type(e).__name__}: {e}")
+                try:
+                    keys_resource.save_versions(key_versions)
+                except Exception as e:
+                    UtilityTools.dlog(debug, "save_key_versions failed (non-fatal)", err=f"{type(e).__name__}: {e}")
 
         results.append(
             {
@@ -149,7 +149,7 @@ def run_module(user_args, session):
                 "vault_ids": vault_ids,
                 "keys": keys,
                 "key_versions": key_versions,
-                "saved": bool(args.save),
+                "saved": True,
             }
         )
 
@@ -175,17 +175,16 @@ def run_module(user_args, session):
             secrets = [r for r in (secrets_resource.list(vault_ids=vault_ids) or []) if isinstance(r, dict)]
             if secrets:
                 UtilityTools.print_limited_table(secrets, secrets_resource.COLUMNS, resource_type="Secrets")
-                if args.save:
-                    secrets_resource.save(secrets)
+                secrets_resource.save(secrets)
                 if not secret_ids:
                     secret_ids = dedupe_strs([s.get("id") for s in secrets if isinstance(s.get("id"), str)])
         elif not secret_ids and not (do_dump and args.secret_name):
             if do_dump:
                 print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Can't download due to missing vault scope for secrets.{UtilityTools.RESET}")
-                print(f"{UtilityTools.BRIGHT_BLACK}    Provide --vault-id, run enum_vault --vaults --save, or provide --secret-id.{UtilityTools.RESET}")
+                print(f"{UtilityTools.BRIGHT_BLACK}    Provide --vault-id, run enum_vault --vaults, or provide --secret-id.{UtilityTools.RESET}")
             else:
                 print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Secrets listing requires vault scope.{UtilityTools.RESET}")
-                print(f"{UtilityTools.BRIGHT_BLACK}    Provide --vault-id, run enum_vault --vaults --save, or provide --secret-id.{UtilityTools.RESET}")
+                print(f"{UtilityTools.BRIGHT_BLACK}    Provide --vault-id, run enum_vault --vaults, or provide --secret-id.{UtilityTools.RESET}")
 
         secret_versions: List[Dict[str, Any]] = []
         if args.versions and secret_ids:
@@ -195,14 +194,12 @@ def run_module(user_args, session):
             ]
             if secret_versions:
                 UtilityTools.print_limited_table(secret_versions, secrets_resource.VERSION_COLUMNS, resource_type="Secret Versions")
-                if args.save:
-                    secrets_resource.save_versions(secret_versions)
+                secrets_resource.save_versions(secret_versions)
 
-        if args.save:
-            try:
-                secrets_resource.save_bundle_metadata(secrets=secrets, secret_versions=secret_versions)
-            except Exception as e:
-                UtilityTools.dlog(debug, "save_secret_bundle_metadata failed (non-fatal)", err=f"{type(e).__name__}: {e}")
+        try:
+            secrets_resource.save_bundle_metadata(secrets=secrets, secret_versions=secret_versions)
+        except Exception as e:
+            UtilityTools.dlog(debug, "save_secret_bundle_metadata failed (non-fatal)", err=f"{type(e).__name__}: {e}")
 
         dumped: List[Dict[str, Any]] = []
         if do_dump:
@@ -244,7 +241,7 @@ def run_module(user_args, session):
                     dumped_display.append(out_row)
                 UtilityTools.print_limited_table(dumped_display, secrets_resource.DUMP_COLUMNS, resource_type="Secret Bundle Values")
 
-            if args.save and dumped:
+            if dumped:
                 try:
                     secrets_resource.save_dump_artifacts(dumped)
                 except Exception as e:
@@ -258,7 +255,7 @@ def run_module(user_args, session):
                 "secrets": secrets,
                 "secret_versions": secret_versions,
                 "dumped": dumped,
-                "saved": bool(args.save),
+                "saved": True,
             }
         )
 

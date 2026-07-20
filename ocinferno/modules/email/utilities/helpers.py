@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 import oci
+from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
 def build_email_clients(session, region: Optional[str] = None) -> Tuple[Any, Any]:
@@ -25,201 +27,98 @@ def build_email_clients(session, region: Optional[str] = None) -> Tuple[Any, Any
     return email_client, dp_client
 
 
-class EmailSendersResource:
+class _EmailClientMixin:
+    """Shared ``_build_client`` for Email Resource classes: builds BOTH the
+    control-plane ``EmailClient`` (used for list/get) and the data-plane
+    ``EmailDPClient`` (stashed as ``self.dp_client`` for send-mail exploit use;
+    not called by any list/get path here) via one ``build_email_clients`` call.
+    """
+
+    def _build_client(self, session, region: Optional[str] = None):
+        email_client, self.dp_client = build_email_clients(session=session, region=region)
+        self.email_client = email_client
+        return email_client
+
+
+class EmailSendersResource(_EmailClientMixin, OciListResource):
+    CLIENT_CLS = oci.email.EmailClient
+    SERVICE_NAME = "EmailDelivery"
     TABLE_NAME = "email_senders"
+    LIST_METHOD = "list_senders"
+    GET_METHOD = "get_sender"
+    GET_ID_PARAM = "sender_id"
     COLUMNS = ["id", "email_address", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.email_client, self.dp_client = build_email_clients(session=session, region=region)
-
-    # List sender addresses in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.email_client.list_senders, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one sender by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.email_client.get_sender(sender_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save sender rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for sender rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class EmailDomainsResource:
+class EmailDomainsResource(_EmailClientMixin, OciListResource):
+    CLIENT_CLS = oci.email.EmailClient
+    SERVICE_NAME = "EmailDelivery"
     TABLE_NAME = "email_domains"
+    LIST_METHOD = "list_email_domains"
+    GET_METHOD = "get_email_domain"
+    GET_ID_PARAM = "email_domain_id"
     COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
-
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.email_client, self.dp_client = build_email_clients(session=session, region=region)
-
-    # List email domains in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.email_client.list_email_domains, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one domain by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.email_client.get_email_domain(email_domain_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save domain rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
 
     # No binary download endpoint for domain rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class EmailDkimsResource:
+class EmailDkimsResource(_EmailClientMixin, OciListResource):
+    CLIENT_CLS = oci.email.EmailClient
+    SERVICE_NAME = "EmailDelivery"
     TABLE_NAME = "email_domain_dkims"
+    LIST_METHOD = "list_dkims"
+    # DKIMs are listed per-domain, not per-compartment; LIST_SCOPE_KWARG remaps the
+    # base list()'s "compartment_id" positional onto the SDK's real scope kwarg.
+    LIST_SCOPE_KWARG = "email_domain_id"
+    GET_METHOD = "get_dkim"
+    GET_ID_PARAM = "dkim_id"
     COLUMNS = ["id", "name", "lifecycle_state", "email_domain_id"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.email_client, self.dp_client = build_email_clients(session=session, region=region)
-
-    # List DKIM entries for one domain.
+    # List DKIM entries for one domain (the enum wrapper's call site).
     def list_for_domain(self, *, email_domain_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.email_client.list_dkims, email_domain_id=email_domain_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Compatibility list method alias for SDK-like pattern.
-    def list(self, *, email_domain_id: str) -> List[Dict[str, Any]]:
-        return self.list_for_domain(email_domain_id=email_domain_id)
-
-    # Get one DKIM by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.email_client.get_dkim(dkim_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save DKIM rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+        return self.list(compartment_id=email_domain_id)
 
     # No binary download endpoint for DKIM rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class EmailSpfsResource:
+class EmailSpfsResource(_EmailClientMixin, OciListResource):
+    CLIENT_CLS = oci.email.EmailClient
+    SERVICE_NAME = "EmailDelivery"
     TABLE_NAME = "email_domain_spfs"
+    LIST_METHOD = "list_spfs"
+    LIST_SCOPE_KWARG = "email_domain_id"
+    GET_METHOD = "get_spf"
+    GET_ID_PARAM = "spf_id"
     COLUMNS = ["id", "lifecycle_state", "email_domain_id", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.email_client, self.dp_client = build_email_clients(session=session, region=region)
-
-    # List SPF entries for one domain.
+    # List SPF entries for one domain (the enum wrapper's call site).
     def list_for_domain(self, *, email_domain_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.email_client.list_spfs, email_domain_id=email_domain_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Compatibility list method alias for SDK-like pattern.
-    def list(self, *, email_domain_id: str) -> List[Dict[str, Any]]:
-        return self.list_for_domain(email_domain_id=email_domain_id)
-
-    # Get one SPF record by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.email_client.get_spf(spf_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save SPF rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+        return self.list(compartment_id=email_domain_id)
 
     # No binary download endpoint for SPF rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class EmailReturnPathsResource:
+class EmailReturnPathsResource(_EmailClientMixin, OciListResource):
+    CLIENT_CLS = oci.email.EmailClient
+    SERVICE_NAME = "EmailDelivery"
     TABLE_NAME = "email_return_paths"
+    LIST_METHOD = "list_email_return_paths"
+    GET_METHOD = "get_email_return_path"
+    GET_ID_PARAM = "email_return_path_id"
     COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.email_client, self.dp_client = build_email_clients(session=session, region=region)
-
-    # List return paths in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.email_client.list_email_return_paths, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one return path by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.email_client.get_email_return_path(email_return_path_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save return-path rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for return-path rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class EmailSuppressionsResource:
+class EmailSuppressionsResource(_EmailClientMixin, OciListResource):
+    CLIENT_CLS = oci.email.EmailClient
+    SERVICE_NAME = "EmailDelivery"
     TABLE_NAME = "email_suppressions"
+    LIST_METHOD = "list_suppressions"
+    GET_METHOD = "get_suppression"
+    GET_ID_PARAM = "suppression_id"
     COLUMNS = ["id", "email_address", "reason", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.email_client, self.dp_client = build_email_clients(session=session, region=region)
-
-    # List suppressions in a compartment.
-    def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
-        resp = oci.pagination.list_call_get_all_results(self.email_client.list_suppressions, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
-
-    # Get one suppression by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.email_client.get_suppression(suppression_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save suppression rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for suppression rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False
 
-
-class EmailConfigurationResource:
+class EmailConfigurationResource(ResourceBase):
     TABLE_NAME = "email_configuration"
     COLUMNS = ["http_submit_endpoint", "smtp_submit_endpoint", "compartment_id"]
 
@@ -240,11 +139,4 @@ class EmailConfigurationResource:
             return {}
         return oci.util.to_dict(resp.data) or {}
 
-    # Save configuration rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for configuration rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:
-        _ = (resource_id, out_path)
-        return False

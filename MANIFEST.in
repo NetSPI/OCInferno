@@ -1,0 +1,12 @@
+# Runtime data files OCInferno loads via importlib.resources / module-relative paths.
+# These MUST ship in the wheel/sdist or the tool fails at runtime (missing service
+# table schema, module registry, and per-module opengraph data).
+recursive-include ocinferno/mappings *.json
+recursive-include ocinferno/modules *.json
+
+# Keep test fixtures and build artifacts out of the sdist.
+prune tests
+prune databases
+prune ocinferno_output
+global-exclude *.pyc
+global-exclude __pycache__

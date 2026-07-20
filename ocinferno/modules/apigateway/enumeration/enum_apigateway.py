@@ -10,11 +10,13 @@ from ocinferno.modules.apigateway.utilities.helpers import (
     ApiGatewaySdksResource,
 )
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import fill_missing_fields, guess_blob_ext, parse_csv_args, write_bytes_file
 from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -33,13 +35,7 @@ CACHE_TABLES = {
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -49,6 +45,7 @@ def _parse_args(user_args):
         parser.add_argument("--api-ids", action="append", default=[], help="API OCID scope for SDK filtering (repeatable, CSV supported)")
         parser.add_argument("--curl-from-openapi", action="store_true", help="Generate curl templates from downloaded OpenAPI")
         parser.add_argument("--base-url", default="", help="Optional base URL for generated curl templates")
+        parser.add_argument("--download-timeout", type=int, default=0, help="Per-download-type wall-clock cap in seconds (0 = unlimited)")
 
     return parse_wrapper_args(
         user_args=user_args,
@@ -63,6 +60,8 @@ def run_module(user_args, session):
     args, _ = _parse_args(user_args)
     debug = bool(getattr(session, "debug", False) or getattr(session, "individual_run_debug", False))
 
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+
     component_order = [key for key, _suffix, _help in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
 
@@ -71,42 +70,15 @@ def run_module(user_args, session):
     results = []
 
     if selected.get("gateways", False):
-        try:
-            gateways_resource = ApiGatewayGatewaysResource(session=session)
-            if not comp_id:
-                raise ValueError("session.compartment_id is not set. Select a compartment first.")
-
-            rows = [r for r in (gateways_resource.list(compartment_id=comp_id) or []) if isinstance(r, dict)]
-            for row in rows:
-                row.setdefault("compartment_id", comp_id)
-
-            enriched = 0
-            if args.get:
-                for row in rows:
-                    rid = row.get("id")
-                    if not rid:
-                        continue
-                    meta = gateways_resource.get(resource_id=rid) or {}
-                    if fill_missing_fields(row, meta):
-                        enriched += 1
-
-            if rows:
-                UtilityTools.print_limited_table(rows, gateways_resource.COLUMNS)
-            if args.save:
-                gateways_resource.save(rows)
-
-            results.append(
-                {
-                    "ok": True,
-                    "gateways": len(rows),
-                    "enriched": enriched,
-                    "saved": bool(args.save),
-                    "get": bool(args.get),
-                }
-            )
-        except Exception as err:
-            print(f"[*] enum_apigateway.gateways: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "gateways", "error": _component_error_summary(err)})
+        gateways_resource = ApiGatewayGatewaysResource(session=session)
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="gateways",
+            list_rows=lambda cid: gateways_resource.list(compartment_id=cid),
+            get_row=lambda row: gateways_resource.get(resource_id=row.get("id")),
+            save_rows_fn=gateways_resource.save,
+            print_columns=gateways_resource.COLUMNS,
+            module_name="enum_apigateway",
+        ))
 
     if selected.get("apis", False):
         try:
@@ -138,7 +110,10 @@ def run_module(user_args, session):
 
             if args.download:
                 comp_fallback = getattr(session, "compartment_id", None)
+                budget = DownloadBudget(session, label="API Gateway API content")
                 for row in rows:
+                    if budget.exceeded():  # per-type --download-timeout cap: stop and move on
+                        break
                     rid = row.get("id")
                     if not rid:
                         continue
@@ -192,8 +167,7 @@ def run_module(user_args, session):
 
             if rows:
                 UtilityTools.print_limited_table(rows, apis_resource.COLUMNS)
-            if args.save:
-                apis_resource.save(rows)
+            apis_resource.save(rows)
 
             results.append(
                 {
@@ -205,7 +179,7 @@ def run_module(user_args, session):
                     "downloaded_spec": downloaded_spec,
                     "download_spec_bytes": download_spec_bytes,
                     "curl_templates_written": curl_templates_written,
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                     "download": bool(args.download),
                     "curl_from_openapi": bool(args.curl_from_openapi),
@@ -213,48 +187,24 @@ def run_module(user_args, session):
                 }
             )
         except Exception as err:
-            print(f"[*] enum_apigateway.apis: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "apis", "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component="apis", module_name="enum_apigateway"))
 
     if selected.get("deployments", False):
-        try:
-            deployments_resource = ApiGatewayDeploymentsResource(session=session)
-            if not comp_id:
-                raise ValueError("session.compartment_id is not set. Select a compartment first.")
-
-            gateway_ids = deployments_resource.resolve_gateway_ids(args, comp_id, debug=debug)
-            rows = [r for r in (deployments_resource.list(compartment_id=comp_id, gateway_ids=gateway_ids) or []) if isinstance(r, dict)]
-            for row in rows:
-                row.setdefault("compartment_id", comp_id)
-
-            enriched = 0
-            if args.get:
-                for row in rows:
-                    rid = row.get("id")
-                    if not rid:
-                        continue
-                    meta = deployments_resource.get(resource_id=rid) or {}
-                    if fill_missing_fields(row, meta):
-                        enriched += 1
-
-            if rows:
-                UtilityTools.print_limited_table(rows, deployments_resource.COLUMNS)
-            if args.save:
-                deployments_resource.save(rows)
-
-            results.append(
-                {
-                    "ok": True,
-                    "deployments": len(rows),
-                    "enriched": enriched,
-                    "saved": bool(args.save),
-                    "get": bool(args.get),
-                    "gateway_ids": gateway_ids,
-                }
-            )
-        except Exception as err:
-            print(f"[*] enum_apigateway.deployments: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "deployments", "error": _component_error_summary(err)})
+        deployments_resource = ApiGatewayDeploymentsResource(session=session)
+        # Gateway-id scope resolved from the compartment; the helper enforces
+        # require_compartment, so an unset compartment surfaces as an {"ok": False} skip.
+        gateway_ids = deployments_resource.resolve_gateway_ids(args, comp_id, debug=debug) if comp_id else []
+        dep_result = run_standard_enum_component(
+            user_args=args, session=session, component_key="deployments",
+            list_rows=lambda cid: deployments_resource.list(compartment_id=cid, gateway_ids=gateway_ids),
+            get_row=lambda row: deployments_resource.get(resource_id=row.get("id")),
+            save_rows_fn=deployments_resource.save,
+            print_columns=deployments_resource.COLUMNS,
+            module_name="enum_apigateway",
+        )
+        if isinstance(dep_result, dict) and "deployments" in dep_result:
+            dep_result["gateway_ids"] = gateway_ids
+        results.append(dep_result)
 
     if selected.get("sdks", False):
         try:
@@ -279,7 +229,10 @@ def run_module(user_args, session):
             downloaded = 0
             if args.download:
                 comp_fallback = getattr(session, "compartment_id", None) or "global"
+                budget = DownloadBudget(session, label="API Gateway SDK artifacts")
                 for row in rows:
+                    if budget.exceeded():  # per-type --download-timeout cap: stop and move on
+                        break
                     sid = row.get("id")
                     if not sid:
                         continue
@@ -296,8 +249,7 @@ def run_module(user_args, session):
 
             if rows:
                 UtilityTools.print_limited_table(rows, sdks_resource.COLUMNS)
-            if args.save and rows:
-                sdks_resource.save(rows)
+            sdks_resource.save(rows)
 
             results.append(
                 {
@@ -306,14 +258,13 @@ def run_module(user_args, session):
                     "api_ids": api_ids,
                     "enriched": enriched,
                     "downloaded": downloaded,
-                    "saved": bool(args.save and bool(rows)),
+                    "saved": True,
                     "get": bool(args.get),
                     "download": bool(args.download),
                 }
             )
         except Exception as err:
-            print(f"[*] enum_apigateway.sdks: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "sdks", "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component="sdks", module_name="enum_apigateway"))
 
     append_cached_component_counts(
         results=results,

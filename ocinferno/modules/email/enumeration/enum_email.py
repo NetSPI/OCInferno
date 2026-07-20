@@ -14,7 +14,7 @@ from ocinferno.modules.email.utilities.helpers import (
     EmailSuppressionsResource,
 )
 from ocinferno.core.utils.service_runtime import (
-    parse_wrapper_args,
+    make_parse_args,
     resolve_selected_components,
 )
 
@@ -30,13 +30,7 @@ COMPONENTS = [
 ]
 
 
-def _parse_args(user_args):
-    return parse_wrapper_args(
-        user_args=user_args,
-        description="Enumerate OCI Email Delivery resources",
-        components=COMPONENTS,
-        include_get=False,
-    )
+_parse_args = make_parse_args("Enumerate OCI Email Delivery resources", COMPONENTS, include_get=False)
 
 
 def run_module(user_args, session) -> Dict[str, Any]:
@@ -73,8 +67,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             if isinstance(row, dict):
                 row.setdefault("compartment_id", comp_id)
         UtilityTools.print_limited_table(senders, senders_resource.COLUMNS)
-        if args.save:
-            senders_resource.save(senders)
+        senders_resource.save(senders)
         results["senders"] = len(senders)
 
     if selected["domains"] or selected["dkims"] or selected["spfs"]:
@@ -88,8 +81,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 row.setdefault("compartment_id", comp_id)
         if selected["domains"]:
             UtilityTools.print_limited_table(domains, domains_resource.COLUMNS)
-            if args.save:
-                domains_resource.save(domains)
+            domains_resource.save(domains)
         results["domains"] = len(domains)
 
     if selected["dkims"] and domains:
@@ -109,8 +101,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     row.setdefault("email_domain_id", domain_id)
             dkims.extend(rows)
         UtilityTools.print_limited_table(dkims, dkims_resource.COLUMNS)
-        if args.save:
-            dkims_resource.save(dkims)
+        dkims_resource.save(dkims)
         results["dkims"] = len(dkims)
 
     if selected["spfs"] and domains:
@@ -130,8 +121,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     row.setdefault("email_domain_id", domain_id)
             spfs.extend(rows)
         UtilityTools.print_limited_table(spfs, spfs_resource.COLUMNS)
-        if args.save:
-            spfs_resource.save(spfs)
+        spfs_resource.save(spfs)
         results["spfs"] = len(spfs)
 
     if selected["return_paths"]:
@@ -144,8 +134,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             if isinstance(row, dict):
                 row.setdefault("compartment_id", comp_id)
         UtilityTools.print_limited_table(return_paths, return_paths_resource.COLUMNS)
-        if args.save:
-            return_paths_resource.save(return_paths)
+        return_paths_resource.save(return_paths)
         results["return_paths"] = len(return_paths)
 
     if selected["suppressions"]:
@@ -158,8 +147,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             if isinstance(row, dict):
                 row.setdefault("compartment_id", comp_id)
         UtilityTools.print_limited_table(suppressions, suppressions_resource.COLUMNS)
-        if args.save:
-            suppressions_resource.save(suppressions)
+        suppressions_resource.save(suppressions)
         results["suppressions"] = len(suppressions)
 
     if selected["email_configuration"]:
@@ -174,8 +162,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 [cfg_row],
                 email_configuration_resource.COLUMNS,
             )
-            if args.save:
-                email_configuration_resource.save([cfg_row])
+            email_configuration_resource.save([cfg_row])
             results["email_configuration"] = 1
         else:
             results["email_configuration"] = 0

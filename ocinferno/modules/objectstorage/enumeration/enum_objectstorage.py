@@ -8,8 +8,11 @@ from ocinferno.modules.objectstorage.utilities.helpers import (
     ObjectStorageBucketsResource,
     ObjectStorageNamespacesResource,
     ObjectStorageObjectsResource,
+    ObjectStoragePreauthenticatedRequestsResource,
+    normalize_sse_c_key,
 )
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import fill_missing_fields, parse_csv_args, safe_path_component
 from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
@@ -22,6 +25,7 @@ COMPONENTS = [
     ("namespaces", "namespaces", "Enumerate namespaces"),
     ("buckets", "buckets", "Enumerate buckets"),
     ("objects", "objects", "Enumerate objects"),
+    ("pars", "pars", "Enumerate pre-authenticated requests (PARs) per bucket"),
 ]
 
 
@@ -32,13 +36,8 @@ CACHE_TABLES = {
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_error_summary as _component_error_summary
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -54,6 +53,7 @@ def _parse_args(user_args):
         parser.add_argument("--newer-than", default="", help="Only include objects created on/after this ISO datetime")
         parser.add_argument("--older-than", default="", help="Only include objects created on/before this ISO datetime")
         parser.add_argument("--sse-c-key-b64", default=None, help="Base64-encoded AES-256 key for SSE-C objects")
+        parser.add_argument("--download-timeout", type=int, default=0, help="Per-bucket download wall-clock cap in seconds (0 = unlimited)")
 
     return parse_wrapper_args(
         user_args=user_args,
@@ -66,6 +66,8 @@ def _parse_args(user_args):
 
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
 
     component_order = [key for key, _suffix, _help in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
@@ -96,14 +98,13 @@ def run_module(user_args, session):
 
             if rows:
                 UtilityTools.print_limited_table(rows, namespaces_resource.COLUMNS)
-            if args.save:
-                namespaces_resource.save(rows)
+            namespaces_resource.save(rows)
 
             results.append(
                 {
                     "ok": True,
                     "namespaces": len(rows),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                 }
             )
@@ -138,19 +139,21 @@ def run_module(user_args, session):
                     namespace = row.get("namespace")
                     if not bucket_name or not namespace:
                         continue
-                    fill_missing_fields(row, buckets_resource.get(resource_id=bucket_name, namespace=namespace) or {})
+                    meta = buckets_resource.get(resource_id=bucket_name, namespace=namespace) or {}
+                    if isinstance(meta, dict):
+                        meta["get_run"] = True
+                    fill_missing_fields(row, meta)
 
             if rows:
                 UtilityTools.print_limited_table(rows, buckets_resource.COLUMNS)
-            if args.save:
-                buckets_resource.save(rows)
+            buckets_resource.save(rows)
 
             results.append(
                 {
                     "ok": True,
                     "buckets": len(rows),
                     "namespaces": len(namespaces),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                 }
             )
@@ -200,21 +203,45 @@ def run_module(user_args, session):
 
             if rows:
                 UtilityTools.print_limited_table(rows, objects_resource.COLUMNS)
-            if args.save:
-                objects_resource.save(rows)
+            objects_resource.save(rows)
 
             downloaded = 0
             failed = 0
             if args.download and rows:
+                # Validate the SSE-C key ONCE, up-front: it's the same CLI-supplied
+                # value for every object in this loop, so a bad/malformed key should
+                # produce a single clear error here instead of raising deep inside
+                # the per-object loop (which would abort downloads for every
+                # remaining object and mis-report this whole component as failed).
+                sse_c_key_ok = True
+                if args.sse_c_key_b64:
+                    try:
+                        normalize_sse_c_key(args.sse_c_key_b64)
+                    except Exception as err:
+                        print(f"{UtilityTools.RED}[X] invalid --sse-c-key-b64: {err}{UtilityTools.RESET}")
+                        sse_c_key_ok = False
+
                 root = session.get_workspace_output_root(mkdir=True)
                 comp_part = safe_path_component(str(compartment_id))
 
-                for row in rows:
+                # Per-bucket wall-clock budget: once one bucket's downloads run past
+                # --download-timeout, skip the rest of THAT bucket and move to the next.
+                bucket_budgets: dict = {}
+
+                for row in (rows if sse_c_key_ok else []):
                     namespace = str(row.get("namespace") or "").strip()
                     bucket_name = str(row.get("bucket_name") or "").strip()
                     object_name = str(row.get("name") or "").strip()
                     region = str(row.get("region") or getattr(session, "region", "") or "").strip()
                     if not namespace or not bucket_name or not object_name:
+                        continue
+
+                    bucket_key = (region, namespace, bucket_name)
+                    budget = bucket_budgets.get(bucket_key)
+                    if budget is None:
+                        budget = DownloadBudget(session, label=f"bucket {bucket_name}")
+                        bucket_budgets[bucket_key] = budget
+                    if budget.exceeded():
                         continue
 
                     object_parts = [safe_path_component(p) for p in object_name.lstrip("/").split("/") if p]
@@ -253,7 +280,7 @@ def run_module(user_args, session):
                     "cid": compartment_id,
                     "buckets_processed": len({(str(r.get('region') or ''), str(r.get('namespace') or ''), str(r.get('bucket_name') or '')) for r in rows}),
                     "objects": len(rows),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "download": bool(args.download),
                     "files_downloaded": downloaded,
                     "download_failed": failed,
@@ -268,6 +295,36 @@ def run_module(user_args, session):
                     "error": _component_error_summary(err),
                 }
             )
+
+    if selected.get("pars", False):
+        try:
+            pars_resource = ObjectStoragePreauthenticatedRequestsResource(session=session)
+            namespaces = parse_csv_args(getattr(args, "object_namespaces", []) or [])
+            buckets = parse_csv_args(getattr(args, "object_buckets", []) or [])
+            bucket_rows = objects_resource.resolve_bucket_rows(
+                compartment_id=compartment_id, namespaces=namespaces, buckets=buckets,
+            )
+            rows = []
+            for bucket_row in bucket_rows:
+                namespace = str(bucket_row.get("namespace") or "").strip()
+                bucket_name = str(bucket_row.get("name") or bucket_row.get("bucket_name") or "").strip()
+                if not namespace or not bucket_name:
+                    continue
+                try:
+                    rows.extend(pars_resource.list(namespace=namespace, bucket_name=bucket_name))
+                except Exception as par_err:
+                    print(f"[*] enum_objectstorage.pars: {bucket_name} skipped ({_component_error_summary(par_err)}).")
+            if rows:
+                UtilityTools.print_limited_table(rows, pars_resource.COLUMNS)
+            pars_resource.save(rows)
+            results.append({
+                "ok": True,
+                "pars": len(rows),
+                "buckets_scanned": len(bucket_rows),
+                "saved": True,
+            })
+        except Exception as err:
+            results.append(component_soft_skip_or_error(err, component="pars", module_name="enum_objectstorage"))
 
     append_cached_component_counts(
         results=results,

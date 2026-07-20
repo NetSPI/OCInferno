@@ -1,5 +1,9 @@
 version: 2
 updates:
+  # Python dependencies (requirements.txt + the optional [dev]/[excel] extras).
+  # Routine minor/patch bumps are BATCHED into grouped PRs to cut review churn;
+  # MAJOR bumps intentionally fall out of the groups into their own PRs so a
+  # potentially breaking change (e.g. a new oci or pandas major) gets scrutiny.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -7,11 +11,34 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    groups:
+      oci:
+        patterns:
+          - "oci"
+          - "oci-*"
+        update-types:
+          - "minor"
+          - "patch"
+      python-deps:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "oci"
+          - "oci-*"
+        update-types:
+          - "minor"
+          - "patch"
 
+  # Pinned GitHub Actions (Dependabot bumps the commit SHA + version comment).
+  # Action updates are low-risk, so batch them all into one PR.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

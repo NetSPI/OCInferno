@@ -13,7 +13,15 @@ from ocinferno.modules.everything.utilities.enum_all_summary import (
     resource_type_area as _resource_type_area,
     summarize_resources_by_compartment as _summarize_resources_by_compartment_impl,
 )
+from datetime import datetime, timezone
+
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.service_runtime import invoke_run_module as _invoke_run_module
+from ocinferno.core.utils.service_runtime import component_error_summary as _component_error_summary
+from ocinferno.core.utils.parallel import cancel_requested, clear_cancel, parallel_map, request_cancel
+from ocinferno.core.utils.scoped_session import CompartmentScopedSession
+from ocinferno.core.utils.regions import home_region, resolve_regions, subscribed_regions
+from ocinferno.core.utils import hierarchy as _hierarchy
 
 # Compartment enumerator module
 COMP_MODULE = "ocinferno.modules.identityclient.enumeration.enum_comp"
@@ -21,7 +29,6 @@ COMP_MODULE = "ocinferno.modules.identityclient.enumeration.enum_comp"
 # enum_comp flags
 FLAG_ENUM_COMP_RECURSIVE = "--recursive"
 FLAG_ENUM_COMP_GET_ALL_COMPS = "--get-all-comps"
-FLAG_SAVE = "--save"
 
 MOD_OBJECT_STORAGE = "ocinferno.modules.objectstorage.enumeration.enum_objectstorage"
 MOD_API_GATEWAY = "ocinferno.modules.apigateway.enumeration.enum_apigateway"
@@ -30,6 +37,12 @@ MOD_RESOURCE_MANAGER = "ocinferno.modules.resourcemanager.enumeration.enum_resou
 MOD_VAULT = "ocinferno.modules.vault.enumeration.enum_vault"
 MOD_CORE_COMPUTE = "ocinferno.modules.core.enumeration.enum_core_compute"
 MOD_IOT = "ocinferno.modules.iot.enumeration.enum_iot"
+MOD_FUNCTIONS = "ocinferno.modules.functions.enumeration.enum_functions"
+MOD_CONTAINER_INSTANCES = "ocinferno.modules.containerinstances.enumeration.enum_container_instances"
+MOD_CERTIFICATES = "ocinferno.modules.certificates.enumeration.enum_certificates"
+MOD_DATAFLOW = "ocinferno.modules.dataflow.enumeration.enum_dataflow"
+MOD_DATASCIENCE = "ocinferno.modules.datascience.enumeration.enum_datascience"
+MOD_DEVOPS = "ocinferno.modules.devops.enumeration.enum_devops"
 
 SERVICE_GROUP_SPECS = [
     {"service": "compartments", "modules": []},
@@ -62,7 +75,63 @@ SERVICE_GROUP_SPECS = [
     {"service": "desktops", "modules": ["ocinferno.modules.desktops.enumeration.enum_desktops"]},
     {"service": "devops", "modules": ["ocinferno.modules.devops.enumeration.enum_devops"]},
     {"service": "vault", "modules": [MOD_VAULT]},
+    {"service": "load_balancer", "modules": ["ocinferno.modules.loadbalancer.enumeration.enum_loadbalancer"]},
+    {"service": "mysql", "modules": ["ocinferno.modules.mysql.enumeration.enum_mysql"]},
+    {"service": "postgresql", "modules": ["ocinferno.modules.postgresql.enumeration.enum_postgresql"]},
+    {"service": "nosql", "modules": ["ocinferno.modules.nosql.enumeration.enum_nosql"]},
+    {"service": "events", "modules": ["ocinferno.modules.events.enumeration.enum_events"]},
+    {"service": "certificates", "modules": ["ocinferno.modules.certificates.enumeration.enum_certificates"]},
+    {"service": "audit", "modules": ["ocinferno.modules.audit.enumeration.enum_audit"]},
+    {"service": "goldengate", "modules": ["ocinferno.modules.goldengate.enumeration.enum_goldengate"]},
+    {"service": "data_integration", "modules": ["ocinferno.modules.dataintegration.enumeration.enum_dataintegration"]},
+    {"service": "integration", "modules": ["ocinferno.modules.integration.enumeration.enum_integration"]},
+    {"service": "monitoring", "modules": ["ocinferno.modules.monitoring.enumeration.enum_monitoring"]},
+    {"service": "streaming", "modules": ["ocinferno.modules.streaming.enumeration.enum_streaming"]},
+    {"service": "queue", "modules": ["ocinferno.modules.queue.enumeration.enum_queue"]},
+    {"service": "redis", "modules": ["ocinferno.modules.redis.enumeration.enum_redis"]},
+    {"service": "opensearch", "modules": ["ocinferno.modules.opensearch.enumeration.enum_opensearch"]},
+    {"service": "waf", "modules": ["ocinferno.modules.waf.enumeration.enum_waf"]},
+    # --- services added 2026-07 ---
+    {"service": "email", "modules": ["ocinferno.modules.email.enumeration.enum_email"]},
+    {"service": "data_safe", "modules": ["ocinferno.modules.data_safe.enumeration.enum_data_safe"]},
+    {"service": "vulnerability_scanning", "modules": ["ocinferno.modules.vulnerability_scanning.enumeration.enum_vulnerability_scanning"]},
+    {"service": "bds", "modules": ["ocinferno.modules.bds.enumeration.enum_bds"]},
+    {"service": "data_catalog", "modules": ["ocinferno.modules.data_catalog.enumeration.enum_data_catalog"]},
+    {"service": "analytics", "modules": ["ocinferno.modules.analytics.enumeration.enum_analytics"]},
+    {"service": "management_agent", "modules": ["ocinferno.modules.management_agent.enumeration.enum_management_agent"]},
+    {"service": "generative_ai", "modules": ["ocinferno.modules.generative_ai.enumeration.enum_generative_ai"]},
+    {"service": "database_management", "modules": ["ocinferno.modules.database_management.enumeration.enum_database_management"]},
+    {"service": "fusion_apps", "modules": ["ocinferno.modules.fusion_apps.enumeration.enum_fusion_apps"]},
+    {"service": "oda", "modules": ["ocinferno.modules.oda.enumeration.enum_oda"]},
+    {"service": "visual_builder", "modules": ["ocinferno.modules.visual_builder.enumeration.enum_visual_builder"]},
+    {"service": "ai_language", "modules": ["ocinferno.modules.ai_language.enumeration.enum_ai_language"]},
+    {"service": "delegate_access_control", "modules": ["ocinferno.modules.delegate_access_control.enumeration.enum_delegate_access_control"]},
+    # --- Tier 1/2 services added 2026-07 ---
+    {"service": "database_tools", "modules": ["ocinferno.modules.database_tools.enumeration.enum_database_tools"]},
+    {"service": "operator_access_control", "modules": ["ocinferno.modules.operator_access_control.enumeration.enum_operator_access_control"]},
+    {"service": "lockbox", "modules": ["ocinferno.modules.lockbox.enumeration.enum_lockbox"]},
+    {"service": "apiaccesscontrol", "modules": ["ocinferno.modules.apiaccesscontrol.enumeration.enum_apiaccesscontrol"]},
+    {"service": "waas", "modules": ["ocinferno.modules.waas.enumeration.enum_waas"]},
+    {"service": "dbmulticloud", "modules": ["ocinferno.modules.dbmulticloud.enumeration.enum_dbmulticloud"]},
+    {"service": "cloud_bridge", "modules": ["ocinferno.modules.cloud_bridge.enumeration.enum_cloud_bridge"]},
+    {"service": "cloud_migrations", "modules": ["ocinferno.modules.cloud_migrations.enumeration.enum_cloud_migrations"]},
+    {"service": "database_migration", "modules": ["ocinferno.modules.database_migration.enumeration.enum_database_migration"]},
+    {"service": "healthchecks", "modules": ["ocinferno.modules.healthchecks.enumeration.enum_healthchecks"]},
+    {"service": "tenant_manager", "modules": ["ocinferno.modules.tenant_manager.enumeration.enum_tenant_manager"]},
+    {"service": "governance_rules", "modules": ["ocinferno.modules.governance_rules.enumeration.enum_governance_rules"]},
+    {"service": "generative_ai_agent", "modules": ["ocinferno.modules.generative_ai_agent.enumeration.enum_generative_ai_agent"]},
+    {"service": "ocvp", "modules": ["ocinferno.modules.ocvp.enumeration.enum_ocvp"]},
+    {"service": "wlms", "modules": ["ocinferno.modules.wlms.enumeration.enum_wlms"]},
+    {"service": "autoscaling", "modules": ["ocinferno.modules.autoscaling.enumeration.enum_autoscaling"]},
+    {"service": "bastion", "modules": ["ocinferno.modules.bastion.enumeration.enum_bastion"]},
+    {"service": "os_management_hub", "modules": ["ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub"]},
+    {"service": "service_connector", "modules": ["ocinferno.modules.service_connector.enumeration.enum_service_connector"]},
 ]
+
+# Service groups that are GLOBAL (tenancy-wide, not regional): they live in the HOME
+# region only, so a multi-region fan-out runs them once (home region) instead of once
+# per region (which would duplicate rows + waste calls). Everything else is regional.
+_GLOBAL_SERVICE_NAMES = {"compartments", "identity"}
 
 
 # Download token routing for enum_all --download
@@ -128,6 +197,31 @@ DOWNLOAD_TOKEN_MODULE_ARGS: Dict[str, Dict[str, List[str]]] = {
     "iot_instances": {
         MOD_IOT: ["--domains", "--digital-twin-instances", "--download"],
     },
+
+    # Functions config (env vars) - developer-supplied metadata
+    "function_config": {
+        MOD_FUNCTIONS: ["--download"],
+    },
+    # Container Instances env vars / command / arguments - metadata
+    "container_env": {
+        MOD_CONTAINER_INSTANCES: ["--download"],
+    },
+    # DevOps build/deploy pipeline parameters - metadata
+    "devops_pipeline_config": {
+        MOD_DEVOPS: ["--build-pipelines", "--deploy-pipelines", "--download"],
+    },
+    # Certificate PEM bundles (chain + exportable private material) - content
+    "certificate_bundles": {
+        MOD_CERTIFICATES: ["--certificates", "--download"],
+    },
+    # Data Flow Spark/PySpark driver scripts + archives from Object Storage - content
+    "dataflow_scripts": {
+        MOD_DATAFLOW: ["--applications", "--download"],
+    },
+    # Data Science model + job artifact bundles - content
+    "datascience_artifacts": {
+        MOD_DATASCIENCE: ["--models", "--jobs", "--download"],
+    },
 }
 
 
@@ -177,6 +271,33 @@ DOWNLOAD_TOKEN_EXCLUSION_EXPANSIONS: Dict[str, Set[str]] = {
 }
 
 
+# Umbrella download CATEGORIES.
+# A category is a keyword that expands to a set of individual download tokens, so an
+# operator can pull the LIGHT config/history layer without triggering HEAVY byte/secret
+# dumps -- or vice versa -- instead of hand-listing every token:
+#   --download metadata     # light: instance-agent history, API specs, ORM job logs
+#   --download content       # heavy: bucket objects, vault secret plaintext, artifact
+#                            #        files, ORM tfvars/templates, SDKs, IoT twins
+#   --download                # bare == all == metadata | content
+#   --download content --not-downloads vault_secrets   # a category minus one token
+# Categories and individual tokens compose freely in --download / --not-downloads.
+# The two sets PARTITION every canonical token (all == metadata | content).
+DOWNLOAD_TOKEN_CATEGORIES: Dict[str, Set[str]] = {
+    "metadata": {
+        "compute", "api_content", "api_specs", "orm_jobs",
+        "function_config", "container_env", "devops_pipeline_config",
+    },
+    "content": {
+        "buckets", "objects", "blobs", "object_storage", "vault_secrets", "artifacts",
+        "sdks", "orm_variables", "orm_templates", "iot_models", "iot_instances",
+        "certificate_bundles", "dataflow_scripts", "datascience_artifacts",
+    },
+}
+
+# All keywords accepted in --download / --not-downloads beyond individual tokens.
+DOWNLOAD_CATEGORY_KEYWORDS: Set[str] = {"all"} | set(DOWNLOAD_TOKEN_CATEGORIES)
+
+
 def _canonical_module_tokens() -> List[str]:
     return sorted(str(spec["service"]) for spec in SERVICE_GROUP_SPECS)
 
@@ -222,10 +343,10 @@ def _parse_args(user_args) -> argparse.Namespace:
         nargs="*",
         default=None,
         help=(
-            "Run only selected service groups (CSV/space separated).\n"
-            "Examples: --modules dns,devops  OR  --modules dns devops\n"
-            "Available modules:\n"
-            f"{_format_help_list(_canonical_module_tokens(), indent='    ')}"
+            "Run only selected service groups (CSV/space separated). Omit to run ALL.\n"
+            "Accepts full tokens or short aliases (storage, compute, iam, oke, kms, lb, ...).\n"
+            "Examples: --modules dns,devops  OR  --modules storage compute\n"
+            "Run '--list-modules' to see every token (with aliases)."
         ),
     )
     p.add_argument(
@@ -238,25 +359,59 @@ def _parse_args(user_args) -> argparse.Namespace:
             "Uses the same module tokens listed under --modules."
         ),
     )
+    p.add_argument(
+        "--list-modules",
+        dest="list_modules",
+        action="store_true",
+        help="List every --modules service token (with aliases) and exit.",
+    )
+    p.add_argument(
+        "--regions",
+        nargs="*",
+        default=None,
+        help=(
+            "Region scope for enumeration (CSV/space separated). Default: the session's\n"
+            "CURRENT region only (today's behavior). OCI resources are regional, so a\n"
+            "single-region scan misses resources in other subscribed regions.\n"
+            "Examples:\n"
+            "  --regions all                 # every SUBSCRIBED region\n"
+            "  --regions us-ashburn-1,us-phoenix-1\n"
+            "Global services (IAM/identity, tagging, compartments) run in the HOME region\n"
+            "only regardless of this flag. Peak API calls scale by number of regions."
+        ),
+    )
+    p.add_argument(
+        "--find-regions", dest="find_regions", action="store_true",
+        help=(
+            "Discover the tenancy's subscribed regions once (list_region_subscriptions),\n"
+            "persist them to the region_subscriptions store, and enumerate across ALL of\n"
+            "them (shorthand for a fresh --regions all). Without this / --regions, only the\n"
+            "session's current region is scanned."
+        ),
+    )
 
     # once-per-run modules
     p.add_argument("--config-check", dest="config_check", action="store_true", help="Run config_check once (after scans).")
     p.add_argument("--opengraph", action="store_true", help="Run OpenGraph once (after scans).")
 
     # Pass-through knobs for submodules
-    p.add_argument("--save", action="store_true", help="Pass --save to submodules (where supported).")
     p.add_argument(
         "--download",
         nargs="*",
         default=None,
         help=(
-            "Enable download routing for enum_all.\n"
+            "Enable download routing for enum_all. Accepts umbrella CATEGORIES or\n"
+            "individual tokens (categories + tokens compose freely; CSV/space separated).\n"
             "Examples:\n"
-            "  --download                   # all downloads\n"
-            "  --download buckets           # object storage content\n"
+            "  --download                   # all downloads (== metadata + content)\n"
+            "  --download metadata          # light: instance-agent history, API specs, ORM job logs\n"
+            "  --download content           # heavy: bucket objects, vault secrets, artifacts, tfvars, SDKs, IoT\n"
+            "  --download buckets           # a single token (object storage content)\n"
+            "  --download content --not-downloads vault_secrets   # a category minus a token\n"
             "  --download buckets,orm_variables api_content\n"
-            "Available tokens:\n"
-            "    - all\n"
+            "Categories:\n"
+            f"{_format_help_list(sorted(DOWNLOAD_CATEGORY_KEYWORDS), indent='    ')}\n"
+            "Tokens:\n"
             f"{_format_help_list(_canonical_download_tokens(), indent='    ')}"
         ),
     )
@@ -265,14 +420,37 @@ def _parse_args(user_args) -> argparse.Namespace:
         nargs="*",
         default=None,
         help=(
-            "Exclude download token groups (CSV/space separated).\n"
+            "Exclude download categories/tokens (CSV/space separated).\n"
             "Examples:\n"
+            "  --download --not-downloads content        # everything light, no heavy dumps\n"
             "  --download --not-downloads object_storage\n"
             "  --not-downloads api_specs,sdks\n"
-            "Uses the same download tokens listed under --download."
+            "Uses the same categories/tokens listed under --download."
         ),
     )
     p.add_argument("--get", action="store_true", help="Pass --get to submodules (where supported).")
+
+    # ---- Parallelism + resume ----
+    p.add_argument(
+        "--parallel-services", dest="parallel_services", type=int, default=1,
+        help=(
+            "Enumerate (compartment, service) units CONCURRENTLY with N workers "
+            "(default: 1 = sequential). Each parallel run records progress under a run "
+            "token (printed at start); a plain re-run starts fresh."
+        ),
+    )
+    p.add_argument(
+        "--resume", dest="resume", default=None,
+        help=(
+            "Resume a prior --parallel-services run by its token: re-runs ONLY the "
+            "(compartment, service) units that run left incomplete. Requires --parallel-services > 1."
+        ),
+    )
+    p.add_argument(
+        "--list-tokens", dest="list_tokens", action="store_true",
+        help="List saved run tokens (interrupted/failed parallel runs) with progress, then exit.",
+    )
+
     # enum_all always enables DB context reuse across modules to avoid ordering foot-guns.
     p.set_defaults(use_db=True)
 
@@ -329,7 +507,6 @@ def _descendant_compartment_closure(session, roots: List[str]) -> List[str]:
 
     rows = getattr(session, "global_compartment_list", None) or []
     children: Dict[str, List[str]] = {}
-    known: Set[str] = set()
 
     for r in rows:
         if not isinstance(r, dict):
@@ -338,7 +515,6 @@ def _descendant_compartment_closure(session, roots: List[str]) -> List[str]:
         parent = str(r.get("parent_compartment_id") or "").strip()
         if not cid or not cid.startswith("ocid1."):
             continue
-        known.add(cid)
         if parent and parent.startswith("ocid1.") and parent != cid:
             children.setdefault(parent, []).append(cid)
         children.setdefault(cid, [])
@@ -346,29 +522,11 @@ def _descendant_compartment_closure(session, roots: List[str]) -> List[str]:
     for parent in list(children.keys()):
         children[parent] = _normalize_cids(children[parent])
 
-    out: List[str] = []
-    seen: Set[str] = set()
-    queue: List[str] = list(roots)
-    while queue:
-        cid = queue.pop(0)
-        if cid in seen:
-            continue
-        seen.add(cid)
-        out.append(cid)
-        for child in children.get(cid, []):
-            if child not in seen:
-                queue.append(child)
-
-    # Keep roots even if not currently in discovered set.
-    fallback = _normalize_cids([c for c in roots if c not in out])
-    return _normalize_cids(out + fallback)
-
-
-def _invoke_run_module(module, user_args: List[str], session):
-    fn = getattr(module, "run_module", None)
-    if not callable(fn):
-        raise TypeError("module has no run_module()")
-    return fn(list(user_args), session)
+    # BFS from a virtual super-root whose children are exactly `roots`, in
+    # order, so undiscovered roots are still included in the closure.
+    virtual_root = "__closure_roots__"
+    children[virtual_root] = roots
+    return _hierarchy.descendants(children, virtual_root)
 
 
 def _is_nonfatal_service_error(exc: Exception) -> bool:
@@ -417,16 +575,16 @@ def _module_supported_flags(module_name: str) -> Set[str]:
         return set()
 
     flags = set()
-    for flag in ("--save", "--get", "--download"):
+    for flag in ("--get", "--download"):
         if flag in text:
             flags.add(flag)
 
     # Most enum modules use parse_wrapper_args(). That helper implicitly adds
-    # --get/--save by default and adds --download when include_download=True.
+    # --get by default and adds --download when include_download=True.
     # Relying only on literal "--download" text misses modules that support it
     # via include_download but don't mention the flag string directly.
     if "parse_wrapper_args(" in text:
-        flags.update({"--save", "--get"})
+        flags.add("--get")
         if "include_download=True" in text:
             flags.add("--download")
     return flags
@@ -497,7 +655,8 @@ def _resolve_download_plan(
     def _resolve_many(raw_tokens: List[str], dst: List[str]) -> None:
         for token in raw_tokens:
             canon = DOWNLOAD_TOKEN_ALIASES.get(token, token)
-            if canon in known_tokens or canon == "all":
+            # Accept individual tokens AND the category keywords all/metadata/content.
+            if canon in known_tokens or canon in DOWNLOAD_CATEGORY_KEYWORDS:
                 if canon not in dst:
                     dst.append(canon)
             else:
@@ -508,14 +667,28 @@ def _resolve_download_plan(
 
     if unknown:
         known = sorted(list(known_tokens))
-        raise ValueError(f"Unknown download token(s): {', '.join(unknown)}. Known tokens: {', '.join(known)}")
+        cats = sorted(DOWNLOAD_CATEGORY_KEYWORDS)
+        raise ValueError(
+            f"Unknown download token(s): {', '.join(unknown)}. "
+            f"Categories: {', '.join(cats)}. Tokens: {', '.join(known)}"
+        )
 
-    # Base include set
+    def _expand_category(token: str) -> Set[str]:
+        """Expand a category keyword to its token set; a plain token maps to itself."""
+        if token == "all":
+            return set(known_tokens)
+        if token in DOWNLOAD_TOKEN_CATEGORIES:
+            return set(DOWNLOAD_TOKEN_CATEGORIES[token])
+        return {token}
+
+    # Base include set (bare --download == all; otherwise expand categories + tokens)
     if download_flag_set:
-        if (not resolved_include) or ("all" in resolved_include):
+        if not resolved_include:
             include_set = set(known_tokens)
         else:
-            include_set = {t for t in resolved_include if t != "all"}
+            include_set = set()
+            for tok in resolved_include:
+                include_set |= _expand_category(tok)
     elif resolved_exclude:
         # --not-downloads by itself means: all downloads except exclusions.
         include_set = set(known_tokens)
@@ -523,11 +696,14 @@ def _resolve_download_plan(
         # No explicit download controls => no download routing.
         include_set = set()
 
-    # Exclusions
+    # Exclusions (expand categories, then the object_storage-style token expansions)
     expanded_exclude: Set[str] = set()
     for tok in resolved_exclude:
         if tok == "all":
             expanded_exclude.add("all")
+            continue
+        if tok in DOWNLOAD_TOKEN_CATEGORIES:
+            expanded_exclude |= DOWNLOAD_TOKEN_CATEGORIES[tok]
             continue
         expanded_exclude.update(DOWNLOAD_TOKEN_EXCLUSION_EXPANSIONS.get(tok, {tok}))
 
@@ -566,8 +742,6 @@ def _module_args_with_download_plan(
     supported = _module_supported_flags(module_name)
     accepts_unknown = _module_accepts_unknown_args(module_name)
     out: List[str] = []
-    if args.save and (("--save" in supported) or accepts_unknown):
-        out.append("--save")
     if args.get and (("--get" in supported) or accepts_unknown):
         out.append("--get")
     if download_all and (("--download" in supported) or accepts_unknown):
@@ -603,17 +777,56 @@ def _split_service_selector_tokens(raw_tokens: Optional[List[str]]) -> List[str]
     return _split_csv_tokens(raw_tokens)
 
 
+# Friendly short --modules aliases -> canonical service-group token. The full token name
+# always works too; these are shorthands on top of it.
+_MODULE_ALIASES: Dict[str, str] = {
+    "compute": "core_compute", "instances": "core_compute", "vms": "core_compute",
+    "network": "core_network", "vcn": "core_network",
+    "blockstorage": "core_block_storage", "bv": "core_block_storage", "volumes": "core_block_storage",
+    "storage": "object_storage", "oss": "object_storage", "buckets": "object_storage",
+    "fss": "file_storage",
+    "iam": "identity", "identitydomains": "identity",
+    "kms": "vault", "secrets": "vault",
+    "oke": "kubernetes", "k8s": "kubernetes",
+    "lb": "load_balancer", "nlb": "network_load_balancer",
+    "gguard": "cloud_guard", "guard": "cloud_guard",
+    "ar": "artifact_registry", "cr": "container_registry", "ci": "container_instances",
+    "db": "databases", "adb": "databases",
+    "rm": "resource_manager", "orm": "resource_manager",
+    "kafka": "managed_kafka", "genai": "generative_ai",
+    "logs": "logging", "vss": "vulnerability_scanning", "comp": "compartments",
+}
+
+
 @lru_cache(maxsize=1)
 def _module_selector_index() -> Dict[str, str]:
     idx: Dict[str, str] = {}
     for spec in SERVICE_GROUP_SPECS:
         service = str(spec["service"]).strip().lower()
         idx[service] = service
-
+    # aliases resolve to canonical service tokens (only when the target still exists)
+    canonical = set(idx)
+    for alias, service in _MODULE_ALIASES.items():
+        if service in canonical:
+            idx[alias.strip().lower()] = service
     return idx
 
 
-def _resolve_service_run_flags(args: argparse.Namespace, *, any_once_flags: bool, debug: bool = False) -> Dict[str, bool]:
+def _print_module_tokens() -> None:
+    """Print every --modules service token (with aliases) and exit."""
+    aliases_by_service: Dict[str, List[str]] = {}
+    for alias, service in _MODULE_ALIASES.items():
+        aliases_by_service.setdefault(service, []).append(alias)
+    print(f"{UtilityTools.BRIGHT_CYAN}[*] --modules service tokens "
+          f"(comma/space separated; omit --modules to run ALL){UtilityTools.RESET}")
+    for service in _canonical_module_tokens():
+        extra = sorted(aliases_by_service.get(service, []))
+        suffix = f"   (aliases: {', '.join(extra)})" if extra else ""
+        print(f"    {service}{suffix}")
+    print("    Example:  modules run enum_all --modules storage,identity kubernetes")
+
+
+def _resolve_service_run_flags(args: argparse.Namespace, *, any_once_flags: bool, should_enum_comp: bool = False, debug: bool = False) -> Dict[str, bool]:
     all_services = [str(spec["service"]) for spec in SERVICE_GROUP_SPECS]
     all_service_set = set(all_services)
 
@@ -632,13 +845,19 @@ def _resolve_service_run_flags(args: argparse.Namespace, *, any_once_flags: bool
     # Selection behavior:
     # - include list present: run only includes
     # - only excludes present: run all minus excludes
-    # - no selectors/flags: preserve old behavior (all unless once-only flags were requested)
+    # - no selectors/flags: preserve old behavior (all unless once-only flags were requested).
+    #   --comp always implies wanting a fresh enumeration pass, so it must NOT be treated as
+    #   a "once-only flags were requested, skip enumeration" signal -- otherwise
+    #   `enum_all --comp --config-check` (a very natural "discover + scan + audit" combo)
+    #   silently skips every service enumeration and process_config_check then runs against
+    #   whatever was already in the DB (often nothing), reporting a false "0 findings".
+    only_once_only_flags_requested = any_once_flags and not should_enum_comp
     if include_services:
         selected = set(include_services)
     elif exclude_services:
         selected = set(all_service_set)
     else:
-        selected = set() if any_once_flags else set(all_service_set)
+        selected = set() if only_once_only_flags_requested else set(all_service_set)
 
     selected -= exclude_services
 
@@ -664,7 +883,7 @@ def _print_compartment_tree(session, target_cids: List[str]) -> None:
     _print_compartment_tree_impl(session, target_cids)
 
 
-def _expand_compartments(session, roots: List[str], *, debug: bool = False, save: bool = False) -> None:
+def _expand_compartments(session, roots: List[str], *, debug: bool = False) -> None:
     """
     Runs enum_comp to populate/refresh session.global_compartment_list.
     For both tenancy and non-tenancy roots: recursive mode.
@@ -690,8 +909,6 @@ def _expand_compartments(session, roots: List[str], *, debug: bool = False, save
         try:
             session.compartment_id = tid
             comp_args = [FLAG_ENUM_COMP_RECURSIVE, FLAG_ENUM_COMP_GET_ALL_COMPS]
-            if save:
-                comp_args.append(FLAG_SAVE)
             _invoke_run_module(comp_mod, comp_args, session)
         finally:
             session.compartment_id = old
@@ -704,8 +921,6 @@ def _expand_compartments(session, roots: List[str], *, debug: bool = False, save
         try:
             session.compartment_id = cid
             comp_args = [FLAG_ENUM_COMP_RECURSIVE, FLAG_ENUM_COMP_GET_ALL_COMPS]
-            if save:
-                comp_args.append(FLAG_SAVE)
             _invoke_run_module(comp_mod, comp_args, session)
         finally:
             session.compartment_id = old
@@ -761,7 +976,6 @@ def _resolve_scan_targets(
     use_all_discovered: bool,
     recursive_compartments: bool,
     should_enum_comp: bool,
-    save: bool = False,
     debug: bool = False,
 ) -> List[str]:
     discovered_before = set(_get_discovered_cids(session))
@@ -775,7 +989,7 @@ def _resolve_scan_targets(
 
     if should_enum_comp:
         UtilityTools.dlog(debug, "enum_all: running enum_comp", comp_roots=comp_roots)
-        _expand_compartments(session, comp_roots, debug=debug, save=save)
+        _expand_compartments(session, comp_roots, debug=debug)
 
     discovered_after = set(_get_discovered_cids(session))
     newly_discovered = sorted(list(discovered_after - discovered_before))
@@ -826,6 +1040,207 @@ def _build_execution_plan(service_run_flags: Dict[str, bool], *, debug: bool = F
     return execution_plan
 
 
+# =============================================================================
+# Parallel execution + resumable run ledger
+# =============================================================================
+
+_LEDGER_TABLE = "enum_all_task_ledger"
+
+
+def _unit_key(region: str, cid: str, module_name: str) -> str:
+    # Region-scoped unit identity so resume tracks (region, compartment, module).
+    # A blank region (single-region runs) collapses to "::cid::module".
+    return f"{region or ''}::{cid}::{module_name}"
+
+
+def _mint_run_token() -> str:
+    return "enum_all-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+
+
+def _ledger_mark(session, run_id: str, region: str, cid: str, module_name: str, status: str, *, error: str = "") -> None:
+    """Best-effort progress record for one (region, compartment, module) unit. Never raises.
+
+    ``status`` is one of running/done/failed; ``error`` carries
+    a one-line summary when a unit fails. A later mark REPLACES the row (PK is
+    run_id+region+compartment+module+workspace), so each unit keeps only its latest state.
+    """
+    try:
+        session.data_master.save_dict_row(
+            db="service",
+            table_name=_LEDGER_TABLE,
+            row={
+                "workspace_id": session.workspace_id,
+                "run_id": run_id,
+                "region": region or "",
+                "compartment_id": cid,
+                "module": module_name,
+                "status": status,
+                "error": str(error or "")[:2000],
+                "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            },
+            on_conflict="replace",
+        )
+    except Exception:
+        pass
+
+
+def _ledger_done_units(session, run_id: str) -> Set[str]:
+    try:
+        rows = session.data_master.fetch_column_from_table(
+            db="service",
+            table_name=_LEDGER_TABLE,
+            columns=["region", "compartment_id", "module"],
+            where={"workspace_id": session.workspace_id, "run_id": run_id, "status": "done"},
+        )
+    except Exception:
+        return set()
+    return {_unit_key(str(r or ""), str(c), str(m)) for (r, c, m) in rows}
+
+
+def _ledger_list_tokens(session) -> List[Dict[str, Any]]:
+    try:
+        rows = session.data_master.fetch_column_from_table(
+            db="service",
+            table_name=_LEDGER_TABLE,
+            columns=["run_id", "status", "updated_at"],
+            where={"workspace_id": session.workspace_id},
+        )
+    except Exception:
+        return []
+    agg: Dict[str, Dict[str, Any]] = {}
+    for run_id, status, updated_at in rows:
+        rec = agg.setdefault(str(run_id), {"run_id": str(run_id), "done": 0, "failed": 0, "total": 0, "last": ""})
+        rec["total"] += 1
+        if str(status) == "done":
+            rec["done"] += 1
+        elif str(status) == "failed":
+            rec["failed"] += 1
+        if str(updated_at or "") > rec["last"]:
+            rec["last"] = str(updated_at or "")
+    return sorted(agg.values(), key=lambda r: r["last"], reverse=True)
+
+
+def _print_run_tokens(session) -> None:
+    tokens = _ledger_list_tokens(session)
+    if not tokens:
+        print(f"{UtilityTools.YELLOW}[!] No saved enum_all run tokens for this workspace.{UtilityTools.RESET}")
+        return
+    print(f"{UtilityTools.BRIGHT_CYAN}[*] Saved enum_all run tokens (resume with --parallel-services N --resume <token>):{UtilityTools.RESET}")
+    for rec in tokens:
+        done, total, failed = rec["done"], rec["total"], rec.get("failed", 0)
+        state = "complete" if done >= total and total else f"{done}/{total} units done"
+        if failed:
+            state += f", {failed} failed"
+        print(f"    {rec['run_id']}  [{state}]  last update {rec['last'] or 'n/a'}")
+
+
+def _plan_units(
+    final_targets: List[str],
+    execution_plan: List[Tuple[str, bool, List[str]]],
+    scan_regions: List[str],
+    home_region: Optional[str],
+    skip_units: Set[str],
+) -> List[Tuple[str, str, str]]:
+    """Expand (region, compartment, module) units, honoring the resume skip-set and
+    the global-vs-regional distinction (global services run in the home region only)."""
+    regions = list(scan_regions or [""])
+    home = home_region or (regions[0] if regions else "")
+    units: List[Tuple[str, str, str]] = []
+    for region in regions:
+        for cid in final_targets:
+            for svc_name, should_run, modules in execution_plan:
+                if not should_run:
+                    continue
+                # Global (tenancy-wide) services: only run once, in the home region.
+                if svc_name in _GLOBAL_SERVICE_NAMES and len(regions) > 1 and region != home:
+                    continue
+                for module_name in modules:
+                    if _unit_key(region, cid, module_name) in skip_units:
+                        continue
+                    units.append((region, cid, module_name))
+    return units
+
+
+def _run_execution_plan_parallel(
+    session,
+    args: argparse.Namespace,
+    final_targets: List[str],
+    execution_plan: List[Tuple[str, bool, List[str]]],
+    *,
+    download_all: bool,
+    module_download_extras: Optional[Dict[str, List[str]]],
+    run_id: str,
+    threads: int,
+    skip_units: Set[str],
+    scan_regions: List[str],
+    home_region: Optional[str],
+    debug: bool = False,
+) -> None:
+    """Fan (region, compartment, service-module) units out across a bounded worker pool.
+
+    Each worker acts on its own compartment AND region via a ``CompartmentScopedSession``
+    view over the shared session, so concurrent units never fight over
+    ``session.compartment_id`` / region. DB writes are safe (the DataController serializes
+    every method on one process-wide lock). A single Ctrl+C sets the cooperative
+    cancel flag, the pool stops launching new units, and the resume token is
+    reprinted so the run can pick up exactly where it stopped.
+    """
+    units = _plan_units(final_targets, execution_plan, scan_regions, home_region, skip_units)
+    multi_region = len([r for r in (scan_regions or []) if r]) > 1
+
+    print(f"{UtilityTools.BRIGHT_CYAN}[*] enum_all run token: {run_id}{UtilityTools.RESET}")
+    if skip_units:
+        print(f"{UtilityTools.BRIGHT_CYAN}[*] Resuming: {len(skip_units)} unit(s) already complete, {len(units)} remaining.{UtilityTools.RESET}")
+    if not units:
+        print(f"{UtilityTools.GREEN}[+] enum_all: nothing left to run for token {run_id}.{UtilityTools.RESET}")
+        return
+    scope_word = "(region, compartment, service)" if multi_region else "(compartment, service)"
+    if multi_region:
+        print(f"{UtilityTools.YELLOW}[!] Multi-region: fanning out across {len([r for r in scan_regions if r])} region(s) "
+              f"({', '.join(r for r in scan_regions if r)}). Peak API calls scale by #regions.{UtilityTools.RESET}")
+    print(f"{UtilityTools.BRIGHT_CYAN}[*] Running {len(units)} {scope_word} unit(s) across {threads} worker(s).{UtilityTools.RESET}")
+    print(f"{UtilityTools.YELLOW}[!] Interrupt-safe: one Ctrl+C stops the pool; resume with  enum_all --parallel-services {threads} --resume {run_id}{UtilityTools.RESET}")
+
+    def _worker(unit: Tuple[str, str, str]):
+        region, cid, module_name = unit
+        if cancel_requested():
+            return None
+        scoped = CompartmentScopedSession(session, cid, region or None)
+        where = f"{cid}@{region}" if region else cid
+        UtilityTools._log_action("module", f"START enum_all {module_name} @ {where}", "N/A")
+        _ledger_mark(session, run_id, region, cid, module_name, "running")
+        try:
+            _run_other_module(
+                scoped,
+                _module_args_for_target(
+                    args,
+                    module_name,
+                    cid,
+                    debug=debug,
+                    download_all=download_all,
+                    module_download_extras=module_download_extras,
+                ),
+                module_name,
+            )
+            _ledger_mark(session, run_id, region, cid, module_name, "done")
+        except Exception as err:
+            # Record the failure (with a one-line summary) but don't sink the batch;
+            # the unit stays non-"done" so --resume re-runs it. KeyboardInterrupt is a
+            # BaseException, so one Ctrl+C still propagates and stops the pool.
+            _ledger_mark(session, run_id, region, cid, module_name, "failed", error=_component_error_summary(err))
+        finally:
+            UtilityTools._log_action("module", f"END enum_all {module_name} @ {where}", "N/A")
+        return None
+
+    try:
+        parallel_map(units, _worker, threads=threads, progress_label="enum_all", show_progress=True)
+    except KeyboardInterrupt:
+        request_cancel()
+
+    if cancel_requested():
+        print(f"{UtilityTools.YELLOW}[!] enum_all interrupted — resume with  enum_all --parallel-services {threads} --resume {run_id}{UtilityTools.RESET}")
+
+
 def _run_execution_plan(
     session,
     args: argparse.Namespace,
@@ -834,46 +1249,65 @@ def _run_execution_plan(
     *,
     download_all: bool,
     module_download_extras: Optional[Dict[str, List[str]]],
+    scan_regions: List[str],
+    home_region: Optional[str],
     debug: bool = False,
 ) -> None:
-    for cid in final_targets:
-        UtilityTools._log_action("module", f"START enum_all target {cid}", "N/A")
-        old = getattr(session, "compartment_id", None)
-        try:
-            session.compartment_id = cid
-            for svc_name, should_run, modules in execution_plan:
-                if not should_run:
-                    continue
-                UtilityTools.dlog(debug, "enum_all: running service group", service=svc_name, compartment_id=cid)
-                for module_name in modules:
-                    print(f"{UtilityTools.BRIGHT_CYAN}[*] Running {module_name} for {UtilityTools.condense_ocid(cid)}{UtilityTools.RESET}")
-                    _run_other_module(
-                        session,
-                        _module_args_for_target(
-                            args,
+    regions = [r for r in (scan_regions or []) if r] or [None]
+    multi_region = len(regions) > 1
+    home = home_region or (regions[0] if regions and regions[0] else None)
+    if multi_region:
+        print(f"{UtilityTools.YELLOW}[!] Multi-region: enumerating {len(regions)} region(s) "
+              f"({', '.join(str(r) for r in regions)}); peak API calls scale by #regions.{UtilityTools.RESET}")
+    for region in regions:
+        for cid in final_targets:
+            label = f"{cid}@{region}" if region else cid
+            UtilityTools._log_action("module", f"START enum_all target {label}", "N/A")
+            old_cid = getattr(session, "compartment_id", None)
+            old_region = getattr(session, "config_current_default_region", None)
+            try:
+                session.compartment_id = cid
+                if region:
+                    session.config_current_default_region = region
+                for svc_name, should_run, modules in execution_plan:
+                    if not should_run:
+                        continue
+                    # Global services run once, in the home region only.
+                    if svc_name in _GLOBAL_SERVICE_NAMES and multi_region and region != home:
+                        continue
+                    UtilityTools.dlog(debug, "enum_all: running service group", service=svc_name, compartment_id=cid, region=region)
+                    for module_name in modules:
+                        print(f"{UtilityTools.BRIGHT_CYAN}[*] Running {module_name} for {UtilityTools.condense_ocid(cid)}"
+                              f"{(' @ ' + region) if region else ''}{UtilityTools.RESET}")
+                        _run_other_module(
+                            session,
+                            _module_args_for_target(
+                                args,
+                                module_name,
+                                cid,
+                                debug=debug,
+                                download_all=download_all,
+                                module_download_extras=module_download_extras,
+                            ),
                             module_name,
-                            cid,
-                            debug=debug,
-                            download_all=download_all,
-                            module_download_extras=module_download_extras,
-                        ),
-                        module_name,
-                    )
-        finally:
-            session.compartment_id = old
-            UtilityTools._log_action("module", f"END enum_all target {cid}", "N/A")
+                        )
+            finally:
+                session.compartment_id = old_cid
+                if region:
+                    session.config_current_default_region = old_region
+                UtilityTools._log_action("module", f"END enum_all target {label}", "N/A")
 
 
 def _run_once_modules(session, args: argparse.Namespace, *, run_config_check: bool, run_opengraph: bool) -> None:
     if run_config_check:
-        UtilityTools._log_action("module", "START enum_config_check", "N/A")
-        _run_other_module(session, _module_args(args, "ocinferno.modules.everything.enumeration.enum_config_check"), "ocinferno.modules.everything.enumeration.enum_config_check")
-        UtilityTools._log_action("module", "END enum_config_check", "N/A")
+        UtilityTools._log_action("module", "START process_config_check", "N/A")
+        _run_other_module(session, _module_args(args, "ocinferno.modules.everything.processing.process_config_check"), "ocinferno.modules.everything.processing.process_config_check")
+        UtilityTools._log_action("module", "END process_config_check", "N/A")
 
     if run_opengraph:
-        UtilityTools._log_action("module", "START enum_oracle_cloud_hound_data", "N/A")
-        _run_other_module(session, _module_args(args, "ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data"), "ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data")
-        UtilityTools._log_action("module", "END enum_oracle_cloud_hound_data", "N/A")
+        UtilityTools._log_action("module", "START process_oracle_cloud_hound_data", "N/A")
+        _run_other_module(session, _module_args(args, "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data"), "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data")
+        UtilityTools._log_action("module", "END process_oracle_cloud_hound_data", "N/A")
 
 
 def _render_scan_summary(session, final_targets: List[str]) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, int]]]:
@@ -919,9 +1353,21 @@ def _render_scan_summary(session, final_targets: List[str]) -> Tuple[List[Dict[s
 # Main
 # =============================================================================
 
-def run_module(user_args, session, output_format=None):
+def run_module(user_args, session):
     args = _parse_args(user_args)
     debug = bool(getattr(session, "debug", False))
+
+    if getattr(args, "list_modules", False):
+        _print_module_tokens()
+        return 1
+
+    if getattr(args, "list_tokens", False):
+        _print_run_tokens(session)
+        return 1
+
+    parallel_services = max(1, int(getattr(args, "parallel_services", 1) or 1))
+    resume_token = getattr(args, "resume", None)
+    use_parallel = parallel_services > 1 or bool(resume_token)
 
     try:
         download_all, module_download_extras = _resolve_download_plan(args, debug=debug)
@@ -957,12 +1403,11 @@ def run_module(user_args, session, output_format=None):
         use_all_discovered=use_all_discovered,
         recursive_compartments=recursive_compartments,
         should_enum_comp=should_enum_comp,
-        save=bool(args.save),
         debug=debug,
     )
 
     try:
-        service_run_flags = _resolve_service_run_flags(args, any_once_flags=any_once_flags, debug=debug)
+        service_run_flags = _resolve_service_run_flags(args, any_once_flags=any_once_flags, should_enum_comp=should_enum_comp, debug=debug)
     except ValueError as e:
         print(f"{UtilityTools.RED}[X] enum_all: {e}{UtilityTools.RESET}")
         return 0
@@ -974,16 +1419,58 @@ def run_module(user_args, session, output_format=None):
         UtilityTools.dlog(debug, "enum_all: --comp only requested; stopping after enum_comp")
         return 1
 
+    # Region scope: default is the session's current region (today's behavior);
+    # --regions all | r1,r2 fans enumeration out across subscribed regions;
+    # --find-regions force-discovers + persists the subscription store, then scans all.
+    if bool(getattr(args, "find_regions", False)):
+        found = subscribed_regions(session, refresh=True)  # live fetch + persist store
+        print(f"{UtilityTools.BRIGHT_CYAN}[*] enum_all: discovered {len(found)} subscribed "
+              f"region(s): {', '.join(found) or '(none)'}{UtilityTools.RESET}")
+        scan_regions = resolve_regions(session, "all")
+    else:
+        scan_regions = resolve_regions(session, getattr(args, "regions", None))
+    home = home_region(session)
+    if len([r for r in scan_regions if r]) > 1:
+        UtilityTools.dlog(debug, "enum_all: multi-region scope", regions=scan_regions, home=home)
+
     execution_plan = _build_execution_plan(service_run_flags, debug=debug)
-    _run_execution_plan(
-        session,
-        args,
-        final_targets,
-        execution_plan,
-        download_all=download_all,
-        module_download_extras=module_download_extras,
-        debug=debug,
-    )
+    if use_parallel:
+        clear_cancel()
+        run_id = resume_token or _mint_run_token()
+        skip_units = _ledger_done_units(session, run_id) if resume_token else set()
+        try:
+            _run_execution_plan_parallel(
+                session,
+                args,
+                final_targets,
+                execution_plan,
+                download_all=download_all,
+                module_download_extras=module_download_extras,
+                run_id=run_id,
+                threads=parallel_services,
+                skip_units=skip_units,
+                scan_regions=scan_regions,
+                home_region=home,
+                debug=debug,
+            )
+        except KeyboardInterrupt:
+            request_cancel()
+            print(f"{UtilityTools.YELLOW}[!] enum_all interrupted — resume with  enum_all --parallel-services {parallel_services} --resume {run_id}{UtilityTools.RESET}")
+            return -1
+        if cancel_requested():
+            return -1
+    else:
+        _run_execution_plan(
+            session,
+            args,
+            final_targets,
+            execution_plan,
+            download_all=download_all,
+            module_download_extras=module_download_extras,
+            scan_regions=scan_regions,
+            home_region=home,
+            debug=debug,
+        )
 
     _run_once_modules(
         session,

@@ -1,14 +1,21 @@
-FROM python:3.13
+FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade pip && \
-    pip install --no-cache-dir -r /app/requirements.txt
-
 COPY . /app
 
-CMD ["python", "-m", "cli.main"]
+# Install the package itself (not just requirements.txt) so the console script
+# and packaged mappings/*.json resolve. Pass extras at build time, e.g.
+#   docker build --build-arg OCINFERNO_EXTRAS=excel .
+ARG OCINFERNO_EXTRAS=""
+RUN python -m pip install --upgrade pip && \
+    if [ -n "$OCINFERNO_EXTRAS" ]; then \
+      pip install --no-cache-dir ".[${OCINFERNO_EXTRAS}]"; \
+    else \
+      pip install --no-cache-dir .; \
+    fi
+
+ENTRYPOINT ["ocinferno"]

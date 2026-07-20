@@ -10,14 +10,18 @@ from pathlib import Path
 from tests.integration.opengraph_test_harness import IntegrationTestDataController, OpenGraphTestSession
 
 # Group-only tests still import the full OpenGraph module, which imports parser-backed
-# builders. Stub parser symbols so this test does not depend on oci_lexer_parser.
-if "oci_lexer_parser" not in sys.modules:
+# builders. Only stub oci_lexer_parser when the real package is genuinely unavailable --
+# unconditionally installing a fake module here would permanently shadow the real
+# oci_lexer_parser for the rest of the pytest session for any other test file.
+try:
+    import oci_lexer_parser  # noqa: F401
+except ImportError:
     parser_stub = types.ModuleType("oci_lexer_parser")
     parser_stub.parse_dynamic_group_matching_rules = lambda *_a, **_k: []
     parser_stub.parse_policy_statements = lambda *_a, **_k: []
     sys.modules["oci_lexer_parser"] = parser_stub
 
-from ocinferno.modules.opengraph.enumeration.enum_oracle_cloud_hound_data import run_module
+from ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data import run_module
 
 
 WORKSPACE_ID = 4242
@@ -371,7 +375,7 @@ class TestGroupMembershipOpenGraphModule(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self._tmp_path = Path(self._tmp.name)
         self.dc = IntegrationTestDataController(self._tmp_path)
-        self.assertTrue(self.dc.create_service_tables_from_yaml())
+        self.assertTrue(self.dc.create_service_tables_from_schema())
         self.session = OpenGraphTestSession(
             self.dc,
             workspace_id=WORKSPACE_ID,

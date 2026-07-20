@@ -9,6 +9,7 @@ from ocinferno.modules.identityclient.utilities.helpers import (
     IdentityIddAppsResource,
     IdentityIddAuthTokensResource,
     IdentityIddGrantsResource,
+    IdentityIddMfaSettingsResource,
     IdentityIddPasswordPoliciesResource,
     IdentityPrincipalsResource,
 )
@@ -29,6 +30,7 @@ COMPONENTS = [
     ("idd_auth_tokens", "idd_auth_tokens", "Enumerate identity domain auth tokens"),
     ("idd_grants", "idd_grants", "Enumerate identity domain grants"),
     ("idd_password_policies", "idd_password_policies", "Enumerate identity domain password policies"),
+    ("idd_mfa_settings", "idd_mfa_settings", "Enumerate identity domain MFA / authentication factor settings"),
 ]
 
 
@@ -42,16 +44,11 @@ CACHE_TABLES = {
     "idd_auth_tokens": ("identity_domain_user_auth_tokens", None),
     "idd_grants": ("identity_domain_grants", None),
     "idd_password_policies": ("identity_domain_password_policies", None),
+    "idd_mfa_settings": ("identity_domain_authentication_factor_settings", None),
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -96,6 +93,7 @@ def run_module(user_args, session):
         "idd_auth_tokens": IdentityIddAuthTokensResource(session=session),
         "idd_grants": IdentityIddGrantsResource(session=session),
         "idd_password_policies": IdentityIddPasswordPoliciesResource(session=session),
+        "idd_mfa_settings": IdentityIddMfaSettingsResource(session=session),
     }
 
     results = []
@@ -105,8 +103,7 @@ def run_module(user_args, session):
         try:
             results.append(resource_map[key].list(user_args=user_args))
         except Exception as err:
-            print(f"[*] enum_identity.{key}: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": key, "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component=key, module_name="enum_identity"))
 
     append_cached_component_counts(
         results=results,

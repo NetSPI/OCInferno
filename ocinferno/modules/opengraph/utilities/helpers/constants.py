@@ -12,9 +12,17 @@ NODE_TYPE_OCI_USER = "OCIUser"
 NODE_TYPE_OCI_GROUP = "OCIGroup"
 NODE_TYPE_OCI_DYNAMIC_GROUP = "OCIDynamicGroup"
 NODE_TYPE_OCI_GENERIC_RESOURCE = "OCIGenericResource"
+# A Management Agent install key: a portable bearer credential that lets its holder
+# register a NEW management agent (from ANY host) as a principal in the key's
+# compartment. If a dynamic group matches resource.type='managementagent' there, that
+# rogue agent joins the DG -> inherits its IAM policy grants. (See INSTALL_KEY_CAN_JOIN_DG.)
+NODE_TYPE_OCI_MANAGEMENT_AGENT_INSTALL_KEY = "OCIManagementAgentInstallKey"
 
 EDGE_TYPE_OCI_GROUP_MEMBER = "OCI_GROUP_MEMBER"
 EDGE_TYPE_OCI_DYNAMIC_GROUP_MEMBER = "OCI_DYNAMIC_GROUP_MEMBER"
+# A usable install key can enroll a rogue managementagent into a matching dynamic
+# group (mirrors INSTANCE_CAN_JOIN_DG for a launchable instance).
+EDGE_TYPE_OCI_INSTALL_KEY_CAN_JOIN_DG = "INSTALL_KEY_CAN_JOIN_DG"
 
 _RESOURCE_SCOPE_MAP_PATH = Path(__file__).resolve().parent / "data" / "resource_scope_map.json"
 _STATIC_CONSTANTS_PATH = Path(__file__).resolve().parent / "data" / "static_constants.json"

@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.download_budget import DownloadBudget
+from ocinferno.core.utils.enum_framework import nested_list_fn
 from ocinferno.core.utils.module_helpers import fill_missing_fields, unique_rows_by_id
 from ocinferno.modules.artifactregistry.utilities.helpers import (
     ArtifactRegistryArtifactsResource,
@@ -13,6 +15,7 @@ from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
+    run_standard_enum_component,
 )
 
 
@@ -28,13 +31,7 @@ CACHE_TABLES = {
 }
 
 
-def _component_error_summary(err: Exception) -> str:
-    status = getattr(err, "status", None)
-    code = getattr(err, "code", None)
-    msg = getattr(err, "message", None)
-    if status is not None or code is not None:
-        return f"status={status}, code={code}, message={msg or str(err)}"
-    return f"{type(err).__name__}: {err}"
+from ocinferno.core.utils.service_runtime import component_soft_skip_or_error
 
 
 def _parse_args(user_args):
@@ -45,6 +42,7 @@ def _parse_args(user_args):
         mode_group.add_argument("--all", action="store_true", help="Download all versions")
         mode_group.add_argument("--latest", action="store_true", help="Download latest version per artifact path")
         parser.add_argument("--out-dir", default="", help="Override download output directory")
+        parser.add_argument("--download-timeout", type=int, default=0, help="Per-download-type wall-clock cap in seconds (0 = unlimited)")
 
     return parse_wrapper_args(
         user_args=user_args,
@@ -59,6 +57,8 @@ def run_module(user_args, session):
     args, _ = _parse_args(user_args)
     compartment_id = getattr(session, "compartment_id", None)
 
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+
     component_order = [key for key, _suffix, _help in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
 
@@ -68,32 +68,14 @@ def run_module(user_args, session):
     artifacts_resource = ArtifactRegistryArtifactsResource(session=session)
 
     if selected.get("repositories", False):
-        try:
-            if not compartment_id:
-                raise ValueError("session.compartment_id is not set")
-            rows = repositories_resource.list(compartment_id=compartment_id) or []
-            rows = unique_rows_by_id([row for row in rows if isinstance(row, dict)])
-            for row in rows:
-                row.setdefault("compartment_id", compartment_id)
-
-            if args.get:
-                for row in rows:
-                    repository_id = row.get("id")
-                    if not repository_id:
-                        continue
-                    meta = repositories_resource.get(resource_id=repository_id) or {}
-                    fill_missing_fields(row, meta)
-
-            if rows:
-                UtilityTools.print_limited_table(rows, repositories_resource.COLUMNS)
-
-            if args.save:
-                repositories_resource.save(rows)
-
-            results.append({"ok": True, "repositories": len(rows), "saved": bool(args.save), "get": bool(args.get)})
-        except Exception as err:
-            print(f"[*] enum_artifactregistry.repositories: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "repositories", "error": _component_error_summary(err)})
+        results.append(run_standard_enum_component(
+            user_args=args, session=session, component_key="repositories",
+            list_rows=lambda cid: repositories_resource.list(compartment_id=cid),
+            get_row=lambda row: repositories_resource.get(resource_id=row.get("id")),
+            save_rows_fn=repositories_resource.save,
+            print_columns=repositories_resource.COLUMNS,
+            module_name="enum_artifactregistry",
+        ))
     if selected.get("artifacts", False):
         try:
             if not compartment_id:
@@ -106,17 +88,17 @@ def run_module(user_args, session):
                 repository_ids = [row.get("id") for row in repositories if isinstance(row, dict) and row.get("id")]
 
             wanted_path = (args.path or "").strip()
-            rows = []
-            for repository_id in repository_ids:
-                listed = artifacts_resource.list(compartment_id=compartment_id, repository_id=repository_id) or []
-                for row in listed:
-                    if not isinstance(row, dict):
-                        continue
-                    row.setdefault("repository_id", repository_id)
-                    row.setdefault("compartment_id", compartment_id)
-                    if wanted_path and (row.get("artifact_path") or "") != wanted_path:
-                        continue
-                    rows.append(row)
+            # repository_ids already resolved above (manual --repo-id or a live list); reuse it
+            # via manual_parent_ids so nested_list_fn only does the fan-out + stamp.
+            list_rows = nested_list_fn(
+                parent_resource_cls=ArtifactRegistryRepositoriesResource,
+                parent_id_field="repository_id",
+                manual_parent_ids=repository_ids,
+                child_takes_compartment=True,
+            )(session, args, artifacts_resource)
+            rows = list_rows(compartment_id)
+            if wanted_path:
+                rows = [row for row in rows if (row.get("artifact_path") or "") == wanted_path]
 
             rows = unique_rows_by_id(rows)
 
@@ -135,7 +117,10 @@ def run_module(user_args, session):
             failed = 0
             if args.download:
                 targets = rows if args.all else artifacts_resource.pick_latest_per_path(rows)
+                budget = DownloadBudget(session, label="artifact registry artifacts")
                 for row in targets:
+                    if budget.exceeded():  # per-type --download-timeout cap: stop and move on
+                        break
                     repository_id = row.get("repository_id") or ""
                     artifact_path = row.get("artifact_path") or ""
                     version = row.get("version") or ""
@@ -168,15 +153,14 @@ def run_module(user_args, session):
                     else:
                         failed += 1
 
-            if args.save:
-                artifacts_resource.save(rows)
+            artifacts_resource.save(rows)
 
             results.append(
                 {
                     "ok": True,
                     "repos": len(repository_ids),
                     "artifacts": len(rows),
-                    "saved": bool(args.save),
+                    "saved": True,
                     "get": bool(args.get),
                     "download": bool(args.download),
                     "all": bool(args.all),
@@ -189,8 +173,7 @@ def run_module(user_args, session):
                 }
             )
         except Exception as err:
-            print(f"[*] enum_artifactregistry.artifacts: skipped ({_component_error_summary(err)}).")
-            results.append({"ok": False, "component": "artifacts", "error": _component_error_summary(err)})
+            results.append(component_soft_skip_or_error(err, component="artifacts", module_name="enum_artifactregistry"))
 
     append_cached_component_counts(
         results=results,

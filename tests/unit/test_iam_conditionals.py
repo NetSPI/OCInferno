@@ -191,5 +191,65 @@ class TestIamConditionalsTargetCompartmentId(unittest.TestCase):
         self.assertEqual(set(delta.allowed_location_ids or set()), {"dev", "other"})
 
 
+class TestIamConditionalsTargetResourceCompartmentTag(unittest.TestCase):
+    """_compartment_tag_poststep must propagate an unresolved upstream delta (e.g.
+    _match_resources_across_tables returning unresolved=True for empty
+    ctx.location_ids) instead of collapsing it to a hard FALSE -- an AND-combinator
+    needs "cannot determine" here, not "definitely no match", or it silently
+    prunes an edge that should have surfaced as unresolved."""
+
+    def setUp(self):
+        self.engine = StatementConditionalsEngine(ctx=_Ctx(), session=_Session({}), debug=False)
+
+    def test_empty_location_ids_propagates_unresolved_not_hard_false(self):
+        ctx = EvalContext(
+            subjects=[],
+            verbs_l=set(),
+            perms=set(),
+            resource_tokens_l=set(),
+            location_ids=set(),
+        )
+        delta = self.engine._h_target_resource_compartment_tag(
+            var="target.resource.compartment.tag.team.env",
+            op="eq",
+            rhs_val="prod",
+            ctx=ctx,
+        )
+        self.assertEqual(delta.tri, BoolTri.UNKNOWN)
+        self.assertTrue(delta.unresolved)
+
+    def test_no_matching_compartments_is_still_a_resolved_false(self):
+        """A genuinely-resolved 'nothing matched' (non-empty location_ids, tag just
+        doesn't match anything) must remain a hard FALSE, not get reclassified as
+        unresolved -- only a truly unresolved upstream delta should propagate."""
+        session = _Session(
+            {
+                "resource_compartments": [
+                    {
+                        "id": "ocid1.compartment.oc1..devcomp",
+                        "defined_tags": '{"team": {"env": "dev"}}',
+                    }
+                ],
+            }
+        )
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = EvalContext(
+            subjects=[],
+            verbs_l=set(),
+            perms=set(),
+            resource_tokens_l=set(),
+            location_ids={"ocid1.compartment.oc1..devcomp"},
+            children_by_compartment_id={"ocid1.compartment.oc1..devcomp": set()},
+        )
+        delta = engine._h_target_resource_compartment_tag(
+            var="target.resource.compartment.tag.team.env",
+            op="eq",
+            rhs_val="prod",
+            ctx=ctx,
+        )
+        self.assertEqual(delta.tri, BoolTri.FALSE)
+        self.assertFalse(delta.unresolved)
+
+
 if __name__ == "__main__":
     unittest.main()

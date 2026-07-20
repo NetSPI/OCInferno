@@ -21,6 +21,10 @@ def test_enum_comp_get_root_failure_does_not_stop_listing(monkeypatch):
         def is_tenancy_root(root: str) -> bool:
             return root.startswith("ocid1.tenancy.")
 
+        def save_compartment(self, row):
+            # enum_comp now persists unconditionally; accept the call as a no-op.
+            calls["save_compartment"] = calls.get("save_compartment", 0) + 1
+
         def get_compartment(self, *, compartment_id: str):
             if compartment_id.startswith("ocid1.tenancy."):
                 raise RuntimeError("simulated get root failure")

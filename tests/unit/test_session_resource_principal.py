@@ -13,8 +13,15 @@ from unittest.mock import patch
 
 
 def _install_oci_stub() -> None:
-    if "oci" in sys.modules:
+    # Only stub when the real SDK is genuinely not installed -- unconditionally
+    # installing a fake module here would permanently shadow the real `oci` for
+    # the rest of the pytest session for any other test file that needs it
+    # (collection-order dependent).
+    try:
+        import oci  # noqa: F401
         return
+    except ImportError:
+        pass
 
     class _DynamicStub:
         def __init__(self, name: str = "stub"):
@@ -143,6 +150,7 @@ def _import_session_module():
 
 
 SESSION_MOD = _import_session_module()
+AUTH_MOD = importlib.import_module("ocinferno.core.auth")
 SessionUtility = SESSION_MOD.SessionUtility
 CredRecord = SESSION_MOD.CredRecord
 
@@ -206,7 +214,7 @@ class TestSessionResourcePrincipal(unittest.TestCase):
         }
 
         with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
-            with patch.object(SESSION_MOD, "SecurityTokenSigner", _FakeSigner):
+            with patch.object(AUTH_MOD, "SecurityTokenSigner", _FakeSigner):
                 rc = session.add_resource_profile_token("rp_inline", extra_args)
 
         self.assertEqual(rc, 1)
@@ -224,61 +232,42 @@ class TestSessionResourcePrincipal(unittest.TestCase):
         self.assertEqual(payload.get("rpst_content"), token)
         self.assertIn("private_pem_content", payload)
 
-    def test_add_resource_profile_token_accepts_filepath_with_token_and_key_files(self):
-        session = self._make_session()
-        tenancy = "ocid1.tenancy.oc1..fromfile"
-        token = _jwt_with_tenancy(tenancy)
+    def test_add_resource_profile_token_accepts_filepath_or_reference_file_alias(self):
+        # `reference_file` and `filepath` are pure aliases for the same kwarg
+        # (add_resource_profile_token treats them interchangeably).
+        for dict_key, credname, region in (
+            ("filepath", "rp_file", "us-ashburn-1"),
+            ("reference_file", "rp_ref_alias", "us-chicago-1"),
+        ):
+            with self.subTest(dict_key=dict_key):
+                session = self._make_session()
+                tenancy = f"ocid1.tenancy.oc1..{dict_key}"
+                token = _jwt_with_tenancy(tenancy)
 
-        with tempfile.TemporaryDirectory() as td:
-            base = Path(td)
-            token_file = base / "rpst.txt"
-            key_file = base / "rp_key.pem"
-            ref_file = base / "rp.conf"
+                with tempfile.TemporaryDirectory() as td:
+                    base = Path(td)
+                    token_file = base / "rpst.txt"
+                    key_file = base / "rp_key.pem"
+                    ref_file = base / "rp.conf"
 
-            token_file.write_text(token, encoding="utf-8")
-            key_file.write_text("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n", encoding="utf-8")
-            ref_file.write_text(
-                f"token_file={token_file}\nprivate_key_file={key_file}\nregion=us-ashburn-1\n",
-                encoding="utf-8",
-            )
+                    token_file.write_text(token, encoding="utf-8")
+                    key_file.write_text("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n", encoding="utf-8")
+                    ref_file.write_text(
+                        f"token_file={token_file}\nprivate_key_file={key_file}\nregion={region}\n",
+                        encoding="utf-8",
+                    )
 
-            with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
-                with patch.object(SESSION_MOD, "SecurityTokenSigner", _FakeSigner):
-                    rc = session.add_resource_profile_token("rp_file", {"filepath": str(ref_file)})
+                    with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
+                        with patch.object(AUTH_MOD, "SecurityTokenSigner", _FakeSigner):
+                            rc = session.add_resource_profile_token(credname, {dict_key: str(ref_file)})
 
-        self.assertEqual(rc, 1)
-        self.assertEqual(session.region, "us-ashburn-1")
-        self.assertEqual(session.tenant_id, tenancy)
-        stored = session.data_master.fetch_cred(11, "rp_file")
-        payload = json.loads(stored["session_creds"])
-        self.assertTrue(payload.get("rpst_file"))
-        self.assertTrue(payload.get("private_pem_file"))
-
-    def test_add_resource_profile_token_accepts_reference_file_alias(self):
-        session = self._make_session()
-        tenancy = "ocid1.tenancy.oc1..fromref"
-        token = _jwt_with_tenancy(tenancy)
-
-        with tempfile.TemporaryDirectory() as td:
-            base = Path(td)
-            token_file = base / "rpst.txt"
-            key_file = base / "rp_key.pem"
-            ref_file = base / "rp.conf"
-
-            token_file.write_text(token, encoding="utf-8")
-            key_file.write_text("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n", encoding="utf-8")
-            ref_file.write_text(
-                f"token_file={token_file}\nprivate_key_file={key_file}\nregion=us-chicago-1\n",
-                encoding="utf-8",
-            )
-
-            with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
-                with patch.object(SESSION_MOD, "SecurityTokenSigner", _FakeSigner):
-                    rc = session.add_resource_profile_token("rp_ref_alias", {"reference_file": str(ref_file)})
-
-        self.assertEqual(rc, 1)
-        self.assertEqual(session.region, "us-chicago-1")
-        self.assertEqual(session.tenant_id, tenancy)
+                self.assertEqual(rc, 1)
+                self.assertEqual(session.region, region)
+                self.assertEqual(session.tenant_id, tenancy)
+                stored = session.data_master.fetch_cred(11, credname)
+                payload = json.loads(stored["session_creds"])
+                self.assertTrue(payload.get("rpst_file"))
+                self.assertTrue(payload.get("private_pem_file"))
 
     def test_add_resource_profile_token_rejects_conflicting_reference_paths(self):
         session = self._make_session()
@@ -323,7 +312,7 @@ class TestSessionResourcePrincipal(unittest.TestCase):
             )
 
             with patch.object(SESSION_MOD.serialization, "load_pem_private_key", return_value=object()):
-                with patch.object(SESSION_MOD, "SecurityTokenSigner", _FakeSigner):
+                with patch.object(AUTH_MOD, "SecurityTokenSigner", _FakeSigner):
                     rc = session._load_resource_profile_from_record(rec, force_refresh=True)
 
         self.assertEqual(rc, 1)

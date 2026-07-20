@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 import re
 import shutil
 import textwrap
@@ -19,7 +20,29 @@ except ModuleNotFoundError:  # pragma: no cover - enables offline/local test run
                 return obj
 
     oci = _OciFallback()
-from prettytable import PrettyTable
+
+try:  # prettytable is an OPTIONAL extra; fall back to a plain-text table if absent.
+    from prettytable import PrettyTable
+except ImportError:  # pragma: no cover - exercised only when the extra isn't installed
+    PrettyTable = None
+
+
+def _plain_table(headers: "list[str]", rows: "list[list[str]]") -> str:
+    """Minimal ASCII table used when the optional ``prettytable`` isn't installed."""
+    cols = len(headers)
+    widths = [len(str(h)) for h in headers]
+    for r in rows:
+        for i in range(cols):
+            if i < len(r):
+                widths[i] = max(widths[i], len(str(r[i])))
+    line = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+    def _row(vals):
+        return "| " + " | ".join(str(vals[i] if i < len(vals) else "").ljust(widths[i]) for i in range(cols)) + " |"
+    out = [line, _row(headers), line]
+    out += [_row(r) for r in rows]
+    out.append(line)
+    return "\n".join(out)
+
 
 T = TypeVar("T")
 
@@ -47,12 +70,15 @@ class UtilityTools:
         "secret",
         "password",
         "passphrase",
+        "pass_phrase",
         "authorization",
         "api_key",
         "api-key",
         "apikey",
         "x-api-key",
         "private_key",
+        "key_content",
+        "pem_content",
         "security_token",
         "session_creds",
         "credential",
@@ -124,8 +150,8 @@ class UtilityTools:
         then shows only first/last N of the unique segment.
 
         Example:
-          ocid1.tenancy.oc1..aaaaaaaagmct...snxfsaa
-          -> ocid1.tenancy.oc1..aaa…saa
+          ocid1.tenancy.oc1..aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          -> ocid1.tenancy.oc1..aaa…aaa
         """
         if not isinstance(s, str):
             return ""
@@ -205,16 +231,33 @@ class UtilityTools:
     # -----------------------------
     # Module action logger
     # -----------------------------
+    # Per-workspace on-disk audit trail (set by SessionUtility to
+    # <output_root>/tool_logs/history_log.txt). Gives blue teamers a durable,
+    # timestamped record of every module run to correlate against OCI Audit.
+    _HISTORY_LOG_PATH: Optional[str] = None
+
+    @classmethod
+    def set_history_log_path(cls, path: Optional[str]) -> None:
+        cls._HISTORY_LOG_PATH = str(path) if path else None
+
     @staticmethod
     def _log_action(type_of_log: str, action: str, permission: str) -> None:
         """
-        Minimal action logger used by module runner(s).
+        Minimal action logger used by module runner(s). Prints to the console AND,
+        when a history-log path is configured, appends a timestamped line to disk.
         """
         ts = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-        print(
-            f"{UtilityTools.BRIGHT_BLACK}[LOG {ts}] {type_of_log}: {action} "
-            f"(perm={permission}){UtilityTools.RESET}"
-        )
+        line = f"[LOG {ts}] {type_of_log}: {action} (perm={permission})"
+        print(f"{UtilityTools.BRIGHT_BLACK}{line}{UtilityTools.RESET}")
+
+        path = UtilityTools._HISTORY_LOG_PATH
+        if path:
+            try:
+                os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+                with open(path, "a", encoding="utf-8") as fh:
+                    fh.write(line + "\n")
+            except Exception:
+                pass
 
     @staticmethod
     def progress_iter(
@@ -573,10 +616,6 @@ class UtilityTools:
             return
 
         headers = [f.capitalize() for f in fields]
-        table = PrettyTable()
-        table.field_names = headers
-        if align in ("l", "c", "r"):
-            table.align = align
 
         shown = rows[:max_rows]
         rendered_rows: list[list[str]] = []
@@ -600,6 +639,17 @@ class UtilityTools:
                 row_vals.append(s)
 
             rendered_rows.append(row_vals)
+
+        if PrettyTable is None:  # optional dep absent -> plain ASCII table
+            print(_plain_table(headers, rendered_rows))
+            if len(rows) > max_rows:
+                print(f"{UtilityTools.BRIGHT_BLACK}... ({len(rows) - max_rows} more rows){UtilityTools.RESET}")
+            return
+
+        table = PrettyTable()
+        table.field_names = headers
+        if align in ("l", "c", "r"):
+            table.align = align
 
         if auto_wrap_to_terminal and headers:
             try:

@@ -4,64 +4,53 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import oci
+from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase
 
 
 def build_tagging_client(session, region: Optional[str] = None):
     """Initialize an Identity client for tagging APIs with shared behavior."""
-    client = _init_client(
+    return _init_client(
         oci.identity.IdentityClient,
         session=session,
         service_name="Identity",
+        region=region,
     )
-    target_region = region or getattr(session, "region", None)
-    if target_region:
-        try:
-            client.base_client.set_region(target_region)
-        except Exception:
-            pass
-    return client
 
 
-class TaggingTagNamespacesResource:
+class TaggingTagNamespacesResource(OciListResource):
+    CLIENT_CLS = oci.identity.IdentityClient
+    SERVICE_NAME = "Identity"
     TABLE_NAME = "tag_namespaces"
+    LIST_METHOD = "list_tag_namespaces"
+    GET_METHOD = "get_tag_namespace"
+    GET_ID_PARAM = "tag_namespace_id"
     COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_tagging_client(session=session, region=region)
-
-    # List tag namespaces.
-    def list(self, *, compartment_id: str, include_subcompartments: bool = False) -> List[Dict[str, Any]]:
+    # ``include_subcompartments`` is unsupported on some older SDK builds; fall back
+    # to a plain compartment-scoped call rather than hard-failing (matches the
+    # pre-migration try/except behavior).
+    def _list_items(self, compartment_id: str, **kwargs):
+        include_subcompartments = bool(kwargs.pop("include_subcompartments", False))
         try:
-            resp = oci.pagination.list_call_get_all_results(
+            return oci.pagination.list_call_get_all_results(
                 self.client.list_tag_namespaces,
                 compartment_id=compartment_id,
-                include_subcompartments=bool(include_subcompartments),
+                include_subcompartments=include_subcompartments,
+                **kwargs,
             )
         except (TypeError, ValueError):
-            resp = oci.pagination.list_call_get_all_results(self.client.list_tag_namespaces, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
+            return oci.pagination.list_call_get_all_results(
+                self.client.list_tag_namespaces, compartment_id=compartment_id, **kwargs
+            )
 
-    # Get one tag namespace by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.client.get_tag_namespace(tag_namespace_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save namespace rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+    def list(self, *, compartment_id: str, include_subcompartments: bool = False, **kwargs) -> List[Dict[str, Any]]:
+        return super().list(compartment_id=compartment_id, include_subcompartments=include_subcompartments, **kwargs)
 
     # No binary download endpoint for namespace rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
 
-
-class TaggingTagDefinitionsResource:
+class TaggingTagDefinitionsResource(ResourceBase):
     TABLE_NAME = "tag_definitions"
     COLUMNS = ["id", "name", "tag_namespace_name", "lifecycle_state", "time_created"]
 
@@ -121,49 +110,35 @@ class TaggingTagDefinitionsResource:
                 pass
         return {}
 
-    # Save definition rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
-
     # No binary download endpoint for definition rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False
 
-
-class TaggingTagDefaultsResource:
+class TaggingTagDefaultsResource(OciListResource):
+    CLIENT_CLS = oci.identity.IdentityClient
+    SERVICE_NAME = "Identity"
     TABLE_NAME = "tag_defaults"
+    LIST_METHOD = "list_tag_defaults"
+    GET_METHOD = "get_tag_default"
+    GET_ID_PARAM = "tag_default_id"
     COLUMNS = ["id", "tag_definition_id", "lifecycle_state", "time_created"]
 
-    def __init__(self, session, region: Optional[str] = None):
-        self.session = session
-        self.client = build_tagging_client(session=session, region=region)
-
-    # List tag defaults.
-    def list(self, *, compartment_id: str, include_subcompartments: bool = False) -> List[Dict[str, Any]]:
+    # ``include_subcompartments`` is unsupported on some older SDK builds; fall back
+    # to a plain compartment-scoped call rather than hard-failing (matches the
+    # pre-migration try/except behavior).
+    def _list_items(self, compartment_id: str, **kwargs):
+        include_subcompartments = bool(kwargs.pop("include_subcompartments", False))
         try:
-            resp = oci.pagination.list_call_get_all_results(
+            return oci.pagination.list_call_get_all_results(
                 self.client.list_tag_defaults,
                 compartment_id=compartment_id,
-                include_subcompartments=bool(include_subcompartments),
+                include_subcompartments=include_subcompartments,
+                **kwargs,
             )
         except (TypeError, ValueError):
-            resp = oci.pagination.list_call_get_all_results(self.client.list_tag_defaults, compartment_id=compartment_id)
-        return oci.util.to_dict(resp.data) or []
+            return oci.pagination.list_call_get_all_results(
+                self.client.list_tag_defaults, compartment_id=compartment_id, **kwargs
+            )
 
-    # Get one tag default by OCID.
-    def get(self, *, resource_id: str) -> Dict[str, Any]:
-        try:
-            resp = self.client.get_tag_default(tag_default_id=resource_id)
-        except Exception:
-            return {}
-        return oci.util.to_dict(resp.data) or {}
-
-    # Save default rows.
-    def save(self, rows: List[Dict[str, Any]]) -> None:
-        self.session.save_resources(rows or [], self.TABLE_NAME)
+    def list(self, *, compartment_id: str, include_subcompartments: bool = False, **kwargs) -> List[Dict[str, Any]]:
+        return super().list(compartment_id=compartment_id, include_subcompartments=include_subcompartments, **kwargs)
 
     # No binary download endpoint for default rows.
-    def download(self, *, resource_id: str, out_path: str) -> bool:  # pragma: no cover - placeholder
-        _ = (resource_id, out_path)
-        return False

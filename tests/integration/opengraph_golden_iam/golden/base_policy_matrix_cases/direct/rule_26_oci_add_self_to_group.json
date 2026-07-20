@@ -37,10 +37,12 @@
         },
         "kind": "OCI_ADD_SELF_TO_GROUP",
         "properties": {
+          "authz_source": "OCI IAM policy permission (GROUP_UPDATE)",
           "derived_from_group_principal": true,
           "derived_shortcut": true,
           "description": "Derived from raw IAM edges: user can update self and update/manage groups in this location, so self-add/group-membership placement is possible for reachable group targets.",
           "edge_category": "PERMISSION",
+          "example_command": "modules run exploit_add_self_to_group --group-ocid groups@ocid1.compartment.oc1..app --self",
           "has_direct": true,
           "has_impossible_conditionals": false,
           "has_inherited": false,

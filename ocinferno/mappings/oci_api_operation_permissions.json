@@ -1,0 +1,2413 @@
+{
+  "schema_version": 1,
+  "source": "OCI policy reference (per-service 'Permissions Required for Each API Operation' tables)",
+  "generated": "2026-07-11",
+  "notes": [
+    "Maps an OCI SDK operation name (BaseClient.call_api operation_name) to the IAM permission(s) that a SUCCESSFUL call implies the caller holds.",
+    "Only permissions the docs explicitly list are recorded. Where an operation lists multiple permissions, ALL are required for success, so a 2xx response implies the caller holds ALL of them.",
+    "Some conditional permissions (e.g. KEY_DECRYPT only when a customer-managed key is used) are captured under 'conditional_permissions' and MUST NOT be recorded from a plain success -- they are informational only.",
+    "'operations' is a flat map keyed by operation name. This is safe for enumeration ops whose names are globally unique in the OCI SDK (ListInstances, ListBuckets, ListVaults, ...).",
+    "'ambiguous_operations' holds generic operation names that recur across services with DIFFERENT permissions (ListWorkRequests, GetWorkRequest, ListCertificates, ListShapes, ListPolicies, ListProtocols). These MUST be disambiguated by service before recording -- do NOT record them from the flat map."
+  ],
+  "sources": {
+    "core": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/corepolicyreference_topic-Permissions_Required_for_Each_API_Operation.htm",
+    "identity": "https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/iampolicyreference.htm",
+    "objectstorage": "https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/objectstoragepolicyreference.htm",
+    "vault_kms": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/keypolicyreference.htm",
+    "dns": "https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/dnspolicyreference.htm",
+    "functions": "https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/functionspolicyreference.htm",
+    "kubernetes": "https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/contengpolicyreference.htm",
+    "filestorage": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/filestoragepolicyreference.htm",
+    "logging": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/loggingpolicyreference.htm",
+    "containerregistry": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/registrypolicyreference.htm",
+    "notifications": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/notificationpolicyreference.htm",
+    "resourcemanager": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/resourcemanagerpolicyreference.htm",
+    "apigateway": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/apigatewaypolicyreference.htm",
+    "email": "https://docs.oracle.com/en-us/iaas/Content/Identity/policyreference/emailpolicyreference.htm",
+    "loadbalancer": "https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/lbpolicyreference.htm"
+  },
+  "operations": {
+    "__core_compute": "----- CORE: Compute -----",
+    "ListInstances": {
+      "permissions": [
+        "INSTANCE_READ"
+      ],
+      "resource_type": "instance-family",
+      "service": "core"
+    },
+    "GetInstance": {
+      "permissions": [
+        "INSTANCE_READ"
+      ],
+      "resource_type": "instance-family",
+      "service": "core"
+    },
+    "ListInstanceDevices": {
+      "permissions": [
+        "INSTANCE_READ"
+      ],
+      "resource_type": "instance-family",
+      "service": "core"
+    },
+    "GetInstanceMaintenanceReboot": {
+      "permissions": [
+        "INSTANCE_READ"
+      ],
+      "resource_type": "instance-family",
+      "service": "core"
+    },
+    "ListShapes": {
+      "permissions": [
+        "INSTANCE_INSPECT"
+      ],
+      "resource_type": "instance-family",
+      "service": "core",
+      "note": "core-services ListShapes; NOT the load-balancer ListShapes"
+    },
+    "ListImages": {
+      "permissions": [
+        "INSTANCE_IMAGE_INSPECT"
+      ],
+      "resource_type": "instance-family",
+      "service": "core"
+    },
+    "GetImage": {
+      "permissions": [
+        "INSTANCE_IMAGE_INSPECT"
+      ],
+      "resource_type": "instance-family",
+      "service": "core"
+    },
+    "ListInstanceConsoleConnections": {
+      "permissions": [
+        "INSTANCE_CONSOLE_CONNECTION_INSPECT",
+        "INSTANCE_INSPECT",
+        "INSTANCE_READ"
+      ],
+      "resource_type": "console-connection",
+      "service": "core"
+    },
+    "GetInstanceConsoleConnection": {
+      "permissions": [
+        "INSTANCE_CONSOLE_CONNECTION_READ",
+        "INSTANCE_READ"
+      ],
+      "resource_type": "console-connection",
+      "service": "core"
+    },
+    "ListConsoleHistories": {
+      "permissions": [
+        "CONSOLE_HISTORY_READ",
+        "INSTANCE_INSPECT"
+      ],
+      "resource_type": "console-history",
+      "service": "core"
+    },
+    "GetConsoleHistory": {
+      "permissions": [
+        "CONSOLE_HISTORY_READ",
+        "INSTANCE_INSPECT"
+      ],
+      "resource_type": "console-history",
+      "service": "core"
+    },
+    "ShowConsoleHistoryData": {
+      "permissions": [
+        "CONSOLE_HISTORY_READ",
+        "INSTANCE_READ",
+        "INSTANCE_IMAGE_READ"
+      ],
+      "resource_type": "console-history",
+      "service": "core"
+    },
+    "ListInstanceConfigurations": {
+      "permissions": [
+        "INSTANCE_CONFIGURATION_INSPECT"
+      ],
+      "resource_type": "instance-configuration",
+      "service": "core"
+    },
+    "GetInstanceConfiguration": {
+      "permissions": [
+        "INSTANCE_CONFIGURATION_READ"
+      ],
+      "resource_type": "instance-configuration",
+      "service": "core"
+    },
+    "ListInstancePools": {
+      "permissions": [
+        "INSTANCE_POOL_INSPECT"
+      ],
+      "resource_type": "instance-pool",
+      "service": "core"
+    },
+    "GetInstancePool": {
+      "permissions": [
+        "INSTANCE_POOL_READ"
+      ],
+      "resource_type": "instance-pool",
+      "service": "core"
+    },
+    "ListInstancePoolInstances": {
+      "permissions": [
+        "INSTANCE_POOL_READ"
+      ],
+      "resource_type": "instance-pool",
+      "service": "core"
+    },
+    "ListDedicatedVmHosts": {
+      "permissions": [
+        "DEDICATED_VM_HOST_INSPECT"
+      ],
+      "resource_type": "dedicated-vm-host",
+      "service": "core"
+    },
+    "GetDedicatedVmHost": {
+      "permissions": [
+        "DEDICATED_VM_HOST_READ"
+      ],
+      "resource_type": "dedicated-vm-host",
+      "service": "core"
+    },
+    "ListDedicatedVmHostInstances": {
+      "permissions": [
+        "DEDICATED_VM_HOST_READ"
+      ],
+      "resource_type": "dedicated-vm-host",
+      "service": "core"
+    },
+    "ListComputeClusters": {
+      "permissions": [
+        "COMPUTE_CLUSTER_INSPECT"
+      ],
+      "resource_type": "compute-cluster",
+      "service": "core"
+    },
+    "GetComputeCluster": {
+      "permissions": [
+        "COMPUTE_CLUSTER_READ"
+      ],
+      "resource_type": "compute-cluster",
+      "service": "core"
+    },
+    "ListComputeCapacityReservations": {
+      "permissions": [
+        "CAPACITY_RESERVATION_INSPECT"
+      ],
+      "resource_type": "compute-capacity-reservation",
+      "service": "core"
+    },
+    "GetComputeCapacityReservation": {
+      "permissions": [
+        "CAPACITY_RESERVATION_READ"
+      ],
+      "resource_type": "compute-capacity-reservation",
+      "service": "core"
+    },
+    "ListComputeImageCapabilitySchemas": {
+      "permissions": [
+        "COMPUTE_IMAGE_CAPABILITY_SCHEMA_INSPECT"
+      ],
+      "resource_type": "compute-image-capability-schema",
+      "service": "core"
+    },
+    "GetComputeImageCapabilitySchema": {
+      "permissions": [
+        "COMPUTE_IMAGE_CAPABILITY_SCHEMA_READ"
+      ],
+      "resource_type": "compute-image-capability-schema",
+      "service": "core"
+    },
+    "__core_instance_agent": "----- CORE: Oracle Cloud Agent (instance-agent) -----",
+    "ListInstanceAgentCommands": {
+      "permissions": [
+        "INSTANCE_AGENT_COMMAND_INSPECT"
+      ],
+      "resource_type": "instance-agent-command",
+      "service": "core"
+    },
+    "GetInstanceAgentCommand": {
+      "permissions": [
+        "INSTANCE_AGENT_COMMAND_READ"
+      ],
+      "resource_type": "instance-agent-command",
+      "service": "core"
+    },
+    "ListInstanceAgentCommandExecutions": {
+      "permissions": [
+        "INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT"
+      ],
+      "resource_type": "instance-agent-command",
+      "service": "core"
+    },
+    "GetInstanceAgentCommandExecution": {
+      "permissions": [
+        "INSTANCE_AGENT_COMMAND_EXECUTION_INSPECT"
+      ],
+      "resource_type": "instance-agent-command",
+      "service": "core"
+    },
+    "ListInstanceAgentPlugins": {
+      "permissions": [
+        "INSTANCE_AGENT_PLUGIN_INSPECT"
+      ],
+      "resource_type": "instance-agent-plugin",
+      "service": "core"
+    },
+    "GetInstanceAgentPlugin": {
+      "permissions": [
+        "INSTANCE_AGENT_PLUGIN_READ"
+      ],
+      "resource_type": "instance-agent-plugin",
+      "service": "core"
+    },
+    "ListInstanceagentAvailablePlugins": {
+      "permissions": [
+        "INSTANCE_AGENT_PLUGIN_INSPECT"
+      ],
+      "resource_type": "instance-agent-plugin",
+      "service": "core"
+    },
+    "__core_block_storage": "----- CORE: Block Storage -----",
+    "ListVolumes": {
+      "permissions": [
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "volume-family",
+      "service": "core"
+    },
+    "GetVolume": {
+      "permissions": [
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "volume-family",
+      "service": "core"
+    },
+    "ListVolumeAttachments": {
+      "permissions": [
+        "VOLUME_ATTACHMENT_INSPECT",
+        "VOLUME_INSPECT",
+        "INSTANCE_INSPECT"
+      ],
+      "resource_type": "volume-attachment",
+      "service": "core"
+    },
+    "GetVolumeAttachment": {
+      "permissions": [
+        "VOLUME_ATTACHMENT_INSPECT",
+        "INSTANCE_INSPECT"
+      ],
+      "resource_type": "volume-attachment",
+      "service": "core"
+    },
+    "ListVolumeBackups": {
+      "permissions": [
+        "VOLUME_BACKUP_INSPECT",
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "volume-backup",
+      "service": "core"
+    },
+    "GetVolumeBackup": {
+      "permissions": [
+        "VOLUME_BACKUP_INSPECT",
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "volume-backup",
+      "service": "core"
+    },
+    "ListBootVolumes": {
+      "permissions": [
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "volume-family",
+      "service": "core"
+    },
+    "GetBootVolume": {
+      "permissions": [
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "volume-family",
+      "service": "core"
+    },
+    "ListBootVolumeBackups": {
+      "permissions": [
+        "BOOT_VOLUME_BACKUP_INSPECT",
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "boot-volume-backup",
+      "service": "core"
+    },
+    "GetBootVolumeBackup": {
+      "permissions": [
+        "BOOT_VOLUME_BACKUP_INSPECT",
+        "VOLUME_INSPECT"
+      ],
+      "resource_type": "boot-volume-backup",
+      "service": "core"
+    },
+    "ListVolumeGroups": {
+      "permissions": [
+        "VOLUME_GROUP_INSPECT"
+      ],
+      "resource_type": "volume-group",
+      "service": "core"
+    },
+    "GetVolumeGroup": {
+      "permissions": [
+        "VOLUME_GROUP_INSPECT"
+      ],
+      "resource_type": "volume-group",
+      "service": "core"
+    },
+    "ListVolumeGroupBackups": {
+      "permissions": [
+        "VOLUME_GROUP_BACKUP_INSPECT"
+      ],
+      "resource_type": "volume-group-backup",
+      "service": "core"
+    },
+    "GetVolumeGroupBackup": {
+      "permissions": [
+        "VOLUME_GROUP_BACKUP_INSPECT"
+      ],
+      "resource_type": "volume-group-backup",
+      "service": "core"
+    },
+    "ListVolumeBackupPolicies": {
+      "permissions": [
+        "BACKUP_POLICIES_INSPECT"
+      ],
+      "resource_type": "backup-policy",
+      "service": "core"
+    },
+    "GetVolumeBackupPolicy": {
+      "permissions": [
+        "BACKUP_POLICIES_INSPECT"
+      ],
+      "resource_type": "backup-policy",
+      "service": "core"
+    },
+    "GetVolumeBackupPolicyAssignment": {
+      "permissions": [
+        "BACKUP_POLICY_ASSIGNMENT_INSPECT"
+      ],
+      "resource_type": "backup-policy-assignment",
+      "service": "core"
+    },
+    "__core_networking": "----- CORE: Networking -----",
+    "ListVcns": {
+      "permissions": [
+        "VCN_READ"
+      ],
+      "resource_type": "vcn",
+      "service": "core"
+    },
+    "GetVcn": {
+      "permissions": [
+        "VCN_READ"
+      ],
+      "resource_type": "vcn",
+      "service": "core"
+    },
+    "ListSubnets": {
+      "permissions": [
+        "SUBNET_READ"
+      ],
+      "resource_type": "subnet",
+      "service": "core"
+    },
+    "GetSubnet": {
+      "permissions": [
+        "SUBNET_READ"
+      ],
+      "resource_type": "subnet",
+      "service": "core"
+    },
+    "ListRouteTables": {
+      "permissions": [
+        "ROUTE_TABLE_READ"
+      ],
+      "resource_type": "route-table",
+      "service": "core"
+    },
+    "GetRouteTable": {
+      "permissions": [
+        "ROUTE_TABLE_READ"
+      ],
+      "resource_type": "route-table",
+      "service": "core"
+    },
+    "ListSecurityLists": {
+      "permissions": [
+        "SECURITY_LIST_READ"
+      ],
+      "resource_type": "security-list",
+      "service": "core"
+    },
+    "GetSecurityList": {
+      "permissions": [
+        "SECURITY_LIST_READ"
+      ],
+      "resource_type": "security-list",
+      "service": "core"
+    },
+    "ListNetworkSecurityGroups": {
+      "permissions": [
+        "NETWORK_SECURITY_GROUP_READ"
+      ],
+      "resource_type": "network-security-group",
+      "service": "core"
+    },
+    "GetNetworkSecurityGroup": {
+      "permissions": [
+        "NETWORK_SECURITY_GROUP_READ"
+      ],
+      "resource_type": "network-security-group",
+      "service": "core"
+    },
+    "ListNetworkSecurityGroupSecurityRules": {
+      "permissions": [
+        "NETWORK_SECURITY_GROUP_LIST_SECURITY_RULES"
+      ],
+      "resource_type": "network-security-group",
+      "service": "core"
+    },
+    "ListDhcpOptions": {
+      "permissions": [
+        "DHCP_READ"
+      ],
+      "resource_type": "dhcp-options",
+      "service": "core"
+    },
+    "GetDhcpOptions": {
+      "permissions": [
+        "DHCP_READ"
+      ],
+      "resource_type": "dhcp-options",
+      "service": "core"
+    },
+    "ListInternetGateways": {
+      "permissions": [
+        "INTERNET_GATEWAY_READ"
+      ],
+      "resource_type": "internet-gateway",
+      "service": "core"
+    },
+    "GetInternetGateway": {
+      "permissions": [
+        "INTERNET_GATEWAY_READ"
+      ],
+      "resource_type": "internet-gateway",
+      "service": "core"
+    },
+    "ListNatGateways": {
+      "permissions": [
+        "NAT_GATEWAY_READ"
+      ],
+      "resource_type": "nat-gateway",
+      "service": "core"
+    },
+    "GetNatGateway": {
+      "permissions": [
+        "NAT_GATEWAY_READ"
+      ],
+      "resource_type": "nat-gateway",
+      "service": "core"
+    },
+    "ListServiceGateways": {
+      "permissions": [
+        "SERVICE_GATEWAY_READ"
+      ],
+      "resource_type": "service-gateway",
+      "service": "core"
+    },
+    "GetServiceGateway": {
+      "permissions": [
+        "SERVICE_GATEWAY_READ"
+      ],
+      "resource_type": "service-gateway",
+      "service": "core"
+    },
+    "ListLocalPeeringGateways": {
+      "permissions": [
+        "LOCAL_PEERING_GATEWAY_READ"
+      ],
+      "resource_type": "local-peering-gateway",
+      "service": "core"
+    },
+    "GetLocalPeeringGateway": {
+      "permissions": [
+        "LOCAL_PEERING_GATEWAY_READ"
+      ],
+      "resource_type": "local-peering-gateway",
+      "service": "core"
+    },
+    "ListRemotePeeringConnections": {
+      "permissions": [
+        "REMOTE_PEERING_CONNECTION_READ"
+      ],
+      "resource_type": "remote-peering-connection",
+      "service": "core"
+    },
+    "GetRemotePeeringConnection": {
+      "permissions": [
+        "REMOTE_PEERING_CONNECTION_READ"
+      ],
+      "resource_type": "remote-peering-connection",
+      "service": "core"
+    },
+    "ListDrgs": {
+      "permissions": [
+        "DRG_READ"
+      ],
+      "resource_type": "drg",
+      "service": "core"
+    },
+    "GetDrg": {
+      "permissions": [
+        "DRG_READ"
+      ],
+      "resource_type": "drg",
+      "service": "core"
+    },
+    "ListDrgAttachments": {
+      "permissions": [
+        "DRG_ATTACHMENT_READ"
+      ],
+      "resource_type": "drg-attachment",
+      "service": "core"
+    },
+    "GetDrgAttachment": {
+      "permissions": [
+        "DRG_ATTACHMENT_READ"
+      ],
+      "resource_type": "drg-attachment",
+      "service": "core"
+    },
+    "ListDrgRouteTables": {
+      "permissions": [
+        "DRG_ROUTE_TABLE_READ"
+      ],
+      "resource_type": "drg-route-table",
+      "service": "core"
+    },
+    "GetDrgRouteTable": {
+      "permissions": [
+        "DRG_ROUTE_TABLE_READ"
+      ],
+      "resource_type": "drg-route-table",
+      "service": "core"
+    },
+    "ListDrgRouteRules": {
+      "permissions": [
+        "DRG_ROUTE_RULE_READ"
+      ],
+      "resource_type": "drg-route-rule",
+      "service": "core"
+    },
+    "ListDrgRouteDistributions": {
+      "permissions": [
+        "DRG_ROUTE_DISTRIBUTION_READ"
+      ],
+      "resource_type": "drg-route-distribution",
+      "service": "core"
+    },
+    "GetDrgRouteDistribution": {
+      "permissions": [
+        "DRG_ROUTE_DISTRIBUTION_READ"
+      ],
+      "resource_type": "drg-route-distribution",
+      "service": "core"
+    },
+    "ListCpes": {
+      "permissions": [
+        "CPE_READ"
+      ],
+      "resource_type": "cpe",
+      "service": "core"
+    },
+    "GetCpe": {
+      "permissions": [
+        "CPE_READ"
+      ],
+      "resource_type": "cpe",
+      "service": "core"
+    },
+    "ListIPSecConnections": {
+      "permissions": [
+        "IPSEC_CONNECTION_READ"
+      ],
+      "resource_type": "ipsec-connection",
+      "service": "core"
+    },
+    "GetIPSecConnection": {
+      "permissions": [
+        "IPSEC_CONNECTION_READ"
+      ],
+      "resource_type": "ipsec-connection",
+      "service": "core"
+    },
+    "ListIPSecConnectionTunnels": {
+      "permissions": [
+        "IPSEC_CONNECTION_READ"
+      ],
+      "resource_type": "ipsec-connection",
+      "service": "core"
+    },
+    "GetIPSecConnectionTunnel": {
+      "permissions": [
+        "IPSEC_CONNECTION_READ"
+      ],
+      "resource_type": "ipsec-connection",
+      "service": "core"
+    },
+    "ListVirtualCircuits": {
+      "permissions": [
+        "VIRTUAL_CIRCUIT_READ"
+      ],
+      "resource_type": "virtual-circuit",
+      "service": "core"
+    },
+    "GetVirtualCircuit": {
+      "permissions": [
+        "VIRTUAL_CIRCUIT_READ"
+      ],
+      "resource_type": "virtual-circuit",
+      "service": "core"
+    },
+    "ListCrossConnects": {
+      "permissions": [
+        "CROSS_CONNECT_READ"
+      ],
+      "resource_type": "cross-connect",
+      "service": "core"
+    },
+    "GetCrossConnect": {
+      "permissions": [
+        "CROSS_CONNECT_READ"
+      ],
+      "resource_type": "cross-connect",
+      "service": "core"
+    },
+    "ListCrossConnectGroups": {
+      "permissions": [
+        "CROSS_CONNECT_GROUP_READ"
+      ],
+      "resource_type": "cross-connect-group",
+      "service": "core"
+    },
+    "GetCrossConnectGroup": {
+      "permissions": [
+        "CROSS_CONNECT_GROUP_READ"
+      ],
+      "resource_type": "cross-connect-group",
+      "service": "core"
+    },
+    "ListVlans": {
+      "permissions": [
+        "VLAN_READ"
+      ],
+      "resource_type": "vlan",
+      "service": "core"
+    },
+    "GetVlan": {
+      "permissions": [
+        "VLAN_READ"
+      ],
+      "resource_type": "vlan",
+      "service": "core"
+    },
+    "ListVtaps": {
+      "permissions": [
+        "VTAP_LIST"
+      ],
+      "resource_type": "vtap",
+      "service": "core"
+    },
+    "GetVtap": {
+      "permissions": [
+        "VTAP_READ"
+      ],
+      "resource_type": "vtap",
+      "service": "core"
+    },
+    "ListCaptureFilters": {
+      "permissions": [
+        "CAPTURE_FILTER_LIST"
+      ],
+      "resource_type": "capture-filter",
+      "service": "core"
+    },
+    "GetCaptureFilter": {
+      "permissions": [
+        "CAPTURE_FILTER_READ"
+      ],
+      "resource_type": "capture-filter",
+      "service": "core"
+    },
+    "ListPrivateIps": {
+      "permissions": [
+        "PRIVATE_IP_READ"
+      ],
+      "resource_type": "private-ip",
+      "service": "core"
+    },
+    "GetPrivateIp": {
+      "permissions": [
+        "PRIVATE_IP_READ"
+      ],
+      "resource_type": "private-ip",
+      "service": "core"
+    },
+    "ListPublicIps": {
+      "permissions": [
+        "PUBLIC_IP_READ"
+      ],
+      "resource_type": "public-ip",
+      "service": "core",
+      "note": "reserved public IPs; ephemeral use PRIVATE_IP_READ"
+    },
+    "GetPublicIp": {
+      "permissions": [
+        "PUBLIC_IP_READ"
+      ],
+      "resource_type": "public-ip",
+      "service": "core"
+    },
+    "ListIpv6s": {
+      "permissions": [
+        "IPV6_READ"
+      ],
+      "resource_type": "ipv6",
+      "service": "core"
+    },
+    "GetIpv6": {
+      "permissions": [
+        "IPV6_READ"
+      ],
+      "resource_type": "ipv6",
+      "service": "core"
+    },
+    "GetVnic": {
+      "permissions": [
+        "VNIC_READ"
+      ],
+      "resource_type": "vnic",
+      "service": "core"
+    },
+    "ListVnicAttachments": {
+      "permissions": [
+        "VNIC_ATTACHMENT_READ",
+        "INSTANCE_INSPECT"
+      ],
+      "resource_type": "vnic-attachment",
+      "service": "core"
+    },
+    "GetVnicAttachment": {
+      "permissions": [
+        "VNIC_ATTACHMENT_READ"
+      ],
+      "resource_type": "vnic-attachment",
+      "service": "core"
+    },
+    "ListIpInventory": {
+      "permissions": [
+        "IPAM_READ"
+      ],
+      "resource_type": "ipam",
+      "service": "core"
+    },
+    "__identity": "----- IDENTITY / IAM -----",
+    "ListUsers": {
+      "permissions": [
+        "USER_INSPECT"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "GetUser": {
+      "permissions": [
+        "USER_INSPECT"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListApiKeys": {
+      "permissions": [
+        "USER_READ"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListAuthTokens": {
+      "permissions": [
+        "USER_READ"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListSwiftPasswords": {
+      "permissions": [
+        "USER_READ"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListCustomerSecretKeys": {
+      "permissions": [
+        "USER_READ"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListOAuthClientCredentials": {
+      "permissions": [
+        "USER_READ"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListMfaTotpDevices": {
+      "permissions": [
+        "USER_READ"
+      ],
+      "resource_type": "users",
+      "service": "identity"
+    },
+    "ListGroups": {
+      "permissions": [
+        "GROUP_INSPECT"
+      ],
+      "resource_type": "groups",
+      "service": "identity"
+    },
+    "GetGroup": {
+      "permissions": [
+        "GROUP_INSPECT"
+      ],
+      "resource_type": "groups",
+      "service": "identity"
+    },
+    "ListUserGroupMemberships": {
+      "permissions": [
+        "GROUP_INSPECT",
+        "USER_INSPECT"
+      ],
+      "resource_type": "groups",
+      "service": "identity"
+    },
+    "GetUserGroupMembership": {
+      "permissions": [
+        "USER_INSPECT",
+        "GROUP_INSPECT"
+      ],
+      "resource_type": "groups",
+      "service": "identity"
+    },
+    "ListDynamicGroups": {
+      "permissions": [
+        "DYNAMIC_GROUP_INSPECT"
+      ],
+      "resource_type": "dynamic-groups",
+      "service": "identity"
+    },
+    "GetDynamicGroup": {
+      "permissions": [
+        "DYNAMIC_GROUP_INSPECT"
+      ],
+      "resource_type": "dynamic-groups",
+      "service": "identity"
+    },
+    "ListPolicies": {
+      "permissions": [
+        "POLICY_READ"
+      ],
+      "resource_type": "policies",
+      "service": "identity",
+      "note": "identity ListPolicies; NOT the load-balancer ListPolicies"
+    },
+    "GetPolicy": {
+      "permissions": [
+        "POLICY_READ"
+      ],
+      "resource_type": "policies",
+      "service": "identity"
+    },
+    "ListCompartments": {
+      "permissions": [
+        "COMPARTMENT_INSPECT"
+      ],
+      "resource_type": "compartments",
+      "service": "identity"
+    },
+    "GetCompartment": {
+      "permissions": [
+        "COMPARTMENT_INSPECT"
+      ],
+      "resource_type": "compartments",
+      "service": "identity"
+    },
+    "ListAvailabilityDomains": {
+      "permissions": [
+        "COMPARTMENT_INSPECT"
+      ],
+      "resource_type": "compartments",
+      "service": "identity"
+    },
+    "ListFaultDomains": {
+      "permissions": [
+        "COMPARTMENT_INSPECT"
+      ],
+      "resource_type": "compartments",
+      "service": "identity"
+    },
+    "GetTenancy": {
+      "permissions": [
+        "TENANCY_INSPECT"
+      ],
+      "resource_type": "tenancies",
+      "service": "identity"
+    },
+    "ListRegionSubscriptions": {
+      "permissions": [
+        "TENANCY_INSPECT"
+      ],
+      "resource_type": "tenancies",
+      "service": "identity"
+    },
+    "ListRegions": {
+      "permissions": [
+        "TENANCY_INSPECT"
+      ],
+      "resource_type": "tenancies",
+      "service": "identity"
+    },
+    "ListTagNamespaces": {
+      "permissions": [
+        "TAG_NAMESPACE_INSPECT"
+      ],
+      "resource_type": "tag-namespaces",
+      "service": "identity"
+    },
+    "ListTags": {
+      "permissions": [
+        "TAG_NAMESPACE_INSPECT"
+      ],
+      "resource_type": "tag-namespaces",
+      "service": "identity"
+    },
+    "GetTag": {
+      "permissions": [
+        "TAG_NAMESPACE_INSPECT"
+      ],
+      "resource_type": "tag-namespaces",
+      "service": "identity"
+    },
+    "ListTagDefaults": {
+      "permissions": [
+        "TAG_DEFAULT_INSPECT"
+      ],
+      "resource_type": "tag-defaults",
+      "service": "identity"
+    },
+    "GetTagDefault": {
+      "permissions": [
+        "TAG_DEFAULT_INSPECT"
+      ],
+      "resource_type": "tag-defaults",
+      "service": "identity"
+    },
+    "ListCostTrackingTags": {
+      "permissions": [
+        "TAG_NAMESPACE_INSPECT"
+      ],
+      "resource_type": "tag-namespaces",
+      "service": "identity"
+    },
+    "ListIdentityProviders": {
+      "permissions": [
+        "IDENTITY_PROVIDER_INSPECT"
+      ],
+      "resource_type": "identity-providers",
+      "service": "identity"
+    },
+    "GetIdentityProvider": {
+      "permissions": [
+        "IDENTITY_PROVIDER_INSPECT"
+      ],
+      "resource_type": "identity-providers",
+      "service": "identity"
+    },
+    "ListIdpGroupMappings": {
+      "permissions": [
+        "IDENTITY_PROVIDER_INSPECT",
+        "GROUP_INSPECT"
+      ],
+      "resource_type": "identity-providers",
+      "service": "identity"
+    },
+    "ListNetworkSources": {
+      "permissions": [
+        "NETWORK_SOURCE_INSPECT"
+      ],
+      "resource_type": "network-sources",
+      "service": "identity"
+    },
+    "GetNetworkSource": {
+      "permissions": [
+        "NETWORK_SOURCE_INSPECT"
+      ],
+      "resource_type": "network-sources",
+      "service": "identity"
+    },
+    "__objectstorage": "----- OBJECT STORAGE -----",
+    "GetNamespaceMetadata": {
+      "permissions": [
+        "OBJECTSTORAGE_NAMESPACE_READ"
+      ],
+      "resource_type": "objectstorage-namespaces",
+      "service": "objectstorage"
+    },
+    "ListBuckets": {
+      "permissions": [
+        "BUCKET_INSPECT"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "GetBucket": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage",
+      "conditional_permissions": [
+        "KEY_DECRYPT"
+      ]
+    },
+    "HeadBucket": {
+      "permissions": [
+        "BUCKET_INSPECT"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage",
+      "conditional_permissions": [
+        "KEY_DECRYPT"
+      ]
+    },
+    "ListObjects": {
+      "permissions": [
+        "OBJECT_INSPECT"
+      ],
+      "resource_type": "objects",
+      "service": "objectstorage"
+    },
+    "ListObjectVersions": {
+      "permissions": [
+        "OBJECT_INSPECT"
+      ],
+      "resource_type": "objects",
+      "service": "objectstorage"
+    },
+    "GetObject": {
+      "permissions": [
+        "OBJECT_READ"
+      ],
+      "resource_type": "objects",
+      "service": "objectstorage",
+      "conditional_permissions": [
+        "KEY_DECRYPT"
+      ]
+    },
+    "HeadObject": {
+      "permissions": [
+        "OBJECT_INSPECT"
+      ],
+      "resource_type": "objects",
+      "service": "objectstorage",
+      "note": "docs list OBJECT_READ or OBJECT_INSPECT; INSPECT is the weaker guaranteed floor",
+      "conditional_permissions": [
+        "KEY_DECRYPT"
+      ]
+    },
+    "ListMultipartUploads": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "ListMultipartUploadParts": {
+      "permissions": [
+        "OBJECT_INSPECT"
+      ],
+      "resource_type": "objects",
+      "service": "objectstorage"
+    },
+    "GetObjectLifecyclePolicy": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "GetRetentionRule": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "ListRetentionRules": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "GetReplicationPolicy": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "ListReplicationPolicies": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "ListReplicationSources": {
+      "permissions": [
+        "BUCKET_READ"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage"
+    },
+    "ListPreauthenticatedRequests": {
+      "permissions": [
+        "PAR_MANAGE"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage",
+      "note": "docs list PAR_MANAGE or BUCKET_READ"
+    },
+    "GetPreauthenticatedRequest": {
+      "permissions": [
+        "PAR_MANAGE"
+      ],
+      "resource_type": "buckets",
+      "service": "objectstorage",
+      "note": "docs list PAR_MANAGE or BUCKET_READ"
+    },
+    "__vault_kms": "----- VAULT / KEY MANAGEMENT / SECRETS -----",
+    "ListVaults": {
+      "permissions": [
+        "VAULT_INSPECT"
+      ],
+      "resource_type": "vaults",
+      "service": "kms"
+    },
+    "GetVault": {
+      "permissions": [
+        "VAULT_READ"
+      ],
+      "resource_type": "vaults",
+      "service": "kms"
+    },
+    "GetVaultUsage": {
+      "permissions": [
+        "VAULT_READ"
+      ],
+      "resource_type": "vaults",
+      "service": "kms"
+    },
+    "ListKeys": {
+      "permissions": [
+        "KEY_INSPECT"
+      ],
+      "resource_type": "keys",
+      "service": "kms"
+    },
+    "GetKey": {
+      "permissions": [
+        "KEY_READ"
+      ],
+      "resource_type": "keys",
+      "service": "kms"
+    },
+    "ListKeyVersions": {
+      "permissions": [
+        "KEY_INSPECT"
+      ],
+      "resource_type": "keys",
+      "service": "kms"
+    },
+    "GetKeyVersion": {
+      "permissions": [
+        "KEY_READ"
+      ],
+      "resource_type": "keys",
+      "service": "kms"
+    },
+    "ListSecrets": {
+      "permissions": [
+        "SECRET_INSPECT"
+      ],
+      "resource_type": "secrets",
+      "service": "kms"
+    },
+    "GetSecret": {
+      "permissions": [
+        "SECRET_READ"
+      ],
+      "resource_type": "secrets",
+      "service": "kms"
+    },
+    "ListSecretVersions": {
+      "permissions": [
+        "SECRET_VERSION_INSPECT"
+      ],
+      "resource_type": "secrets",
+      "service": "kms"
+    },
+    "GetSecretVersion": {
+      "permissions": [
+        "SECRET_VERSION_READ"
+      ],
+      "resource_type": "secrets",
+      "service": "kms"
+    },
+    "ListSecretBundleVersions": {
+      "permissions": [
+        "SECRET_BUNDLE_INSPECT"
+      ],
+      "resource_type": "secret-bundles",
+      "service": "kms"
+    },
+    "GetSecretBundle": {
+      "permissions": [
+        "SECRET_BUNDLE_READ"
+      ],
+      "resource_type": "secret-bundles",
+      "service": "kms"
+    },
+    "GetSecretBundleByName": {
+      "permissions": [
+        "SECRET_BUNDLE_READ"
+      ],
+      "resource_type": "secret-bundles",
+      "service": "kms"
+    },
+    "ListHsmClusters": {
+      "permissions": [
+        "HSM_CLUSTER_INSPECT"
+      ],
+      "resource_type": "hsm-clusters",
+      "service": "kms"
+    },
+    "GetHsmCluster": {
+      "permissions": [
+        "HSM_CLUSTER_READ"
+      ],
+      "resource_type": "hsm-clusters",
+      "service": "kms"
+    },
+    "__dns": "----- DNS -----",
+    "ListZones": {
+      "permissions": [
+        "DNS_ZONE_INSPECT"
+      ],
+      "resource_type": "dns-zones",
+      "service": "dns"
+    },
+    "GetZone": {
+      "permissions": [
+        "DNS_ZONE_READ"
+      ],
+      "resource_type": "dns-zones",
+      "service": "dns"
+    },
+    "GetZoneRecords": {
+      "permissions": [
+        "DNS_ZONE_READ",
+        "DNS_RECORD_READ"
+      ],
+      "resource_type": "dns-records",
+      "service": "dns"
+    },
+    "GetDomainRecords": {
+      "permissions": [
+        "DNS_RECORD_READ"
+      ],
+      "resource_type": "dns-records",
+      "service": "dns"
+    },
+    "GetRRSet": {
+      "permissions": [
+        "DNS_RECORD_READ"
+      ],
+      "resource_type": "dns-records",
+      "service": "dns"
+    },
+    "ListSteeringPolicies": {
+      "permissions": [
+        "DNS_STEERING_POLICY_INSPECT"
+      ],
+      "resource_type": "dns-steering-policies",
+      "service": "dns"
+    },
+    "GetSteeringPolicy": {
+      "permissions": [
+        "DNS_STEERING_POLICY_READ"
+      ],
+      "resource_type": "dns-steering-policies",
+      "service": "dns"
+    },
+    "ListSteeringPolicyAttachments": {
+      "permissions": [
+        "DNS_STEERING_ATTACHMENT_INSPECT"
+      ],
+      "resource_type": "dns-steering-policy-attachments",
+      "service": "dns"
+    },
+    "GetSteeringPolicyAttachment": {
+      "permissions": [
+        "DNS_STEERING_ATTACHMENT_READ"
+      ],
+      "resource_type": "dns-steering-policy-attachments",
+      "service": "dns"
+    },
+    "ListTsigKeys": {
+      "permissions": [
+        "DNS_TSIG_KEY_INSPECT"
+      ],
+      "resource_type": "dns-tsig-keys",
+      "service": "dns"
+    },
+    "GetTsigKey": {
+      "permissions": [
+        "DNS_TSIG_KEY_READ"
+      ],
+      "resource_type": "dns-tsig-keys",
+      "service": "dns"
+    },
+    "ListViews": {
+      "permissions": [
+        "DNS_VIEW_INSPECT"
+      ],
+      "resource_type": "dns-views",
+      "service": "dns"
+    },
+    "GetView": {
+      "permissions": [
+        "DNS_VIEW_READ"
+      ],
+      "resource_type": "dns-views",
+      "service": "dns"
+    },
+    "ListResolvers": {
+      "permissions": [
+        "DNS_RESOLVER_INSPECT"
+      ],
+      "resource_type": "dns-resolvers",
+      "service": "dns"
+    },
+    "GetResolver": {
+      "permissions": [
+        "DNS_RESOLVER_READ"
+      ],
+      "resource_type": "dns-resolvers",
+      "service": "dns"
+    },
+    "ListResolverEndpoints": {
+      "permissions": [
+        "DNS_RESOLVER_ENDPOINT_INSPECT",
+        "DNS_RESOLVER_READ"
+      ],
+      "resource_type": "dns-resolver-endpoints",
+      "service": "dns"
+    },
+    "GetResolverEndpoint": {
+      "permissions": [
+        "DNS_RESOLVER_ENDPOINT_READ"
+      ],
+      "resource_type": "dns-resolver-endpoints",
+      "service": "dns"
+    },
+    "__functions": "----- FUNCTIONS -----",
+    "ListApplications": {
+      "permissions": [
+        "FN_APP_LIST"
+      ],
+      "resource_type": "fn-app",
+      "service": "functions",
+      "note": "SDK operation_name is ListApplications (docs abbreviate as ListApp)"
+    },
+    "GetApplication": {
+      "permissions": [
+        "FN_APP_READ"
+      ],
+      "resource_type": "fn-app",
+      "service": "functions"
+    },
+    "ListFunctions": {
+      "permissions": [
+        "FN_FUNCTION_LIST"
+      ],
+      "resource_type": "fn-function",
+      "service": "functions"
+    },
+    "GetFunction": {
+      "permissions": [
+        "FN_FUNCTION_READ"
+      ],
+      "resource_type": "fn-function",
+      "service": "functions"
+    },
+    "__kubernetes": "----- KUBERNETES ENGINE (OKE) -----",
+    "ListClusters": {
+      "permissions": [
+        "CLUSTER_INSPECT"
+      ],
+      "resource_type": "cluster-family",
+      "service": "kubernetes"
+    },
+    "GetCluster": {
+      "permissions": [
+        "CLUSTER_READ"
+      ],
+      "resource_type": "cluster-family",
+      "service": "kubernetes"
+    },
+    "ListNodePools": {
+      "permissions": [
+        "CLUSTER_NODE_POOL_INSPECT"
+      ],
+      "resource_type": "cluster-node-pool",
+      "service": "kubernetes"
+    },
+    "GetNodePool": {
+      "permissions": [
+        "CLUSTER_NODE_POOL_READ"
+      ],
+      "resource_type": "cluster-node-pool",
+      "service": "kubernetes"
+    },
+    "ListVirtualNodePools": {
+      "permissions": [
+        "CLUSTER_VIRTUAL_NODE_POOL_INSPECT"
+      ],
+      "resource_type": "cluster-virtual-node-pool",
+      "service": "kubernetes"
+    },
+    "GetVirtualNodePool": {
+      "permissions": [
+        "CLUSTER_VIRTUAL_NODE_POOL_READ"
+      ],
+      "resource_type": "cluster-virtual-node-pool",
+      "service": "kubernetes"
+    },
+    "ListVirtualNodes": {
+      "permissions": [
+        "CLUSTER_VIRTUAL_NODE_POOL_READ"
+      ],
+      "resource_type": "cluster-virtual-node-pool",
+      "service": "kubernetes"
+    },
+    "GetVirtualNode": {
+      "permissions": [
+        "CLUSTER_VIRTUAL_NODE_POOL_READ"
+      ],
+      "resource_type": "cluster-virtual-node-pool",
+      "service": "kubernetes"
+    },
+    "ListAddons": {
+      "permissions": [
+        "CLUSTER_READ"
+      ],
+      "resource_type": "cluster-family",
+      "service": "kubernetes"
+    },
+    "GetAddon": {
+      "permissions": [
+        "CLUSTER_READ"
+      ],
+      "resource_type": "cluster-family",
+      "service": "kubernetes"
+    },
+    "ListWorkloadMappings": {
+      "permissions": [
+        "CLUSTER_WORKLOAD_MAPPING_INSPECT"
+      ],
+      "resource_type": "cluster-workload-mapping",
+      "service": "kubernetes"
+    },
+    "GetWorkloadMapping": {
+      "permissions": [
+        "CLUSTER_WORKLOAD_MAPPING_READ"
+      ],
+      "resource_type": "cluster-workload-mapping",
+      "service": "kubernetes"
+    },
+    "__filestorage": "----- FILE STORAGE -----",
+    "ListFileSystems": {
+      "permissions": [
+        "FILE_SYSTEM_INSPECT"
+      ],
+      "resource_type": "file-systems",
+      "service": "filestorage"
+    },
+    "GetFileSystem": {
+      "permissions": [
+        "FILE_SYSTEM_READ"
+      ],
+      "resource_type": "file-systems",
+      "service": "filestorage"
+    },
+    "ListMountTargets": {
+      "permissions": [
+        "MOUNT_TARGET_INSPECT"
+      ],
+      "resource_type": "mount-targets",
+      "service": "filestorage"
+    },
+    "GetMountTarget": {
+      "permissions": [
+        "MOUNT_TARGET_READ"
+      ],
+      "resource_type": "mount-targets",
+      "service": "filestorage"
+    },
+    "ListExports": {
+      "permissions": [
+        "EXPORT_SET_READ"
+      ],
+      "resource_type": "export-sets",
+      "service": "filestorage"
+    },
+    "GetExport": {
+      "permissions": [
+        "EXPORT_SET_READ"
+      ],
+      "resource_type": "export-sets",
+      "service": "filestorage"
+    },
+    "ListExportSets": {
+      "permissions": [
+        "EXPORT_SET_INSPECT"
+      ],
+      "resource_type": "export-sets",
+      "service": "filestorage"
+    },
+    "GetExportSet": {
+      "permissions": [
+        "EXPORT_SET_READ"
+      ],
+      "resource_type": "export-sets",
+      "service": "filestorage"
+    },
+    "ListSnapshots": {
+      "permissions": [
+        "FILE_SYSTEM_READ"
+      ],
+      "resource_type": "file-systems",
+      "service": "filestorage"
+    },
+    "GetSnapshot": {
+      "permissions": [
+        "FILE_SYSTEM_READ"
+      ],
+      "resource_type": "file-systems",
+      "service": "filestorage"
+    },
+    "ListFilesystemSnapshotPolicies": {
+      "permissions": [
+        "FILESYSTEM_SNAPSHOT_POLICY_INSPECT"
+      ],
+      "resource_type": "filesystem-snapshot-policy",
+      "service": "filestorage"
+    },
+    "GetFilesystemSnapshotPolicy": {
+      "permissions": [
+        "FILESYSTEM_SNAPSHOT_POLICY_READ"
+      ],
+      "resource_type": "filesystem-snapshot-policy",
+      "service": "filestorage"
+    },
+    "ListOutboundConnectors": {
+      "permissions": [
+        "OUTBOUND_CONNECTOR_INSPECT"
+      ],
+      "resource_type": "outbound-connectors",
+      "service": "filestorage"
+    },
+    "GetOutboundConnector": {
+      "permissions": [
+        "OUTBOUND_CONNECTOR_READ"
+      ],
+      "resource_type": "outbound-connectors",
+      "service": "filestorage"
+    },
+    "ListReplications": {
+      "permissions": [
+        "REPLICATION_INSPECT"
+      ],
+      "resource_type": "replications",
+      "service": "filestorage"
+    },
+    "GetReplication": {
+      "permissions": [
+        "REPLICATION_READ"
+      ],
+      "resource_type": "replications",
+      "service": "filestorage"
+    },
+    "__logging": "----- LOGGING -----",
+    "ListLogGroups": {
+      "permissions": [
+        "LOG_GROUP_INSPECT"
+      ],
+      "resource_type": "log-group",
+      "service": "logging"
+    },
+    "GetLogGroup": {
+      "permissions": [
+        "LOG_GROUP_READ"
+      ],
+      "resource_type": "log-group",
+      "service": "logging"
+    },
+    "ListLogs": {
+      "permissions": [
+        "LOG_GROUP_INSPECT"
+      ],
+      "resource_type": "log-group",
+      "service": "logging"
+    },
+    "GetLog": {
+      "permissions": [
+        "LOG_GROUP_READ"
+      ],
+      "resource_type": "log-group",
+      "service": "logging"
+    },
+    "ListUnifiedAgentConfigurations": {
+      "permissions": [
+        "UNIFIED_AGENT_CONFIG_INSPECT"
+      ],
+      "resource_type": "unified-agent-configuration",
+      "service": "logging"
+    },
+    "GetUnifiedAgentConfiguration": {
+      "permissions": [
+        "UNIFIED_AGENT_CONFIG_READ"
+      ],
+      "resource_type": "unified-agent-configuration",
+      "service": "logging"
+    },
+    "__containerregistry": "----- CONTAINER REGISTRY -----",
+    "ListContainerRepositories": {
+      "permissions": [
+        "REPOSITORY_INSPECT"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "GetContainerRepository": {
+      "permissions": [
+        "REPOSITORY_READ"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "ListContainerImages": {
+      "permissions": [
+        "REPOSITORY_INSPECT"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "GetContainerImage": {
+      "permissions": [
+        "REPOSITORY_READ"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "ListContainerImageSignatures": {
+      "permissions": [
+        "REPOSITORY_INSPECT"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "GetContainerImageSignature": {
+      "permissions": [
+        "REPOSITORY_READ"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "GetContainerConfiguration": {
+      "permissions": [
+        "REPOSITORY_INSPECT"
+      ],
+      "resource_type": "repos",
+      "service": "containerregistry"
+    },
+    "__notifications": "----- NOTIFICATIONS (ONS) -----",
+    "ListTopics": {
+      "permissions": [
+        "ONS_TOPIC_INSPECT"
+      ],
+      "resource_type": "ons-topics",
+      "service": "notifications"
+    },
+    "GetTopic": {
+      "permissions": [
+        "ONS_TOPIC_READ"
+      ],
+      "resource_type": "ons-topics",
+      "service": "notifications"
+    },
+    "ListSubscriptions": {
+      "permissions": [
+        "ONS_SUBSCRIPTION_INSPECT"
+      ],
+      "resource_type": "ons-subscriptions",
+      "service": "notifications"
+    },
+    "GetSubscription": {
+      "permissions": [
+        "ONS_TOPIC_SUBSCRIBE"
+      ],
+      "resource_type": "ons-subscriptions",
+      "service": "notifications"
+    },
+    "__resourcemanager": "----- RESOURCE MANAGER (ORM) -----",
+    "ListStacks": {
+      "permissions": [
+        "ORM_STACK_INSPECT"
+      ],
+      "resource_type": "orm-stacks",
+      "service": "resourcemanager"
+    },
+    "GetStack": {
+      "permissions": [
+        "ORM_STACK_READ"
+      ],
+      "resource_type": "orm-stacks",
+      "service": "resourcemanager"
+    },
+    "GetStackTfState": {
+      "permissions": [
+        "ORM_STACK_READ"
+      ],
+      "resource_type": "orm-stacks",
+      "service": "resourcemanager"
+    },
+    "GetStackTfConfig": {
+      "permissions": [
+        "ORM_STACK_READ"
+      ],
+      "resource_type": "orm-stacks",
+      "service": "resourcemanager"
+    },
+    "ListStackAssociatedResources": {
+      "permissions": [
+        "ORM_STACK_READ"
+      ],
+      "resource_type": "orm-stacks",
+      "service": "resourcemanager"
+    },
+    "ListStackResourceDriftDetails": {
+      "permissions": [
+        "ORM_STACK_READ"
+      ],
+      "resource_type": "orm-stacks",
+      "service": "resourcemanager"
+    },
+    "ListJobs": {
+      "permissions": [
+        "ORM_JOB_INSPECT"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "GetJob": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "GetJobTfState": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "GetJobTfConfig": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "GetJobTfPlan": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "GetJobLogs": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "GetJobLogsContent": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "ListJobOutputs": {
+      "permissions": [
+        "ORM_JOB_READ"
+      ],
+      "resource_type": "orm-jobs",
+      "service": "resourcemanager"
+    },
+    "ListConfigurationSourceProviders": {
+      "permissions": [
+        "ORM_CONFIG_SOURCE_PROVIDER_INSPECT"
+      ],
+      "resource_type": "orm-config-source-providers",
+      "service": "resourcemanager"
+    },
+    "GetConfigurationSourceProvider": {
+      "permissions": [
+        "ORM_CONFIG_SOURCE_PROVIDER_READ"
+      ],
+      "resource_type": "orm-config-source-providers",
+      "service": "resourcemanager"
+    },
+    "ListPrivateEndpoints": {
+      "permissions": [
+        "ORM_PRIVATE_ENDPOINT_INSPECT"
+      ],
+      "resource_type": "orm-private-endpoints",
+      "service": "resourcemanager"
+    },
+    "GetPrivateEndpoint": {
+      "permissions": [
+        "ORM_PRIVATE_ENDPOINT_READ"
+      ],
+      "resource_type": "orm-private-endpoints",
+      "service": "resourcemanager"
+    },
+    "ListTemplates": {
+      "permissions": [
+        "ORM_TEMPLATE_INSPECT"
+      ],
+      "resource_type": "orm-templates",
+      "service": "resourcemanager"
+    },
+    "GetTemplate": {
+      "permissions": [
+        "ORM_TEMPLATE_READ"
+      ],
+      "resource_type": "orm-templates",
+      "service": "resourcemanager"
+    },
+    "__apigateway": "----- API GATEWAY -----",
+    "ListGateways": {
+      "permissions": [
+        "API_GATEWAY_LIST"
+      ],
+      "resource_type": "api-gateway",
+      "service": "apigateway"
+    },
+    "GetGateway": {
+      "permissions": [
+        "API_GATEWAY_READ"
+      ],
+      "resource_type": "api-gateway",
+      "service": "apigateway"
+    },
+    "ListDeployments": {
+      "permissions": [
+        "API_DEPLOYMENT_LIST"
+      ],
+      "resource_type": "api-deployment",
+      "service": "apigateway"
+    },
+    "GetDeployment": {
+      "permissions": [
+        "API_DEPLOYMENT_READ",
+        "API_GATEWAY_READ"
+      ],
+      "resource_type": "api-deployment",
+      "service": "apigateway"
+    },
+    "ListApis": {
+      "permissions": [
+        "API_DEFINITION_LIST"
+      ],
+      "resource_type": "api-definition",
+      "service": "apigateway"
+    },
+    "GetApi": {
+      "permissions": [
+        "API_DEFINITION_READ"
+      ],
+      "resource_type": "api-definition",
+      "service": "apigateway"
+    },
+    "GetApiContent": {
+      "permissions": [
+        "API_DEFINITION_READ"
+      ],
+      "resource_type": "api-definition",
+      "service": "apigateway"
+    },
+    "GetApiDeploymentSpecification": {
+      "permissions": [
+        "API_DEFINITION_READ"
+      ],
+      "resource_type": "api-definition",
+      "service": "apigateway"
+    },
+    "ListSdks": {
+      "permissions": [
+        "API_SDK_LIST"
+      ],
+      "resource_type": "api-sdk",
+      "service": "apigateway"
+    },
+    "GetSdk": {
+      "permissions": [
+        "API_SDK_READ"
+      ],
+      "resource_type": "api-sdk",
+      "service": "apigateway"
+    },
+    "ListUsagePlans": {
+      "permissions": [
+        "API_USAGE_PLAN_LIST"
+      ],
+      "resource_type": "api-usage-plan",
+      "service": "apigateway"
+    },
+    "GetUsagePlan": {
+      "permissions": [
+        "API_USAGE_PLAN_READ"
+      ],
+      "resource_type": "api-usage-plan",
+      "service": "apigateway"
+    },
+    "ListSubscribers": {
+      "permissions": [
+        "API_SUBSCRIBER_LIST"
+      ],
+      "resource_type": "api-subscriber",
+      "service": "apigateway"
+    },
+    "GetSubscriber": {
+      "permissions": [
+        "API_SUBSCRIBER_READ"
+      ],
+      "resource_type": "api-subscriber",
+      "service": "apigateway"
+    },
+    "__email": "----- EMAIL DELIVERY -----",
+    "ListEmailDomains": {
+      "permissions": [
+        "EMAIL_DOMAIN_INSPECT"
+      ],
+      "resource_type": "email-domains",
+      "service": "email"
+    },
+    "GetEmailDomain": {
+      "permissions": [
+        "EMAIL_DOMAIN_READ"
+      ],
+      "resource_type": "email-domains",
+      "service": "email"
+    },
+    "ListSenders": {
+      "permissions": [
+        "APPROVED_SENDER_INSPECT"
+      ],
+      "resource_type": "approved-senders",
+      "service": "email"
+    },
+    "GetSender": {
+      "permissions": [
+        "APPROVED_SENDER_READ"
+      ],
+      "resource_type": "approved-senders",
+      "service": "email"
+    },
+    "ListSuppressions": {
+      "permissions": [
+        "SUPPRESSION_INSPECT"
+      ],
+      "resource_type": "suppressions",
+      "service": "email"
+    },
+    "GetSuppression": {
+      "permissions": [
+        "SUPPRESSION_READ"
+      ],
+      "resource_type": "suppressions",
+      "service": "email"
+    },
+    "ListEmailReturnPath": {
+      "permissions": [
+        "EMAIL_RETURN_PATH_INSPECT"
+      ],
+      "resource_type": "email-return-paths",
+      "service": "email"
+    },
+    "GetEmailReturnPath": {
+      "permissions": [
+        "EMAIL_RETURN_PATH_READ"
+      ],
+      "resource_type": "email-return-paths",
+      "service": "email"
+    },
+    "__loadbalancer": "----- LOAD BALANCER -----",
+    "ListLoadBalancers": {
+      "permissions": [
+        "LOAD_BALANCER_INSPECT"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "GetLoadBalancer": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "ListBackendSets": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "GetBackendSet": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "ListBackends": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "GetBackend": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "ListCertificates": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer",
+      "note": "load-balancer ListCertificates; API Gateway/others differ -- see ambiguous_operations"
+    },
+    "GetHealthChecker": {
+      "permissions": [
+        "LOAD_BALANCER_READ"
+      ],
+      "resource_type": "load-balancers",
+      "service": "loadbalancer"
+    },
+    "ListAutonomousDatabases": {
+      "permissions": [
+        "AUTONOMOUS_DATABASE_INSPECT"
+      ],
+      "resource_type": "autonomous-database-family",
+      "service": "database"
+    },
+    "GetAutonomousDatabase": {
+      "permissions": [
+        "AUTONOMOUS_DATABASE_INSPECT"
+      ],
+      "resource_type": "autonomous-database-family",
+      "service": "database"
+    },
+    "ListBastions": {
+      "permissions": [
+        "BASTION_READ"
+      ],
+      "resource_type": "bastion",
+      "service": "bastion"
+    },
+    "GetBastion": {
+      "permissions": [
+        "BASTION_READ"
+      ],
+      "resource_type": "bastion",
+      "service": "bastion"
+    },
+    "ListManagedInstances": {
+      "permissions": [
+        "OSMH_MANAGED_INSTANCE_INSPECT"
+      ],
+      "resource_type": "osmh-managed-instances",
+      "service": "os_management_hub"
+    },
+    "GetManagedInstance": {
+      "permissions": [
+        "OSMH_MANAGED_INSTANCE_INSPECT"
+      ],
+      "resource_type": "osmh-managed-instances",
+      "service": "os_management_hub"
+    },
+    "ListServiceConnectors": {
+      "permissions": [
+        "SERVICE_CONNECTOR_INSPECT"
+      ],
+      "resource_type": "serviceconnector",
+      "service": "sch"
+    },
+    "GetServiceConnector": {
+      "permissions": [
+        "SERVICE_CONNECTOR_INSPECT"
+      ],
+      "resource_type": "serviceconnector",
+      "service": "sch"
+    }
+  },
+  "ambiguous_operations": {
+    "__doc": "Operation names that recur across services with DIFFERENT permissions. Disambiguate by service (the OCI SDK operation_name is identical; only the endpoint/service differs). Keys are service slugs.",
+    "ListWorkRequests": {
+      "core": [
+        "WORKREQUEST_INSPECT"
+      ],
+      "kubernetes": [
+        "CLUSTER_WORK_REQUEST_INSPECT",
+        "CLUSTER_NODE_POOL_INSPECT",
+        "CLUSTER_INSPECT"
+      ],
+      "resourcemanager": [
+        "ORM_WORK_REQUEST_INSPECT"
+      ],
+      "apigateway": [
+        "API_WORK_REQUEST_LIST"
+      ],
+      "email": [
+        "EMAIL_WORK_REQUEST_INSPECT"
+      ],
+      "filestorage": [
+        "FSS_WORK_REQUEST_INSPECT"
+      ],
+      "loadbalancer": [
+        "LOAD_BALANCER_READ"
+      ],
+      "objectstorage": [
+        "OBJECT_INSPECT"
+      ]
+    },
+    "GetWorkRequest": {
+      "kubernetes": [
+        "CLUSTER_WORK_REQUEST_READ",
+        "CLUSTER_NODE_POOL_READ",
+        "CLUSTER_READ"
+      ],
+      "resourcemanager": [
+        "ORM_WORK_REQUEST_READ"
+      ],
+      "apigateway": [
+        "API_WORK_REQUEST_READ"
+      ],
+      "email": [
+        "EMAIL_WORK_REQUEST_READ"
+      ],
+      "filestorage": [
+        "FSS_WORK_REQUEST_READ"
+      ],
+      "loadbalancer": [
+        "LOAD_BALANCER_READ"
+      ],
+      "objectstorage": [
+        "OBJECT_READ"
+      ]
+    },
+    "ListCertificates": {
+      "loadbalancer": [
+        "LOAD_BALANCER_READ"
+      ],
+      "apigateway": [
+        "API_CERTIFICATE_LIST"
+      ]
+    },
+    "GetCertificate": {
+      "apigateway": [
+        "API_CERTIFICATE_READ"
+      ]
+    },
+    "ListShapes": {
+      "core": [
+        "INSTANCE_INSPECT"
+      ],
+      "loadbalancer": [
+        "LOAD_BALANCER_INSPECT"
+      ]
+    },
+    "ListPolicies": {
+      "identity": [
+        "POLICY_READ"
+      ],
+      "loadbalancer": [
+        "LOAD_BALANCER_INSPECT"
+      ]
+    },
+    "ListProtocols": {
+      "loadbalancer": [
+        "LOAD_BALANCER_INSPECT"
+      ]
+    },
+    "ListDbSystems": {
+      "database": [
+        "DB_SYSTEM_INSPECT"
+      ]
+    },
+    "GetDbSystem": {
+      "database": [
+        "DB_SYSTEM_INSPECT"
+      ]
+    },
+    "ListSessions": {
+      "bastion": [
+        "BASTION_READ"
+      ]
+    },
+    "GetSession": {
+      "bastion": [
+        "BASTION_READ"
+      ]
+    }
+  },
+  "verb_permission_sets": {
+    "__doc": "OCI verb -> permission-set expansion per resource-type, from the 'Details for Verb+ResourceType Combinations' tables. Access is cumulative: inspect < read < use < manage. Only resource-types with docs-confirmed sets are included.",
+    "buckets": {
+      "inspect": [
+        "BUCKET_INSPECT"
+      ],
+      "read": [
+        "BUCKET_INSPECT",
+        "BUCKET_READ"
+      ],
+      "use": [
+        "BUCKET_INSPECT",
+        "BUCKET_READ",
+        "BUCKET_UPDATE"
+      ],
+      "manage": [
+        "BUCKET_INSPECT",
+        "BUCKET_READ",
+        "BUCKET_UPDATE",
+        "BUCKET_CREATE",
+        "BUCKET_DELETE",
+        "PAR_MANAGE",
+        "RETENTION_RULE_MANAGE"
+      ]
+    },
+    "objects": {
+      "inspect": [
+        "OBJECT_INSPECT"
+      ],
+      "read": [
+        "OBJECT_INSPECT",
+        "OBJECT_READ"
+      ],
+      "use": [
+        "OBJECT_INSPECT",
+        "OBJECT_READ",
+        "OBJECT_OVERWRITE"
+      ],
+      "manage": [
+        "OBJECT_INSPECT",
+        "OBJECT_READ",
+        "OBJECT_OVERWRITE",
+        "OBJECT_CREATE",
+        "OBJECT_DELETE",
+        "OBJECT_VERSION_DELETE",
+        "OBJECT_RESTORE",
+        "OBJECT_UPDATE_TIER"
+      ]
+    },
+    "objectstorage-namespaces": {
+      "read": [
+        "OBJECTSTORAGE_NAMESPACE_READ"
+      ],
+      "use": [
+        "OBJECTSTORAGE_NAMESPACE_READ"
+      ],
+      "manage": [
+        "OBJECTSTORAGE_NAMESPACE_READ",
+        "OBJECTSTORAGE_NAMESPACE_UPDATE"
+      ]
+    },
+    "instance-family": {
+      "inspect": [
+        "INSTANCE_INSPECT"
+      ],
+      "read": [
+        "INSTANCE_INSPECT",
+        "INSTANCE_READ"
+      ],
+      "_note": "manage/use expand into many INSTANCE_* + VNIC_* + VOLUME_ATTACHMENT_* permissions; not fully enumerated here"
+    },
+    "vaults": {
+      "inspect": [
+        "VAULT_INSPECT"
+      ],
+      "read": [
+        "VAULT_INSPECT",
+        "VAULT_READ"
+      ]
+    },
+    "keys": {
+      "inspect": [
+        "KEY_INSPECT"
+      ],
+      "read": [
+        "KEY_INSPECT",
+        "KEY_READ"
+      ]
+    },
+    "secret-family": {
+      "inspect": [
+        "SECRET_INSPECT"
+      ],
+      "read": [
+        "SECRET_INSPECT",
+        "SECRET_READ"
+      ]
+    }
+  }
+}

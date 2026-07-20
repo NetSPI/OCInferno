@@ -52,7 +52,10 @@ from ocinferno.modules.opengraph.utilities.helpers import (
     synthetic_principal_id as _synthetic_principal_id,
     s as _s,
 )
-from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    emit_edge as _emit_edge_shared,
+    _short_ocid,
+)
 from ocinferno.modules.opengraph.utilities.helpers.policy_parser_enrichment import (
     enrich_domain_ocids_in_parsed_statements as _enrich_domain_ocids_in_parsed_statements,
 )
@@ -964,8 +967,13 @@ def _location_tokens(ctx, st, policy_compartment_id, tenant_id, expand_inheritan
                         break
             except Exception:
                 pass
-        if not base:
-            base = first
+        # An unresolved compartment name must not become a location token: using
+        # the literal name string as if it were a real compartment id would let
+        # two unrelated policies that both reference an unresolvable,
+        # identically-named compartment collapse onto the same graph node,
+        # merging distinct attack-path scopes. `base` stays "" here, so the
+        # shared `if not base: return []` below drops the entry, matching the
+        # sibling `compartment` branch's behavior for an unresolved name.
 
     elif ltype == "compartment":
         if not isinstance(vals, list) or not vals:
@@ -1040,32 +1048,6 @@ def _location_tokens(ctx, st, policy_compartment_id, tenant_id, expand_inheritan
 # -----------------------------------------------------------------------------
 # Small “state objects” so we stop passing 20 parallel variables around.
 # -----------------------------------------------------------------------------
-def _short_ocid(ocid: str, keep_head: int = 8, keep_tail: int = 6) -> str:
-    """
-    Shorten an OCI OCID for display: ocid1.*..TOKEN -> TOKEN[:keep_head]...TOKEN[-keep_tail:].
-    Falls back safely for non-OCID strings.
-    """
-    s = _s(ocid)
-    if not s:
-        return ""
-
-    if not s.startswith("ocid1."):
-        # non-ocid: still trim if huge
-        return s if len(s) <= (keep_head + keep_tail + 3) else f"{s[:keep_head]}...{s[-keep_tail:]}"
-
-    # ocid1.<type>.<realm>..<token>
-    token = ""
-    if ".." in s:
-        token = s.split("..", 1)[1]
-    else:
-        token = s.rsplit(".", 1)[-1]
-
-    token = token or s
-    if len(token) <= (keep_head + keep_tail + 3):
-        return token
-    return f"{token[:keep_head]}...{token[-keep_tail:]}"
-
-
 def _pretty_loc(ctx, loc_id: str, tenant_id: str) -> str:
     """
     Display-friendly location:
@@ -1262,7 +1244,7 @@ def _known_subject_sets(ctx):
     return out
 
 
-def _filter_known_subjects(ctx, subjects: list[dict]) -> list[dict]:
+def _filter_known_subjects(ctx, subjects: list[dict], *, include_all: bool = False) -> list[dict]:
     users, groups, dgs = _known_subject_sets(ctx)
     out = []
     for subj in (subjects or []):
@@ -1273,6 +1255,13 @@ def _filter_known_subjects(ctx, subjects: list[dict]) -> list[dict]:
             out.append(subj)
             continue
         if kind == "service":
+            # Service subjects ("Allow service <name> to ...") are dropped by
+            # default -- not real users/groups/dynamic-groups to attribute an
+            # edge to. --include-all restores them (the caller's
+            # skip_service_subject_edges flag check further downstream only has
+            # an effect if a candidate actually survives this filter).
+            if include_all:
+                out.append(subj)
             continue
         sid = _s(subj.get("id") or "")
         if not sid:
@@ -1368,6 +1357,7 @@ def _build_statement_state(*, ctx, policy, st, statement_index, stats, allow_rul
             tenant_id=tenant_id,
             loc_pairs_all=loc_pairs_all,
         ),
+        include_all=include_all,
     )
 
     # `identity_policies.statements` is stored as JSON text in DB; decode to list
@@ -1632,6 +1622,7 @@ def _evaluate_allow_statement_options(*, state: StatementState, cond_engine, sta
         allowed_subjects = _filter_known_subjects(
             ctx,
             [dict(s) for s in (opt.get("delta_candidate_subjects") or base_subjects) if isinstance(s, dict)],
+            include_all=state.include_all,
         )
 
         loc_pairs = list(opt.get("delta_loc_pairs_all") or [])

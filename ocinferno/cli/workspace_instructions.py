@@ -5,14 +5,13 @@ import argparse
 import ast
 import importlib.util
 import json
-import os
 import re
 import shlex
 import subprocess
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 from importlib import resources
 
 from ocinferno.cli.module_actions import interact_with_module
@@ -26,6 +25,7 @@ from ocinferno.core.utils.module_helpers import (
     export_sqlite_dbs_to_excel_blob,
     export_sqlite_dbs_to_json_blob,
 )
+from ocinferno.core.utils import hierarchy as _hierarchy
 
 
 def help_banner():
@@ -47,7 +47,7 @@ OCInferno (O-C-Inferno) - https://github.com/NetSPI/ocinferno
 Written and researched by Scott Weston (@WebbinRoot) of NetSPI
 
 Like Pacu for AWS, this tool is built for red teamers and offensive security pros.
-Wiki: https://github.com/NetSPI/gcpwn/wiki
+Wiki: https://github.com/NetSPI/OCInferno/wiki
 
 ─────────────────────────────────────────────
 OCInferno Commands:
@@ -59,6 +59,7 @@ OCInferno Commands:
     modules
         list                                        List all modules
         search <keyword>                            Search module by keyword
+        info <module_name>                          Show a module's details
         run <module_name> [--cids ...]              Execute a module
 
     compartments
@@ -111,22 +112,22 @@ class CommandProcessor:
     def _resolve_module_mappings_path() -> str:
         # Load only packaged resource path (works for both installed wheel and repo source).
         try:
-            candidate = resources.files("ocinferno.mappings").joinpath("module-mappings.json")
+            candidate = resources.files("ocinferno.mappings").joinpath("module_mappings.json")
             if candidate.is_file():
                 return str(candidate)
         except Exception as exc:
             raise FileNotFoundError(
-                "Required resource 'mappings/module-mappings.json' is missing. "
+                "Required resource 'mappings/module_mappings.json' is missing. "
                 "Reinstall/upgrade OCInferno in a clean environment."
             ) from exc
         raise FileNotFoundError(
-            "Required resource 'mappings/module-mappings.json' is missing. "
+            "Required resource 'mappings/module_mappings.json' is missing. "
             "Reinstall/upgrade OCInferno in a clean environment."
         )
 
     # List of commands and flags allowed
     CREDS_SUBCOMMANDS = ["me", "me-full", "list", "list-full", "db-row", "swap"]
-    MODULES_SUBCOMMANDS = ["list", "search", "run"]
+    MODULES_SUBCOMMANDS = ["list", "search", "info", "run"]
     COMPARTMENTS_SUBCOMMANDS = ["list", "add", "set", "rm"]
     CONFIGS_SUBCOMMANDS = ["list", "set", "unset", "regions"]
     DATA_SUBCOMMANDS = ["export", "sql", "wipe-service"]
@@ -217,9 +218,9 @@ class CommandProcessor:
         if not args:
             return []
         subcmd = args[0]
-        if len(args) == 1 and trailing_space and subcmd == "run":
+        if len(args) == 1 and trailing_space and subcmd in ("run", "info"):
             return self._module_names
-        if len(args) == 2 and not trailing_space and subcmd == "run":
+        if len(args) == 2 and not trailing_space and subcmd in ("run", "info"):
             return self._match_prefix(self._module_names, args[1])
         return []
 
@@ -399,6 +400,7 @@ class CommandProcessor:
 
         sub.add_parser("list")
         sub.add_parser("search").add_argument("search_term")
+        sub.add_parser("info").add_argument("module_name")
 
         run = sub.add_parser("run")
         run.add_argument("module_name")
@@ -555,9 +557,8 @@ class CommandProcessor:
         roots = [cid for cid, n in nodes.items() if n["parent"] is None or n["is_tenant"]]
         roots.sort(key=lambda k: nodes[k]["name"].lower())
 
-        tee, elbow, pipe, space = "├─ ", "└─ ", "│  ", "   "
-
-        def label(node):
+        def label_of(cid):
+            node = nodes[cid]
             base = node["name"] + " (" + node["id"] + ")"
             if node["is_tenant"]:
                 base = f"{UtilityTools.BOLD}{UtilityTools.CYAN}{base} [TENANCY]{UtilityTools.RESET}"
@@ -565,38 +566,14 @@ class CommandProcessor:
                 base = f"{UtilityTools.BOLD}{UtilityTools.RED}{base}{UtilityTools.RESET}"
             return base
 
-        def dfs(cid, prefix="", is_last=True, seen=None):
-            if seen is None:
-                seen = set()
-            if cid in seen:
-                print(prefix + (elbow if is_last else tee) + f"(cycle) {nodes[cid]['name']}")
-                return
-            seen.add(cid)
-
-            branch = elbow if is_last else tee
-            print(prefix + branch + label(nodes[cid]))
-
-            kids = children.get(cid, [])
-            for i, kid in enumerate(kids):
-                last = (i == len(kids) - 1)
-                new_prefix = prefix + (space if is_last else pipe)
-                dfs(kid, new_prefix, last, seen)
-
         if current_compartment_id and current_compartment_id in nodes:
-            trail = []
-            cur = current_compartment_id
-            while cur is not None:
-                trail.append(nodes[cur]["name"])
-                cur = parent_of.get(cur)
-            trail = " / ".join(reversed(trail))
+            chain = [current_compartment_id] + _hierarchy.ancestor_chain(parent_of, current_compartment_id)
+            trail = " / ".join(nodes[c]["name"] for c in reversed(chain) if c in nodes)
             print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Current path:{UtilityTools.RESET} {trail}")
 
         for ri, root in enumerate(roots):
-            print(label(nodes[root]))
-            kids = children.get(root, [])
-            for i, kid in enumerate(kids):
-                last = (i == len(kids) - 1)
-                dfs(kid, "", last)
+            for line in _hierarchy.render_tree_lines([root], children, label_of):
+                print(line)
             if ri < len(roots) - 1:
                 print()
 
@@ -672,18 +649,37 @@ class CommandProcessor:
     # Creds command (unchanged)
     # -----------------------------
     def _detect_auth_type(self, c: Dict[str, Any]) -> str:
-        if c.get("auth_type"):
-            return str(c["auth_type"]).lower()
-        if c.get("key_content") or c.get("key_file") or c.get("fingerprint"):
-            return "api_key"
-        if c.get("delegation_token"):
-            return "delegation_token"
-        if c.get("security_token") or c.get("token"):
-            return "security_token"
-        if c.get("instance_principal") or c.get("use_instance_principal"):
-            return "instance_principal"
+        explicit = str(c.get("auth_type") or "").lower()
+        has_delegation = bool(c.get("delegation_token") or c.get("delegation_token_file"))
+        # Instance-principal is identified by its markers, an explicit auth_type, or the
+        # federation `mode` ("reference-file"/"on-host") that only add_instance_profile_token
+        # stores. A delegation (OBO) token rides ON TOP of instance-principal, so surface it
+        # as a distinct label rather than a plain instance principal.
+        is_instance_principal = bool(
+            c.get("instance_principal")
+            or c.get("use_instance_principal")
+            or explicit in ("instance_principal", "instance-principal", "instance_principal_delegation")
+            or str(c.get("mode") or "").lower() in ("reference-file", "on-host")
+        )
+        if is_instance_principal:
+            return "instance_principal_delegation" if has_delegation else "instance_principal"
+        if explicit:
+            return explicit
         if c.get("resource_principal") or c.get("use_resource_principal"):
             return "resource_principal"
+        if has_delegation:
+            return "delegation_token"
+        # Session-token BEFORE api_key: a session-token profile carries BOTH a security
+        # token AND an ephemeral key_file, so the token must win the classification.
+        if (
+            c.get("security_token_content")
+            or c.get("security_token_file")
+            or c.get("security_token")
+            or c.get("token")
+        ):
+            return "security_token"
+        if c.get("key_content") or c.get("key_file") or c.get("fingerprint"):
+            return "api_key"
         return "unknown"
 
     def _ocid_short(self, ocid: Optional[str]) -> str:
@@ -894,6 +890,20 @@ class CommandProcessor:
             label = f"{label} [{c['index']}]"
         return str(label)
 
+    def _recorded_permissions(self, credname: str) -> List[str]:
+        """Permissions passively recorded for ``credname`` (from successful API calls)."""
+        try:
+            ws = getattr(self.session, "workspace_id", None)
+            if ws is None or not credname:
+                return []
+            row = self.session.data_master.fetch_user_permissions(int(ws), credname)
+            if not row:
+                return []
+            perms = json.loads(row.get("permissions_json") or "{}")
+            return sorted(perms.keys()) if isinstance(perms, dict) else []
+        except Exception:
+            return []
+
     def _print_credential_entry(self, c: Dict[str, Any], label: str, *, include_sensitive: bool) -> None:
         auth = self._detect_auth_type(c)
         labels = self._resolve_cred_labels(c)
@@ -919,6 +929,14 @@ class CommandProcessor:
         print(f"  • region: {reg}")
         print(f"  • fingerprint/key_id: {fpr}")
 
+        # Effective permissions discovered passively as successful API calls landed
+        # (an OCI 2xx proves the caller holds that operation's permission). Helps
+        # both the operator and blue-teamers see exactly what this credential can do.
+        perms = self._recorded_permissions(label)
+        if perms:
+            shown = ", ".join(perms[:12]) + (f", +{len(perms) - 12} more" if len(perms) > 12 else "")
+            print(f"  • discovered permissions ({len(perms)}): {shown}")
+
         if include_sensitive:
             if exp != "-":
                 print(f"  • expires: {exp}")
@@ -937,7 +955,7 @@ class CommandProcessor:
             return
 
         tokp = "-"
-        if auth in ("security_token", "delegation_token"):
+        if auth in ("security_token", "delegation_token", "instance_principal_delegation"):
             tokp = self._safe_short(tok)
         if tokp != "-":
             print(f"  • token: {tokp}")
@@ -1030,6 +1048,7 @@ class CommandProcessor:
             label = target_credname
             if "index" in c:
                 label = f"{label} [{c['index']}]"
+            label = f"{label}  ({self._detect_auth_type(c)})"
             items.append({"label": label, "cred": c, "credname": target_credname})
 
         selected = UtilityTools._choose_from_list("Select credentials to use", items, to_label=lambda it: it["label"])
@@ -1207,7 +1226,7 @@ class CommandProcessor:
 
         # Also scan service Utilities parsers for modules that delegate argparse there.
         service_root = module_file.parent.parent
-        utilities_dir = service_root / "Utilities"
+        utilities_dir = service_root / "utilities"
         if utilities_dir.exists() and utilities_dir.is_dir():
             candidates.extend(sorted(utilities_dir.rglob("*.py")))
 
@@ -1219,6 +1238,20 @@ class CommandProcessor:
         self._module_cli_flag_cache[key] = out
         return list(out)
 
+    def print_module_info(self, module_name: str) -> None:
+        name = str(module_name or "").strip()
+        row = next((m for m in self._module_rows if str(m.get("module_name")) == name), None)
+        if not row:
+            print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Module \"{name}\" not found.{UtilityTools.RESET}")
+            return
+        print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Module: {name}{UtilityTools.RESET}")
+        print(f"  • service     : {row.get('service') or '-'}")
+        print(f"  • category    : {row.get('module_category') or '-'}")
+        print(f"  • author      : {row.get('author') or '-'}")
+        print(f"  • location    : {row.get('location') or '-'}")
+        print(f"  • description  : {row.get('info_blurb') or '-'}")
+        print(f"  • run with    : modules run {name} [flags]  (see `modules run {name} --help`)")
+
     def process_modules_command(self, args):
         command = args.modules_subcommand
 
@@ -1228,6 +1261,10 @@ class CommandProcessor:
 
         if command == "search":
             self.print_modules(search_term=args.search_term)
+            return
+
+        if command == "info":
+            self.print_module_info(args.module_name)
             return
 
         if command == "run":
@@ -1533,6 +1570,22 @@ class CommandProcessor:
             return
 
 
+def _cred_display_type(credtype, session_creds_json) -> str:
+    """Human display type for a stored cred. Distinguishes an instance-principal that
+    carries a delegation/OBO token from a plain one (they share the 'instance-principal'
+    credtype in the DB)."""
+    base = str(credtype or "unknown")
+    if "instance" not in base.lower():
+        return base
+    try:
+        sc = json.loads(session_creds_json) if isinstance(session_creds_json, str) else (session_creds_json or {})
+    except Exception:
+        sc = {}
+    if isinstance(sc, dict) and (sc.get("delegation_token") or sc.get("delegation_token_file")):
+        return f"{base} + delegation (OBO)"
+    return base
+
+
 def list_all_creds_for_user(available_creds):
     if available_creds is None:
         print("\n[-] No creds found")
@@ -1540,7 +1593,8 @@ def list_all_creds_for_user(available_creds):
     print("\n[*] Listing existing credentials...")
     for index, cred in enumerate(available_creds):
         name, type_of_cred = cred[0], cred[1]
-        print(f"  [{index+1}] {name} ({type_of_cred})")
+        session_creds = cred[2] if len(cred) > 2 else None
+        print(f"  [{index+1}] {name} ({_cred_display_type(type_of_cred, session_creds)})")
     print("\n")
 
 
@@ -1605,8 +1659,10 @@ def initial_instructions(
             [1] profile            <credential_name> --filepath <file_path> [--profile <profile_name>]
             [2] api-key            <credential_name> --user <user_ocid> --fingerprint <fingerprint> --tenancy-id <tenancy_ocid> --region <oci_region> (--private-key <pem_or_path> | --private-key-file <path>)
             [3] session-token      <credential_name> (--token <token_or_path> | --token-file <path>) --region <oci_region> [--tenancy-id <tenancy_ocid>] (--private-key <pem_or_path> | --private-key-file <path>)
-            [4] instance-principal <credential_name> (--reference-file <reference_file> | --on-host) [--region <oci_region>] [--imdsv1|--imdsv2] [--proxy <host:port|url>]
+            [4] instance-principal <credential_name> (--reference-file <reference_file> | --on-host) [--region <oci_region>] [--imdsv1|--imdsv2] [--proxy <host:port|url>] [--delegation-token <obo_or_path> | --delegation-token-file <path>]
             [5] resource-principal <credential_name> [--reference-file <reference_file>] [--token <rpst_or_path> | --token-file <path>] [--private-key <pem_or_path> | --private-key-file <path>] [--region <oci_region>]
+
+        (delegation / OBO: add --delegation-token[-file] to instance-principal to act on-behalf-of that token's user.)
 
         To proceed with no credentials, just hit ENTER.
         """
@@ -1693,6 +1749,9 @@ def initial_instructions(
         ip_imds.add_argument("--imdsv2", dest="imds_version", action="store_const", const="v2", help="Prefer IMDSv2 /opc/v2 metadata endpoints")
         instance_principal_parser.add_argument("--proxy", dest="proxy", default=None, help="Proxy for instance-principal setup traffic")
         instance_principal_parser.add_argument("--debug-http", dest="debug_http", action="store_true", help="Enable HTTP debug logging for instance-principal federation")
+        # Optional OBO delegation token -> instance principal acts on-behalf-of the token's user.
+        instance_principal_parser.add_argument("--delegation-token", dest="delegation_token", default=None, help="Optional OBO delegation token value or file path (Cloud Shell); acts on-behalf-of that user")
+        instance_principal_parser.add_argument("--delegation-token-file", dest="delegation_token_file", default=None, help="Optional path to the delegation token file (re-read each load to survive rotation)")
 
         # Resource Principal Auth
         resource_principal_parser = subparsers.add_parser("resource-principal", help="Use resource principal token")
@@ -1708,6 +1767,7 @@ def initial_instructions(
         resource_principal_parser.add_argument("--passphrase-file", dest="passphrase_file", default=None, help="Path to private key passphrase file (optional)")
         resource_principal_parser.add_argument("--proxy", dest="proxy", default=None, help="Proxy for resource-principal setup traffic")
         resource_principal_parser.add_argument("--debug-http", dest="debug_http", action="store_true", help="Enable debug logs for signer setup")
+
         return parser
 
     parser = _build_startup_credential_parser()

@@ -45,7 +45,6 @@ from ocinferno.modules.opengraph.utilities.helpers import (
     family_keys_l as _family_keys_l,
     family_members_l as _family_members_l,
     get_og_state as _og,
-    is_family as _is_family,
     iter_scope_specs as _iter_scope_specs,
     l as _l,
     row_get as _shared_row_get,

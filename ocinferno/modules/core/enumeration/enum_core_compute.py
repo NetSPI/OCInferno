@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
 import argparse
-import base64
 import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Sequence
 
 import oci
 from ocinferno.core.console import UtilityTools
-from ocinferno.modules.core.utilities.compute_helpers import (
-    ComputeResourceClient,
-    ImageResourceClient,
+from ocinferno.modules.core.utilities.helpers import (
+    ClusterNetworksResource,
+    ComputeClustersResource,
+    ComputeImagesResource,
     ComputeInstanceAgentResourceClient,
+    ComputeInstancesResource,
+    InstanceConfigurationsResource,
+    InstancePoolsResource,
     _command_preview_15,
     _display_text,
     _download_instance_agent_execution_payload,
@@ -21,7 +24,6 @@ from ocinferno.modules.core.utilities.compute_helpers import (
     _extract_execution_output_text,
     _write_instance_agent_merged_files,
 )
-from ocinferno.modules.core.utilities.compute_management_helpers import ComputeManagementResourceClient
 from ocinferno.core.utils.module_helpers import fill_missing_fields, cached_table_count, save_rows, resolve_component_flags
 
 
@@ -49,11 +51,10 @@ def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
     )
     p.add_argument("--instance-agent-plugins", dest="instance_agent_plugins", action="store_true", help="Enumerate compute instance-agent plugin status per instance")
 
-    # --get/--save/--download are runner-level common flags; parse module-specific args only.
+    # --get/--download are runner-level common flags; parse module-specific args only.
     args, _ = p.parse_known_args(list(user_args))
     raw_args = {str(x) for x in (list(user_args) if user_args is not None else [])}
     args.get = "--get" in raw_args
-    args.save = "--save" in raw_args
     args.download = "--download" in raw_args
 
     return args
@@ -93,9 +94,9 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
     # Resource loop: compute instances (base inventory + optional metadata/download enrichment).
     if flags["instances"]:
-        ops = ComputeResourceClient(session=session)
+        ops = ComputeInstancesResource(session)
         try:
-            rows = ops.list_instances(compartment_id=comp_id) or []
+            rows = ops.list(compartment_id=comp_id) or []
         except oci.exceptions.ServiceError as e:
             UtilityTools.dlog(True, "list_instances failed", status=getattr(e, "status", None), code=getattr(e, "code", None))
             rows = []
@@ -110,7 +111,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     if not inst_id:
                         continue
                     try:
-                        meta = ops.get_instance(instance_id=inst_id) or {}
+                        meta = ops.get(resource_id=inst_id) or {}
                     except Exception as e:
                         UtilityTools.dlog(debug, "get_instance failed", id=inst_id, err=f"{type(e).__name__}: {e}")
                         continue
@@ -254,11 +255,10 @@ def run_module(user_args, session) -> Dict[str, Any]:
                         out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
                         run_command_export_files += 1
 
-                if args.save:
-                    if command_rows_for_save:
-                        save_rows(session, ComputeInstanceAgentResourceClient.TABLE_COMMANDS, command_rows_for_save)
-                    if execution_rows_for_save:
-                        save_rows(session, ComputeInstanceAgentResourceClient.TABLE_EXECUTIONS, execution_rows_for_save)
+                if command_rows_for_save:
+                    save_rows(session, ComputeInstanceAgentResourceClient.TABLE_COMMANDS, command_rows_for_save)
+                if execution_rows_for_save:
+                    save_rows(session, ComputeInstanceAgentResourceClient.TABLE_EXECUTIONS, execution_rows_for_save)
 
                 summary["instance_agent_run_command_files"] = run_command_export_files
                 summary["instance_agent_run_command_commands"] = run_command_export_commands
@@ -269,8 +269,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 ["id", "display_name", "lifecycle_state", "shape", "availability_domain"],
             )
 
-            if args.save:
-                ops.save_instances(rows)
+            ops.save(rows)
             instance_rows_for_agent = [r for r in rows if isinstance(r, dict)]
 
         summary["instances"] = len(rows)
@@ -284,9 +283,9 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
     # Images
     if flags["images"]:
-        img_ops = ImageResourceClient(session=session)
+        img_ops = ComputeImagesResource(session)
         try:
-            rows = img_ops.list_images(compartment_id=comp_id) or []
+            rows = img_ops.list(compartment_id=comp_id) or []
         except oci.exceptions.ServiceError as e:
             UtilityTools.dlog(True, "list_images failed", status=getattr(e, "status", None), code=getattr(e, "code", None))
             rows = []
@@ -300,7 +299,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 if not img_id:
                     continue
                 try:
-                    full = img_ops.get_image(image_id=img_id) or {}
+                    full = img_ops.get(resource_id=img_id) or {}
                 except Exception as e:
                     UtilityTools.dlog(debug, "get_image failed", image_id=img_id, err=f"{type(e).__name__}: {e}")
                     continue
@@ -313,8 +312,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 rows,
                 ["id", "display_name", "lifecycle_state", "operating_system", "operating_system_version"],
             )
-            if args.save:
-                save_rows(session, img_ops.TABLE_COMPUTE_IMAGES, rows)
+            save_rows(session, img_ops.TABLE_NAME, rows)
 
         summary["images"] = len(rows)
     else:
@@ -326,11 +324,14 @@ def run_module(user_args, session) -> Dict[str, Any]:
         ) or 0
 
     # Compute Management (instance configs/pools/cluster networks/compute clusters)
-    cm_ops = ComputeManagementResourceClient(session=session)
+    ic_ops = InstanceConfigurationsResource(session)
+    ip_ops = InstancePoolsResource(session)
+    cn_ops = ClusterNetworksResource(session)
+    cc_ops = ComputeClustersResource(session)
 
     if flags["instance_configs"]:
         try:
-            rows = cm_ops.list_instance_configurations(compartment_id=comp_id) or []
+            rows = ic_ops.list(compartment_id=comp_id) or []
         except Exception as e:
             UtilityTools.dlog(True, "list_instance_configurations failed", err=f"{type(e).__name__}: {e}")
             rows = []
@@ -341,7 +342,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 if not rid:
                     continue
                 try:
-                    meta = cm_ops.get_instance_configuration(instance_configuration_id=rid) or {}
+                    meta = ic_ops.get(resource_id=rid) or {}
                 except Exception as e:
                     UtilityTools.dlog(debug, "get_instance_configuration failed", instance_configuration_id=rid, err=f"{type(e).__name__}: {e}")
                     continue
@@ -351,8 +352,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
         if rows:
             UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"])
-            if args.save:
-                save_rows(session, cm_ops.TABLE_INSTANCE_CONFIGS, rows)
+            save_rows(session, ic_ops.TABLE_NAME, rows)
         summary["instance_configs"] = len(rows)
     else:
         summary["instance_configs"] = cached_table_count(
@@ -364,7 +364,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
     if flags["instance_pools"]:
         try:
-            rows = cm_ops.list_instance_pools(compartment_id=comp_id) or []
+            rows = ip_ops.list(compartment_id=comp_id) or []
         except Exception as e:
             UtilityTools.dlog(True, "list_instance_pools failed", err=f"{type(e).__name__}: {e}")
             rows = []
@@ -375,7 +375,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 if not rid:
                     continue
                 try:
-                    meta = cm_ops.get_instance_pool(instance_pool_id=rid) or {}
+                    meta = ip_ops.get(resource_id=rid) or {}
                 except Exception as e:
                     UtilityTools.dlog(debug, "get_instance_pool failed", instance_pool_id=rid, err=f"{type(e).__name__}: {e}")
                     continue
@@ -385,8 +385,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
         if rows:
             UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "size", "instance_configuration_id"])
-            if args.save:
-                save_rows(session, cm_ops.TABLE_INSTANCE_POOLS, rows)
+            save_rows(session, ip_ops.TABLE_NAME, rows)
         summary["instance_pools"] = len(rows)
     else:
         summary["instance_pools"] = cached_table_count(
@@ -398,7 +397,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
     if flags["cluster_networks"]:
         try:
-            rows = cm_ops.list_cluster_networks(compartment_id=comp_id) or []
+            rows = cn_ops.list(compartment_id=comp_id) or []
         except Exception as e:
             UtilityTools.dlog(True, "list_cluster_networks failed", err=f"{type(e).__name__}: {e}")
             rows = []
@@ -409,7 +408,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 if not rid:
                     continue
                 try:
-                    meta = cm_ops.get_cluster_network(cluster_network_id=rid) or {}
+                    meta = cn_ops.get(resource_id=rid) or {}
                 except Exception as e:
                     UtilityTools.dlog(debug, "get_cluster_network failed", cluster_network_id=rid, err=f"{type(e).__name__}: {e}")
                     continue
@@ -419,8 +418,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
         if rows:
             UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"])
-            if args.save:
-                save_rows(session, cm_ops.TABLE_CLUSTER_NETWORKS, rows)
+            save_rows(session, cn_ops.TABLE_NAME, rows)
         summary["cluster_networks"] = len(rows)
     else:
         summary["cluster_networks"] = cached_table_count(
@@ -432,7 +430,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
     if flags["compute_clusters"]:
         try:
-            rows = cm_ops.list_compute_clusters(compartment_id=comp_id) or []
+            rows = cc_ops.list(compartment_id=comp_id) or []
         except Exception as e:
             UtilityTools.dlog(True, "list_compute_clusters failed", err=f"{type(e).__name__}: {e}")
             rows = []
@@ -443,7 +441,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 if not rid:
                     continue
                 try:
-                    meta = cm_ops.get_compute_cluster(compute_cluster_id=rid) or {}
+                    meta = cc_ops.get(resource_id=rid) or {}
                 except Exception as e:
                     UtilityTools.dlog(debug, "get_compute_cluster failed", compute_cluster_id=rid, err=f"{type(e).__name__}: {e}")
                     continue
@@ -453,8 +451,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
         if rows:
             UtilityTools.print_limited_table(rows, ["id", "display_name", "lifecycle_state", "time_created"])
-            if args.save:
-                save_rows(session, cm_ops.TABLE_COMPUTE_CLUSTERS, rows)
+            save_rows(session, cc_ops.TABLE_NAME, rows)
         summary["compute_clusters"] = len(rows)
     else:
         summary["compute_clusters"] = cached_table_count(
@@ -573,8 +570,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     "time_created",
                 ],
             )
-            if args.save:
-                save_rows(session, ia_ops.TABLE_COMMANDS, command_rows)
+            save_rows(session, ia_ops.TABLE_COMMANDS, command_rows)
             if args.get or args.download:
                 print(
                     f"[*] Command status lookups: attempted={status_lookup_attempted} "
@@ -643,7 +639,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             target_instances = [r for r in target_instances if isinstance(r, dict)]
         if not target_instances:
             try:
-                target_instances = ComputeResourceClient(session=session).list_instances(compartment_id=comp_id) or []
+                target_instances = ComputeInstancesResource(session).list(compartment_id=comp_id) or []
                 target_instances = [r for r in target_instances if isinstance(r, dict)]
             except Exception:
                 target_instances = []
@@ -771,8 +767,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                     "time_updated",
                 ],
             )
-            if args.save:
-                save_rows(session, ia_ops.TABLE_EXECUTIONS, execution_rows)
+            save_rows(session, ia_ops.TABLE_EXECUTIONS, execution_rows)
         else:
             print("[*] No instance-agent command execution rows.")
         summary["instance_agent_command_executions"] = len(execution_rows)
@@ -813,7 +808,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
 
         if not target_instances:
             try:
-                target_instances = ComputeResourceClient(session=session).list_instances(compartment_id=comp_id) or []
+                target_instances = ComputeInstancesResource(session).list(compartment_id=comp_id) or []
                 target_instances = [r for r in target_instances if isinstance(r, dict)]
             except Exception:
                 target_instances = []
@@ -870,8 +865,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 plugin_rows,
                 ["instance_name", "instance_id", "name", "status", "desired_state", "time_last_update_utc"],
             )
-            if args.save:
-                save_rows(session, ia_ops.TABLE_PLUGINS, plugin_rows)
+            save_rows(session, ia_ops.TABLE_PLUGINS, plugin_rows)
         else:
             print("[*] No instance-agent plugin rows.")
 
