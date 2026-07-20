@@ -105,7 +105,7 @@ pip install ".[excel]"
 ocinferno            # or: python -m ocinferno
 ```
 
-### Option 2: Pip Install (PyPI)
+### Option 2: Pip Install (PyPI) - Note: Dependency Additions to PyPi are still in progress (ocinferno[excel])
 
 ```bash
 pip install ocinferno            # base
