@@ -21,6 +21,72 @@ from ocinferno.core.utils.service_runtime import (
 )
 
 
+# Per-row artifact downloads for stacks/jobs. The Resource classes already
+# implement these (download/download_tf_state/etc.) -- this just wires them
+# into run_standard_enum_component's download_rows_fn hook, which stacks/jobs
+# previously never received, so --download silently downloaded nothing for
+# either component despite the underlying SDK calls being fully implemented.
+def _download_stack_rows(rows, *, session, resource) -> int:
+    budget = DownloadBudget(session, label="resource manager stacks")
+    downloaded = 0
+    for row in rows:
+        if budget.exceeded():  # per-type --download-timeout cap: stop and move on
+            break
+        stack_id = row.get("id")
+        if not stack_id:
+            continue
+        comp_id = row.get("compartment_id")
+        subdirs = ["stacks", stack_id]
+        tf_path = session.get_download_save_path(
+            service_name="resource-manager", filename="tf_config.zip", compartment_id=comp_id, subdirs=subdirs,
+        )
+        if resource.download(resource_id=stack_id, out_path=tf_path):
+            downloaded += 1
+        state_path = session.get_download_save_path(
+            service_name="resource-manager", filename="tf_state.json", compartment_id=comp_id, subdirs=subdirs,
+        )
+        if resource.download_tf_state(stack_id=stack_id, out_path=state_path):
+            downloaded += 1
+    return downloaded
+
+
+def _download_job_rows(rows, *, session, resource) -> int:
+    budget = DownloadBudget(session, label="resource manager jobs")
+    downloaded = 0
+    for row in rows:
+        if budget.exceeded():
+            break
+        job_id = row.get("id")
+        if not job_id:
+            continue
+        comp_id = row.get("compartment_id")
+        subdirs = ["jobs", job_id]
+        logs_path = session.get_download_save_path(
+            service_name="resource-manager", filename="job_logs.txt", compartment_id=comp_id, subdirs=subdirs,
+        )
+        if resource.download(resource_id=job_id, out_path=logs_path):
+            downloaded += 1
+        detailed_logs_path = session.get_download_save_path(
+            service_name="resource-manager", filename="detailed_logs.txt", compartment_id=comp_id, subdirs=subdirs,
+        )
+        if resource.download_detailed_logs(job_id=job_id, out_path=detailed_logs_path):
+            downloaded += 1
+        tf_path = session.get_download_save_path(
+            service_name="resource-manager", filename="tf_config.zip", compartment_id=comp_id, subdirs=subdirs,
+        )
+        if resource.download_tf_config(job_id=job_id, out_path=tf_path):
+            downloaded += 1
+        state_path = session.get_download_save_path(
+            service_name="resource-manager", filename="tf_state.json", compartment_id=comp_id, subdirs=subdirs,
+        )
+        if resource.download_tf_state(job_id=job_id, out_path=state_path):
+            downloaded += 1
+    return downloaded
+
+
+_DOWNLOAD_ROW_FNS = {"stacks": _download_stack_rows, "jobs": _download_job_rows}
+
+
 COMPONENTS = [
     ("stacks", "stacks", "Enumerate stacks"),
     ("jobs", "jobs", "Enumerate jobs"),
@@ -174,6 +240,7 @@ def run_module(user_args, session):
                 continue
 
             resource = resource_map[key]
+            download_fn = _DOWNLOAD_ROW_FNS.get(key)
             results.append(run_standard_enum_component(
                 user_args=args, session=session, component_key=key,
                 list_rows=lambda cid, r=resource: r.list(compartment_id=cid),
@@ -181,6 +248,10 @@ def run_module(user_args, session):
                 save_rows_fn=resource.save,
                 print_columns=resource.COLUMNS,
                 module_name="enum_resourcemanager",
+                download_rows_fn=(
+                    (lambda rows, r=resource, fn=download_fn: fn(rows, session=session, resource=r))
+                    if download_fn else None
+                ),
             ))
         except Exception as err:
             results.append(component_soft_skip_or_error(err, component=key, module_name="enum_resourcemanager"))

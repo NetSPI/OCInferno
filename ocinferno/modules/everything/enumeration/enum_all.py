@@ -395,6 +395,7 @@ def _parse_args(user_args) -> argparse.Namespace:
     # once-per-run modules
     p.add_argument("--config-check", dest="config_check", action="store_true", help="Run config_check once (after scans).")
     p.add_argument("--opengraph", action="store_true", help="Run OpenGraph once (after scans).")
+    p.add_argument("--network-resources", dest="network_resources", action="store_true", help="Run get_network_resources once (after scans).")
 
     # Pass-through knobs for submodules
     p.add_argument(
@@ -1350,7 +1351,9 @@ def _run_execution_plan(
         print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Stopping enum_all: {e.message}{UtilityTools.RESET}")
 
 
-def _run_once_modules(session, args: argparse.Namespace, *, run_config_check: bool, run_opengraph: bool) -> None:
+def _run_once_modules(
+    session, args: argparse.Namespace, *, run_config_check: bool, run_opengraph: bool, run_network_resources: bool = False,
+) -> None:
     if run_config_check:
         UtilityTools._log_action("module", "START process_config_check", "N/A")
         _run_other_module(session, _module_args(args, "ocinferno.modules.everything.processing.process_config_check"), "ocinferno.modules.everything.processing.process_config_check")
@@ -1360,6 +1363,11 @@ def _run_once_modules(session, args: argparse.Namespace, *, run_config_check: bo
         UtilityTools._log_action("module", "START process_oracle_cloud_hound_data", "N/A")
         _run_other_module(session, _module_args(args, "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data"), "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data")
         UtilityTools._log_action("module", "END process_oracle_cloud_hound_data", "N/A")
+
+    if run_network_resources:
+        UtilityTools._log_action("module", "START get_network_resources", "N/A")
+        _run_other_module(session, _module_args(args, "ocinferno.modules.everything.processing.get_network_resources"), "ocinferno.modules.everything.processing.get_network_resources")
+        UtilityTools._log_action("module", "END get_network_resources", "N/A")
 
 
 def _render_scan_summary(session, final_targets: List[str]) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, int]]]:
@@ -1429,7 +1437,7 @@ def run_module(user_args, session):
         print(f"{UtilityTools.RED}[X] enum_all: {e}{UtilityTools.RESET}")
         return 0
 
-    any_once_flags = bool(args.config_check or args.opengraph)
+    any_once_flags = bool(args.config_check or args.opengraph or args.network_resources)
     recursive_compartments = not bool(getattr(args, "no_recursive_compartments", False))
     should_enum_comp = bool(args.comp)
 
@@ -1531,6 +1539,7 @@ def run_module(user_args, session):
         args,
         run_config_check=bool(args.config_check),
         run_opengraph=bool(args.opengraph),
+        run_network_resources=bool(args.network_resources),
     )
 
     tally_rows, detailed_rows = _render_scan_summary(session, final_targets)

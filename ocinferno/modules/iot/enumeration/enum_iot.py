@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ocinferno.core.utils.enum_framework import Component, component_arg_specs, nested_list_fn, run_components
 from ocinferno.core.utils.module_helpers import domain_ids_from_db
-from ocinferno.core.utils.service_runtime import parse_wrapper_args, resolve_selected_components
+from ocinferno.core.utils.service_runtime import parse_wrapper_args, resolve_selected_components, resource_method_download
 from ocinferno.modules.iot.utilities.helpers import (
     IotDigitalTwinAdaptersResource,
     IotDigitalTwinInstancesResource,
@@ -19,6 +19,19 @@ _NESTED_KEYS = (
     "digital_twin_instances",
     "digital_twin_adapters",
     "digital_twin_relationships",
+)
+
+# Both resources implement a --get-adjacent binary download (model spec / instance
+# content blob) that was previously never wired into a Component -- --download was
+# a silent no-op for either. Same method name ("download") on both classes, but each
+# factory call binds its own subdir/filename so the two content types land separately.
+_model_spec_download = resource_method_download(
+    method="download", service_name="iot", subdir="digital-twin-models",
+    filename="model_spec.json", label="IoT digital twin model specs",
+)
+_instance_content_download = resource_method_download(
+    method="download", service_name="iot", subdir="digital-twin-instances",
+    filename="instance_content.json", label="IoT digital twin instance content",
 )
 
 
@@ -40,9 +53,9 @@ def _build_components(domain_ids):
         Component("domains", IotDomainsResource, help_text="Enumerate domains", cache_table="iot_domains"),
         Component("domain_groups", IotDomainGroupsResource, help_text="Enumerate domain-groups", cache_table="iot_domain_groups"),
         Component("digital_twin_models", IotDigitalTwinModelsResource, help_text="Enumerate digital-twin-models",
-                  cache_table="iot_digital_twin_models", list_fn=nested),
+                  cache_table="iot_digital_twin_models", list_fn=nested, download_fn=_model_spec_download),
         Component("digital_twin_instances", IotDigitalTwinInstancesResource, help_text="Enumerate digital-twin-instances",
-                  cache_table="iot_digital_twin_instances", list_fn=nested),
+                  cache_table="iot_digital_twin_instances", list_fn=nested, download_fn=_instance_content_download),
         Component("digital_twin_adapters", IotDigitalTwinAdaptersResource, help_text="Enumerate digital-twin-adapters",
                   cache_table="iot_digital_twin_adapters", list_fn=nested),
         Component("digital_twin_relationships", IotDigitalTwinRelationshipsResource, help_text="Enumerate digital-twin-relationships",

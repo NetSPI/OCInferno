@@ -13,6 +13,8 @@ from ocinferno.modules.core.utilities.helpers import (
     InternetGatewaysResource,
     NatGatewaysResource,
     NetworkSecurityGroupsResource,
+    PrivateIpsResource,
+    PublicIpsResource,
     RouteTablesResource,
     SecurityListsResource,
     ServiceGatewaysResource,
@@ -37,6 +39,8 @@ def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--drgs", action="store_true", help="Enumerate DRGs")
     parser.add_argument("--drg-attachments", dest="drg_attachments", action="store_true", help="Enumerate DRG attachments")
     parser.add_argument("--dhcp-options", dest="dhcp_options", action="store_true", help="Enumerate DHCP options")
+    parser.add_argument("--private-ips", dest="private_ips", action="store_true", help="Enumerate private IPs (fans out over subnets)")
+    parser.add_argument("--public-ips", dest="public_ips", action="store_true", help="Enumerate public IPs (reserved + ephemeral)")
 
     parser.add_argument("--vcn-id", default="", help="Filter by VCN OCID (used by VCN-scoped resources)")
     parser.add_argument("--drg-id", default="", help="Filter by DRG OCID (used by DRG attachments)")
@@ -70,6 +74,8 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "drgs",
             "drg_attachments",
             "dhcp_options",
+            "private_ips",
+            "public_ips",
         ],
     )
     summary: Dict[str, int] = {}
@@ -109,6 +115,8 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "list_kwargs": {"drg_id": drg_id},
         },
         {"key": "dhcp_options", "resource": DhcpOptionsResource(session), "cache_table": "virtual_network_dhcp_options", "list_kwargs": {"vcn_id": vcn_id}},
+        {"key": "private_ips", "resource": PrivateIpsResource(session), "cache_table": "virtual_network_private_ips", "list_kwargs": {"debug": debug}},
+        {"key": "public_ips", "resource": PublicIpsResource(session), "cache_table": "virtual_network_public_ips", "list_kwargs": {"debug": debug}},
     ]
 
     # Resource loop: network components (VCNs, subnets, gateways, DRGs, ACL objects).

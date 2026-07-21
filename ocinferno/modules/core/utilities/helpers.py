@@ -242,6 +242,123 @@ class DhcpOptionsResource(_OptionalScopeKwargMixin, OciListResource):
     SECTION_TITLE = "DHCP Options"
 
 
+class PrivateIpsResource(OciListResource):
+    """Private IPs (primary + secondary) assigned to VNICs.
+
+    ``ListPrivateIps`` has no compartment-wide call -- OCI requires a subnet or
+    VNIC OCID -- so this fans out over every subnet in the compartment (reusing
+    ``SubnetsResource`` when the caller doesn't already have a subnet list, e.g.
+    from the ``subnets`` component's own results in the same run).
+    """
+
+    CLIENT_CLS = oci.core.VirtualNetworkClient
+    SERVICE_NAME = "Virtual Network"
+    TABLE_NAME = "virtual_network_private_ips"
+    GET_METHOD = "get_private_ip"
+    GET_ID_PARAM = "private_ip_id"
+    COLUMNS = [
+        "id", "ip_address", "is_primary", "hostname_label", "subnet_id",
+        "vnic_id", "vlan_id", "compartment_id", "availability_domain", "lifetime",
+    ]
+    SECTION_TITLE = "Private IPs"
+
+    def list(self, *, compartment_id: str, subnet_ids: Optional[List[str]] = None, debug: bool = False) -> List[Dict[str, Any]]:
+        if subnet_ids is None:
+            subnet_ids = [
+                r.get("id")
+                for r in (SubnetsResource(session=self.session).list(compartment_id=compartment_id) or [])
+                if isinstance(r, dict) and r.get("id")
+            ]
+
+        rows: List[Dict[str, Any]] = []
+        for subnet_id in subnet_ids:
+            try:
+                resp = oci.pagination.list_call_get_all_results(self.client.list_private_ips, subnet_id=subnet_id)
+            except Exception as e:
+                UtilityTools.dlog(
+                    debug, "list_private_ips failed for one subnet (non-fatal; other subnets still scanned)",
+                    subnet_id=subnet_id, err=f"{type(e).__name__}: {e}",
+                )
+                continue
+            for r in oci.util.to_dict(resp.data) or []:
+                if isinstance(r, dict):
+                    r.setdefault("compartment_id", compartment_id)
+                    rows.append(r)
+        return rows
+
+
+class PublicIpsResource(OciListResource):
+    """Public IPs (reserved + ephemeral) in the compartment.
+
+    ``ListPublicIps`` needs two kinds of calls for full coverage: REGION scope
+    (reserved IPs, plus ephemeral IPs assigned to regional entities like NAT
+    gateways) and one AVAILABILITY_DOMAIN-scoped call per AD with
+    ``lifetime=EPHEMERAL`` (ephemeral IPs assigned to private IPs on instance
+    VNICs, which are always in the same AD as the private IP).
+    """
+
+    CLIENT_CLS = oci.core.VirtualNetworkClient
+    SERVICE_NAME = "Virtual Network"
+    TABLE_NAME = "virtual_network_public_ips"
+    GET_METHOD = "get_public_ip"
+    GET_ID_PARAM = "public_ip_id"
+    COLUMNS = [
+        "id", "ip_address", "lifecycle_state", "scope", "lifetime",
+        "private_ip_id", "assigned_entity_id", "assigned_entity_type",
+        "compartment_id", "availability_domain",
+    ]
+    SECTION_TITLE = "Public IPs"
+
+    def __init__(self, session, region: Optional[str] = None) -> None:
+        super().__init__(session, region=region)
+        self.id_client = _init_client(oci.identity.IdentityClient, session=session, service_name="Identity", region=region)
+
+    def _list_availability_domains(self, *, debug: bool = False) -> List[str]:
+        tenancy_id = (
+            getattr(self.session, "tenant_id", None)
+            or getattr(self.session, "tenancy_id", None)
+            or getattr(self.session, "compartment_id", None)
+        )
+        if not tenancy_id:
+            return []
+        try:
+            resp = oci.pagination.list_call_get_all_results(self.id_client.list_availability_domains, tenancy_id)
+        except Exception as e:
+            UtilityTools.dlog(debug, "list_availability_domains failed (non-fatal; AD-scoped public IPs skipped)", err=f"{type(e).__name__}: {e}")
+            return []
+        return [ad.name for ad in (resp.data or []) if getattr(ad, "name", None)]
+
+    def list(self, *, compartment_id: str, debug: bool = False) -> List[Dict[str, Any]]:
+        seen_ids: set = set()
+        rows: List[Dict[str, Any]] = []
+
+        def _collect(**kwargs):
+            try:
+                resp = oci.pagination.list_call_get_all_results(self.client.list_public_ips, compartment_id=compartment_id, **kwargs)
+            except Exception as e:
+                UtilityTools.dlog(
+                    debug, "list_public_ips failed for one scope (non-fatal; other scopes still scanned)",
+                    scope_kwargs=kwargs, err=f"{type(e).__name__}: {e}",
+                )
+                return
+            for r in oci.util.to_dict(resp.data) or []:
+                if not isinstance(r, dict):
+                    continue
+                rid = r.get("id")
+                if rid:
+                    if rid in seen_ids:
+                        continue
+                    seen_ids.add(rid)
+                r.setdefault("compartment_id", compartment_id)
+                rows.append(r)
+
+        _collect(scope="REGION")
+        for ad in self._list_availability_domains(debug=debug):
+            _collect(scope="AVAILABILITY_DOMAIN", availability_domain=ad, lifetime="EPHEMERAL")
+
+        return rows
+
+
 # =============================================================================
 # Compute Management (oci.core.ComputeManagementClient)
 # =============================================================================

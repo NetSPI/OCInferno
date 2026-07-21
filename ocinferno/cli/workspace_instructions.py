@@ -554,7 +554,14 @@ class CommandProcessor:
         for pid, kid_list in children.items():
             kid_list.sort(key=lambda k: nodes[k]["name"].lower())
 
-        roots = [cid for cid, n in nodes.items() if n["parent"] is None or n["is_tenant"]]
+        # A node whose parent isn't itself a known/discovered compartment (e.g. the
+        # true parent is a non-ACTIVE/deleted compartment excluded by the default
+        # ACTIVE-only discovery filter, while its children remain active) must still
+        # be rendered as a root of its own -- otherwise it and its whole subtree
+        # silently vanish from the tree even though they're counted in the discovered
+        # total, which is exactly the "found N, tree shows fewer" symptom this fixes.
+        orphaned = {cid for cid, n in nodes.items() if n["parent"] is not None and not n["is_tenant"] and n["parent"] not in nodes}
+        roots = [cid for cid, n in nodes.items() if n["parent"] is None or n["is_tenant"] or cid in orphaned]
         roots.sort(key=lambda k: nodes[k]["name"].lower())
 
         def label_of(cid):
@@ -562,6 +569,8 @@ class CommandProcessor:
             base = node["name"] + " (" + node["id"] + ")"
             if node["is_tenant"]:
                 base = f"{UtilityTools.BOLD}{UtilityTools.CYAN}{base} [TENANCY]{UtilityTools.RESET}"
+            if cid in orphaned:
+                base = f"{base} {UtilityTools.YELLOW}[parent {node['parent']} not in current scope]{UtilityTools.RESET}"
             if node["id"] == current_compartment_id:
                 base = f"{UtilityTools.BOLD}{UtilityTools.RED}{base}{UtilityTools.RESET}"
             return base

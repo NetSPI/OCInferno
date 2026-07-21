@@ -670,8 +670,12 @@ class IdentityResourceClient:
     # on the tenancy (root compartment). When set to true, the hierarchy of compartments is traversed and all compartments 
     # and subcompartments in the tenancy are returned depending on the the setting of accessLevel.
     def list_compartments(self, *, compartment_id: str, lifecycle_state: str, subtree: bool, ) -> list[dict[str, Any]]:
-  
-        rows = self.client.list_compartments(
+        # Was a raw single-page self.client.list_compartments(...) call -- silently
+        # truncated at the first page for any tenancy with enough compartments to
+        # cross the page boundary. Every other list_* method in this file already
+        # pages via list_call_get_all_results; this one just hadn't been migrated.
+        rows = oci.pagination.list_call_get_all_results(
+            self.client.list_compartments,
             compartment_id=compartment_id,
             compartment_id_in_subtree=subtree,
             sort_by="NAME",
@@ -679,7 +683,7 @@ class IdentityResourceClient:
             lifecycle_state=lifecycle_state
         )
         output = oci.util.to_dict(rows.data)
-        
+
         return output
 
     def get_compartment(self, *, compartment_id: str) -> list[dict[str, Any]]:
@@ -768,6 +772,12 @@ class IdentityResourceClient:
         )
         return oci.util.to_dict(rows.data)
 
+    # A classic user can have at most 3 keys (OCI-enforced cap), so this is never
+    # paginated -- unlike every other list_* method here, it's a single direct call.
+    def list_api_keys(self, *, user_id: str) -> list[dict[str, Any]]:
+        resp = self.client.list_api_keys(user_id=user_id)
+        return oci.util.to_dict(resp.data) or []
+
     def list_policies(self, *, compartment_id: str) -> list[dict[str, Any]]:
         rows = oci.pagination.list_call_get_all_results(
             self.client.list_policies,
@@ -786,6 +796,9 @@ class IdentityResourceClient:
 
     def save_memberships(self, memberships) -> None:
         self.session.save_resources(memberships or [], TABLE_USER_GROUP_MEMBERSHIPS)
+
+    def save_api_keys(self, api_keys) -> None:
+        self.session.save_resources(api_keys or [], TABLE_USER_API_KEYS)
 
     def save_policies(self, policies) -> None:
         self.session.save_resources(policies or [], TABLE_POLICIES)
@@ -1442,6 +1455,9 @@ class IdentityResourceSuite(ResourceBase):
         want_dgs = bool(args.dynamic_groups) or not want_any_selector
         # Memberships are always attempted for principals enumeration to maximize graph fidelity.
         want_memberships = True
+        # Same for classic API keys: identity_user_api_keys backs a real security check
+        # (multiple-keys-per-user) that would otherwise never see any rows.
+        want_api_keys = True
 
         no_lane_flags = not (args.idd_only or args.classic_only)
         do_idd = bool(args.idd_only or no_lane_flags)
@@ -1584,6 +1600,7 @@ class IdentityResourceSuite(ResourceBase):
         classic_groups: list[dict[str, Any]] = []
         classic_dynamic_groups: list[dict[str, Any]] = []
         classic_memberships: list[dict[str, Any]] = []
+        classic_api_keys: list[dict[str, Any]] = []
 
         if do_classic:
             if want_users:
@@ -1622,6 +1639,35 @@ class IdentityResourceSuite(ResourceBase):
                             classic_memberships.append(norm)
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_principals: classic memberships failed", err=f"{type(e).__name__}: {e}")
+            if want_api_keys:
+                try:
+                    users_for_api_keys = classic_users
+                    if not users_for_api_keys:
+                        users_for_api_keys = classic_ops.list_users(compartment_id=compartment_id) or []
+                    for user in users_for_api_keys:
+                        user_id = _s(user.get("id"))
+                        if not user_id:
+                            continue
+                        try:
+                            rows = classic_ops.list_api_keys(user_id=user_id) or []
+                        except Exception as key_err:
+                            # Per-user 404/permission gaps are scope-specific, not fatal
+                            # to the rest of the fan-out.
+                            UtilityTools.dlog(
+                                self.debug, "enum_principals: list_api_keys failed for one user (non-fatal)",
+                                user_id=user_id, err=f"{type(key_err).__name__}: {key_err}",
+                            )
+                            continue
+                        for row in rows:
+                            if not isinstance(row, dict):
+                                continue
+                            norm = dict(row)
+                            norm.setdefault("user_id", user_id)
+                            norm.setdefault("compartment_id", compartment_id)
+                            norm.setdefault("credname", _s(getattr(self.session, "credname", None)))
+                            classic_api_keys.append(norm)
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_principals: classic api keys failed", err=f"{type(e).__name__}: {e}")
 
             # Save classic with dedupe if IDD also enumerated.
             if save:
@@ -1654,6 +1700,8 @@ class IdentityResourceSuite(ResourceBase):
                     classic_ops.save_dynamic_groups(dynamic_groups=filtered_dgs)
                 if classic_memberships:
                     classic_ops.save_memberships(memberships=classic_memberships)
+                if classic_api_keys:
+                    classic_ops.save_api_keys(api_keys=classic_api_keys)
 
                 classic_users = filtered_users
                 classic_groups = filtered_groups
@@ -1668,11 +1716,13 @@ class IdentityResourceSuite(ResourceBase):
                 self._print_section("Classic Dynamic Groups", classic_dynamic_groups, ["id", "name", "lifecycle_state", "matching_rule"])
             if want_memberships:
                 self._print_section("Classic User-Group Memberships", classic_memberships, ["user_id", "group_id", "lifecycle_state"])
+            if want_api_keys:
+                self._print_section("Classic User API Keys", classic_api_keys, ["key_id", "user_id", "fingerprint", "lifecycle_state", "inactive_status"])
 
         print(
             f"\n[*] enum_principals complete."
             f" IDD: users={len(idd_users)} groups={len(idd_groups)} dgs={len(idd_dynamic_groups)} memberships={len(idd_memberships)}"
-            f" | Classic: users={len(classic_users)} groups={len(classic_groups)} dgs={len(classic_dynamic_groups)} memberships={len(classic_memberships)}"
+            f" | Classic: users={len(classic_users)} groups={len(classic_groups)} dgs={len(classic_dynamic_groups)} memberships={len(classic_memberships)} api_keys={len(classic_api_keys)}"
         )
 
         return {
@@ -1685,6 +1735,7 @@ class IdentityResourceSuite(ResourceBase):
             "classic_groups": len(classic_groups),
             "classic_dynamic_groups": len(classic_dynamic_groups),
             "classic_memberships": len(classic_memberships),
+            "classic_api_keys": len(classic_api_keys),
             "saved": bool(save),
         }
 

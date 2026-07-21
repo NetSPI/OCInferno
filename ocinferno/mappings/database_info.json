@@ -2919,6 +2919,55 @@
       ]
     },
     {
+      "table_name": "virtual_network_private_ips",
+      "columns": [
+        "availability_domain",
+        "compartment_id",
+        "defined_tags",
+        "display_name",
+        "freeform_tags",
+        "hostname_label",
+        "id",
+        "ip_address",
+        "cidr_prefix_length",
+        "is_primary",
+        "vlan_id",
+        "subnet_id",
+        "time_created",
+        "vnic_id",
+        "ip_state",
+        "lifetime",
+        "route_table_id",
+        "ipv4_subnet_cidr_at_creation"
+      ],
+      "primary_keys": [
+        "id"
+      ]
+    },
+    {
+      "table_name": "virtual_network_public_ips",
+      "columns": [
+        "assigned_entity_id",
+        "assigned_entity_type",
+        "availability_domain",
+        "compartment_id",
+        "defined_tags",
+        "display_name",
+        "freeform_tags",
+        "id",
+        "ip_address",
+        "lifecycle_state",
+        "lifetime",
+        "private_ip_id",
+        "scope",
+        "time_created",
+        "public_ip_pool_id"
+      ],
+      "primary_keys": [
+        "id"
+      ]
+    },
+    {
       "table_name": "container_instances",
       "columns": [
         "compartment_id",
