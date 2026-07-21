@@ -87,6 +87,13 @@ def resource_type_area(resource_type: str) -> str:
     if not rt:
         return "Other"
 
+    # Framework/control-plane tables (excluded from the stdout resource-count
+    # breakdown entirely -- see _NON_RESOURCE_TABLES -- but the Excel export is a
+    # full raw dump that may still list them; give them an honest label instead of
+    # dumping them in "Other").
+    if rt in ("enum_all_task_ledger", "opengraph_nodes", "opengraph_edges", "network_inventory"):
+        return "Internal"
+
     # Explicit aliases first.
     areas = {
         "idd_users": "IAM",
@@ -133,6 +140,20 @@ def resource_type_area(resource_type: str) -> str:
         "drgs": "Network",
         "drg_attachments": "Network",
         "dhcp_options": "Network",
+        # resource_type_label() shortens these (stripping the "compute_"/"desktops_"
+        # prefix the fallback rules below key off), so the short form needs its own
+        # entry here -- otherwise callers that go through resource_type_label() first
+        # (the stdout "Resource Breakdown" summary) fall through to "Other" even
+        # though the raw table name would have matched a prefix rule fine (as the
+        # Excel export, which calls resource_type_area() on the raw table name
+        # directly, already does).
+        "instance_configurations": "Compute",
+        "instance_pools": "Compute",
+        "cluster_networks": "Compute",
+        "compute_clusters": "Compute",
+        "desktops": "Desktops",
+        "pool_desktops": "Desktops",
+        "pool_volumes": "Desktops",
     }
     if rt in areas:
         return areas[rt]
@@ -176,10 +197,83 @@ def resource_type_area(resource_type: str) -> str:
         return "Data Science"
     if rt.startswith("desktops_") or rt.startswith("desktop_"):
         return "Desktops"
-    if rt == "resource_compartments":
+    if rt == "resource_compartments" or rt in ("region_subscriptions",):
         return "IAM"
 
+    # AI / ML
+    if rt.startswith("ai_language_") or rt.startswith("generative_ai_"):
+        return "AI/ML"
+    # Security & governance-adjacent services
+    if (
+        rt.startswith("apiaccesscontrol_") or rt.startswith("audit_") or rt.startswith("bastion_")
+        or rt.startswith("certificate") or rt.startswith("cloud_guard_") or rt.startswith("delegate_access_control_")
+        or rt.startswith("lockbox_") or rt.startswith("oac_") or rt.startswith("vulnerability_scanning_")
+        or rt.startswith("waas_") or rt.startswith("web_app_firewall")
+    ):
+        return "Security"
+    # Analytics / data platform
+    if (
+        rt.startswith("analytics_") or rt.startswith("data_catalog_") or rt.startswith("data_integration_")
+        or rt.startswith("dataflow_") or rt.startswith("opensearch_")
+    ):
+        return "Analytics"
+    # DevOps / CI-CD
+    if rt.startswith("devops_"):
+        return "DevOps"
+    # Monitoring & fleet management
+    if (
+        rt.startswith("monitoring_") or rt.startswith("management_agent_") or rt.startswith("osmh_")
+        or rt.startswith("healthchecks_")
+    ):
+        return "Monitoring"
+    # Messaging / eventing
+    if (
+        rt.startswith("streaming_") or rt.startswith("queue") or rt.startswith("sch_")
+        or rt.startswith("kafka_") or rt.startswith("events_")
+    ):
+        return "Messaging"
+    # Governance / tenancy administration
+    if (
+        rt.startswith("governance_rules_") or rt.startswith("tenant_manager_") or rt.startswith("cloud_migrations_")
+        or rt.startswith("cloud_bridge_") or rt in ("resource_schedules", "resource_search_inventory")
+    ):
+        return "Governance"
+    # Databases (extends the db_/cache_/"database" rule above with the remaining
+    # DB-adjacent services that don't share those substrings)
+    if (
+        rt.startswith("dbmgmt_") or rt.startswith("dbmulticloud_") or rt.startswith("data_safe_")
+        or rt.startswith("postgresql_") or rt.startswith("nosql_") or rt.startswith("redis_")
+        or rt.startswith("goldengate_") or rt.startswith("bds_")
+    ):
+        return "Databases"
+    # Compute-adjacent
+    if rt.startswith("autoscaling_") or rt.startswith("container_instances"):
+        return "Compute"
+    if rt.startswith("ocvp_"):
+        return "VMware"
+    if rt.startswith("fusion_apps_"):
+        return "Fusion Apps"
+    if rt.startswith("integration_") or rt.startswith("oda_") or rt.startswith("visual_builder_"):
+        return "Integration"
+    if rt.startswith("email_"):
+        return "Email"
+    if rt.startswith("wlms_"):
+        return "Middleware"
+    if rt == "load_balancers":
+        return "Network"
+    if rt.startswith("resource_manager") or rt.startswith("resource_configuration_"):
+        return "Resource Manager"
+
     return "Other"
+
+
+# Framework/control-plane tables that carry a compartment_id but aren't themselves
+# discoverable cloud resources -- counting them in the resource breakdown just adds
+# noise (and, before area coverage was comprehensive, was a real source of confusing
+# "Other" rows). Mirrors get_network_resources.py's _EXCLUDED_TABLES.
+_NON_RESOURCE_TABLES = frozenset({
+    "enum_all_task_ledger", "opengraph_nodes", "opengraph_edges", "network_inventory",
+})
 
 
 def summarize_resources_by_compartment(session, target_cids: List[str]) -> dict:
@@ -194,7 +288,7 @@ def summarize_resources_by_compartment(session, target_cids: List[str]) -> dict:
 
     cur = conn.cursor()
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-    tables = [r[0] for r in cur.fetchall() if isinstance(r[0], str)]
+    tables = [r[0] for r in cur.fetchall() if isinstance(r[0], str) and r[0] not in _NON_RESOURCE_TABLES]
 
     for table_name in tables:
         try:

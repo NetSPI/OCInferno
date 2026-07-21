@@ -380,6 +380,57 @@ def _contains_sensitive_key_name(k: str) -> bool:
     return any(t in key for t in tokens)
 
 
+def _age_days(ts: Any) -> Optional[float]:
+    """Best-effort age (in days) of an ISO-8601 timestamp string, None if unparseable."""
+    s = _safe_str(ts).strip()
+    if not s:
+        return None
+
+    from datetime import datetime, timezone
+
+    candidate = s
+    if candidate.endswith("Z"):
+        candidate = candidate[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(candidate)
+    except Exception:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    try:
+        delta = datetime.now(timezone.utc) - dt
+        return delta.total_seconds() / 86400.0
+    except Exception:
+        return None
+
+
+def _condition_mentions_value(st: Dict[str, Any], needle: str) -> bool:
+    """Walk a parsed policy statement's `conditions` tree (nested all/any groups of
+    clauses) looking for any clause whose rhs literal/value mentions `needle`
+    (case-insensitive). Used to tell "has a where clause" apart from "has a where
+    clause that actually protects the thing we care about"."""
+    needle = needle.strip().lower()
+    if not needle:
+        return False
+
+    def _walk(node: Any) -> bool:
+        if not isinstance(node, dict):
+            return False
+        if node.get("type") == "clause":
+            inner = node.get("node") or {}
+            rhs = inner.get("rhs")
+            rhs_val = rhs.get("value") if isinstance(rhs, dict) else rhs
+            if needle in _safe_str(rhs_val).strip().lower():
+                return True
+            return False
+        for item in node.get("items") or []:
+            if _walk(item):
+                return True
+        return False
+
+    return _walk(st.get("conditions") or {})
+
+
 # =============================================================================
 # Service Auditors (one class per service)
 # =============================================================================
@@ -2783,6 +2834,7 @@ class FileStorageServiceAuditor(ServiceAuditor):
 
     T_EXPORTS = "file_storage_exports"
     T_MOUNT_TARGETS = "file_storage_mount_targets"
+    T_FILE_SYSTEMS = "file_storage_file_systems"
 
     def run_checks(self) -> ServiceAuditResult:
         res = ServiceAuditResult(service=self.service)
@@ -2794,7 +2846,45 @@ class FileStorageServiceAuditor(ServiceAuditor):
             self._check_mount_target_nsg(res)
         except Exception as e:
             res.errors.append(f"mount_targets: {type(e).__name__}: {e}")
+        try:
+            self._check_file_system_cmk(res)
+        except Exception as e:
+            res.errors.append(f"file_systems: {type(e).__name__}: {e}")
         return res
+
+    def _check_file_system_cmk(self, res: ServiceAuditResult) -> None:
+        rows = self.get_rows(self.T_FILE_SYSTEMS)
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            fid = _safe_str(r.get("id"))
+            if not cid or not fid:
+                continue
+            if _safe_str(r.get("lifecycle_state")).upper() not in ("ACTIVE",):
+                continue
+            if _safe_str(r.get("kms_key_id")):
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=fid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_FILE_SYSTEMS,
+                    issue_code="FILE_STORAGE_FILE_SYSTEM_NO_CMK",
+                    title="File Storage file system has no customer-managed key",
+                    severity="LOW",
+                    description=_wrap_paragraph(
+                        """
+                        File system is not tied to a customer-managed KMS key (falls back to Oracle-managed
+                        encryption). Data is still encrypted at rest by default; this flags absence of
+                        customer control over the key, not plaintext data.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_filestorage --file-systems --get",
+                    notes=_wrap_paragraph(
+                        "Remediation: use CMK-backed encryption for file systems hosting sensitive workloads."
+                    ),
+                )
+            )
 
     def _check_exports_open_to_any(self, res: ServiceAuditResult) -> None:
         rows = self.get_rows(self.T_EXPORTS)
@@ -2866,10 +2956,15 @@ class IdentityServiceAuditor(ServiceAuditor):
 
     T_API_KEYS = "identity_user_api_keys"
     T_POLICIES = "identity_policies"
+    T_MEMBERSHIPS = "identity_user_group_memberships"
 
     # Verbs (or an all-resources grant) broad enough that an unconditional any-user/
     # any-group grant is a full-blast-radius exposure rather than a bounded one.
     _BROAD_VERBS = {"manage"}
+
+    _ADMIN_GROUP_NAME = "administrators"
+    _API_KEY_MAX_AGE_DAYS = 90
+    _ADMIN_PROTECTING_RESOURCE_TYPES = ("users", "groups")
 
     def run_checks(self) -> ServiceAuditResult:
         res = ServiceAuditResult(service=self.service)
@@ -2878,9 +2973,25 @@ class IdentityServiceAuditor(ServiceAuditor):
         except Exception as e:
             res.errors.append(f"api_keys: {type(e).__name__}: {e}")
         try:
+            self._check_api_key_rotation_age(res)
+        except Exception as e:
+            res.errors.append(f"api_key_rotation_age: {type(e).__name__}: {e}")
+        try:
+            self._check_admin_group_member_has_api_key(res)
+        except Exception as e:
+            res.errors.append(f"admin_group_api_keys: {type(e).__name__}: {e}")
+        try:
             self._check_any_user_any_group_unconditional(res)
         except Exception as e:
             res.errors.append(f"policies: {type(e).__name__}: {e}")
+        try:
+            self._check_tenancy_wide_manage_all_non_admin_group(res)
+        except Exception as e:
+            res.errors.append(f"policies_manage_all: {type(e).__name__}: {e}")
+        try:
+            self._check_iam_admin_group_not_protected(res)
+        except Exception as e:
+            res.errors.append(f"policies_admin_group_protection: {type(e).__name__}: {e}")
         return res
 
     @staticmethod
@@ -2895,6 +3006,37 @@ class IdentityServiceAuditor(ServiceAuditor):
         if _safe_str(cond.get("type")).lower() == "clause":
             return True
         return False
+
+    @staticmethod
+    def _parse_allow_statements(statements: List[str]) -> List[Tuple[int, str, Dict[str, Any]]]:
+        """Parse a policy's raw statement strings and yield (original_index, raw_text,
+        parsed_statement) for every statement that parsed successfully and is an ALLOW.
+        Centralizes the index-remapping (parser drops failed statements from `parsed`
+        rather than null-padding, so positions shift) that every policy-statement check
+        in this class needs.
+        """
+        try:
+            payload, diagnostics = parse_policy_statements(statements, nested_simplify=True, error_mode="report")
+        except Exception:
+            return []
+
+        parsed = (payload or {}).get("statements") or []
+        failed_indices = {
+            e.get("statement_index")
+            for e in ((diagnostics or {}).get("errors") or [])
+            if isinstance(e, dict)
+        }
+        success_indices = [i for i in range(len(statements)) if i not in failed_indices]
+
+        out: List[Tuple[int, str, Dict[str, Any]]] = []
+        for parsed_pos, st in enumerate(parsed):
+            if not isinstance(st, dict) or _safe_str(st.get("kind")).lower() != "allow":
+                continue
+            orig_idx = success_indices[parsed_pos] if parsed_pos < len(success_indices) else None
+            if orig_idx is None:
+                continue
+            out.append((orig_idx, statements[orig_idx], st))
+        return out
 
     def _check_any_user_any_group_unconditional(self, res: ServiceAuditResult) -> None:
         """Flag ALLOW statements whose subject is OCI's true "everyone" wildcards --
@@ -2986,6 +3128,146 @@ class IdentityServiceAuditor(ServiceAuditor):
                     )
                 )
 
+    def _check_tenancy_wide_manage_all_non_admin_group(self, res: ServiceAuditResult) -> None:
+        """Flag `Allow group <X> to manage all-resources in tenancy` grants where <X> is
+        NOT the built-in Administrators group. This is functionally tenancy-admin-equivalent
+        access handed to a group that isn't the audited/intentional admin group -- the same
+        signal Prowler (identity_tenancy_admin_permissions_limited) and Steampipe
+        (identity_only_administrators_group_with_manage_all_resources) flag, mapping to CIS
+        OCI Foundations 1.3.
+        """
+        if parse_policy_statements is None:
+            return
+
+        rows = self.get_rows(self.T_POLICIES)
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            pid = _safe_str(r.get("id"))
+            if not cid or not pid:
+                continue
+
+            statements = [s for s in _as_json_list(r.get("statements")) if isinstance(s, str) and s.strip()]
+            if not statements:
+                continue
+
+            for orig_idx, raw_text, st in self._parse_allow_statements(statements):
+                subject = st.get("subject") or {}
+                if _safe_str(subject.get("type")).lower() != "group":
+                    continue
+                subj_values = subject.get("values") or []
+                group_name = _safe_str(subj_values[0].get("label")) if subj_values and isinstance(subj_values[0], dict) else ""
+                if not group_name or group_name.strip().lower() == self._ADMIN_GROUP_NAME:
+                    continue
+
+                actions = st.get("actions") or {}
+                verbs = {_safe_str(v).lower() for v in (actions.get("values") or [])}
+                resources = st.get("resources") or {}
+                location_scope = st.get("location") or {}
+                if "manage" not in verbs:
+                    continue
+                if _safe_str(resources.get("type")).lower() != "all-resources":
+                    continue
+                if _safe_str(location_scope.get("type")).lower() != "tenancy":
+                    continue
+
+                loc = _loc_base(compartment_id=cid, entity_id=pid, statement_index=orig_idx)
+                res.findings.append(
+                    self.finding(
+                        table_name=self.T_POLICIES,
+                        issue_code="IAM_POLICY_MANAGE_ALL_RESOURCES_NON_ADMIN_GROUP",
+                        title=f"Group '{group_name}' has tenancy-admin-equivalent access outside Administrators",
+                        severity="HIGH",
+                        description=_wrap_paragraph(
+                            f"""
+                            Statement "{raw_text}" grants group '{group_name}' the ability to manage all
+                            resources in the tenancy -- equivalent to full tenancy-admin access -- but this
+                            group is not the built-in Administrators group. Admin-equivalent access outside
+                            the one audited admin group makes it easy to lose track of who actually has
+                            full control of the tenancy.
+                            """
+                        ),
+                        location=loc,
+                        row=r,
+                        recommended_module="modules run enum_identity --policies --get",
+                        notes=_wrap_paragraph(
+                            "Remediation: scope this grant to specific compartments/services instead of the "
+                            "whole tenancy, or consolidate tenancy-wide admin access into the Administrators group."
+                        ),
+                    )
+                )
+
+    def _check_iam_admin_group_not_protected(self, res: ServiceAuditResult) -> None:
+        """Flag `Allow group <X> to use/manage users|groups in tenancy` grants that carry
+        no condition protecting the Administrators group. Without a `where target.group.name
+        != 'Administrators'`-style clause, a member of the granted group can add themselves
+        (or anyone) to Administrators -- a privilege-escalation path. Matches Prowler
+        (identity_iam_admins_cannot_update_tenancy_admins) and Steampipe
+        (identity_iam_administrators_no_update_tenancy_administrators_group), CIS OCI 1.13.
+        """
+        if parse_policy_statements is None:
+            return
+
+        rows = self.get_rows(self.T_POLICIES)
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            pid = _safe_str(r.get("id"))
+            if not cid or not pid:
+                continue
+
+            statements = [s for s in _as_json_list(r.get("statements")) if isinstance(s, str) and s.strip()]
+            if not statements:
+                continue
+
+            for orig_idx, raw_text, st in self._parse_allow_statements(statements):
+                subject = st.get("subject") or {}
+                if _safe_str(subject.get("type")).lower() != "group":
+                    continue
+                subj_values = subject.get("values") or []
+                group_name = _safe_str(subj_values[0].get("label")) if subj_values and isinstance(subj_values[0], dict) else ""
+                if not group_name or group_name.strip().lower() == self._ADMIN_GROUP_NAME:
+                    continue
+
+                actions = st.get("actions") or {}
+                verbs = {_safe_str(v).lower() for v in (actions.get("values") or [])}
+                resources = st.get("resources") or {}
+                resource_values = {_safe_str(v).lower() for v in (resources.get("values") or [])}
+                location_scope = st.get("location") or {}
+                if not (verbs & {"use", "manage"}):
+                    continue
+                if _safe_str(resources.get("type")).lower() != "specific":
+                    continue
+                if not (resource_values & set(self._ADMIN_PROTECTING_RESOURCE_TYPES)):
+                    continue
+                if _safe_str(location_scope.get("type")).lower() != "tenancy":
+                    continue
+                if _condition_mentions_value(st, self._ADMIN_GROUP_NAME):
+                    continue
+
+                loc = _loc_base(compartment_id=cid, entity_id=pid, statement_index=orig_idx)
+                res.findings.append(
+                    self.finding(
+                        table_name=self.T_POLICIES,
+                        issue_code="IAM_POLICY_ADMIN_GROUP_NOT_PROTECTED",
+                        title=f"Group '{group_name}' can manage tenancy users/groups without an Administrators exclusion",
+                        severity="HIGH",
+                        description=_wrap_paragraph(
+                            f"""
+                            Statement "{raw_text}" lets group '{group_name}' use/manage users or groups
+                            tenancy-wide with no condition excluding the Administrators group. A member of
+                            '{group_name}' can therefore add themselves (or another principal they control)
+                            to Administrators -- a privilege-escalation path to full tenancy control.
+                            """
+                        ),
+                        location=loc,
+                        row=r,
+                        recommended_module="modules run enum_identity --policies --get",
+                        notes=_wrap_paragraph(
+                            "Remediation: add a `where target.group.name != 'Administrators'` (or equivalent) "
+                            "condition so this grant cannot be used to modify tenancy-admin membership."
+                        ),
+                    )
+                )
+
     def _check_multiple_api_keys_per_user(self, res: ServiceAuditResult) -> None:
         rows = self.get_rows(self.T_API_KEYS)
         by_user: Dict[str, List[Dict[str, Any]]] = {}
@@ -3019,6 +3301,84 @@ class IdentityServiceAuditor(ServiceAuditor):
                         notes=_wrap_paragraph("Remediation: rotate/revoke stale keys and enforce key hygiene."),
                     )
                 )
+
+    def _check_api_key_rotation_age(self, res: ServiceAuditResult) -> None:
+        rows = self.get_rows(self.T_API_KEYS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            key_id = _safe_str(r.get("key_id")) or _safe_str(r.get("id"))
+            uid = _safe_str(r.get("user_id"))
+            if not cid or not key_id:
+                continue
+            age = _age_days(r.get("time_created"))
+            if age is None or age <= self._API_KEY_MAX_AGE_DAYS:
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=key_id, user_id=uid or None)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_API_KEYS,
+                    issue_code="IAM_USER_API_KEY_STALE",
+                    title="IAM user API key has not been rotated in over 90 days",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        f"""
+                        API key was created {age:.0f} days ago and is still ACTIVE. A long-lived,
+                        never-rotated credential increases the blast radius of a leaked key -- the
+                        longer it's valid, the longer a compromise stays exploitable.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_identity --principals",
+                    notes=_wrap_paragraph(
+                        "Remediation: rotate the API key (upload a new one, then delete the old one)."
+                    ),
+                )
+            )
+
+    def _check_admin_group_member_has_api_key(self, res: ServiceAuditResult) -> None:
+        membership_rows = self.get_rows(self.T_MEMBERSHIPS)
+        admin_user_ids = {
+            _safe_str(m.get("user_id"))
+            for m in membership_rows
+            if _safe_str(m.get("group_name")).strip().lower() == self._ADMIN_GROUP_NAME
+            and _safe_str(m.get("user_id"))
+        }
+        if not admin_user_ids:
+            return
+
+        key_rows = self.get_rows(self.T_API_KEYS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in key_rows:
+            uid = _safe_str(r.get("user_id"))
+            if uid not in admin_user_ids:
+                continue
+            cid = _safe_str(r.get("compartment_id"))
+            key_id = _safe_str(r.get("key_id")) or _safe_str(r.get("id"))
+            if not cid or not key_id:
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=key_id, user_id=uid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_API_KEYS,
+                    issue_code="IAM_ADMIN_USER_HAS_API_KEY",
+                    title="Administrators-group member holds an active API key",
+                    severity="HIGH",
+                    description=_wrap_paragraph(
+                        """
+                        This user is a member of the built-in Administrators group AND holds an active
+                        API signing key. A leaked/stolen key for a tenancy-admin user grants an attacker
+                        full tenancy control -- the largest possible blast radius for a single credential.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_identity --principals",
+                    notes=_wrap_paragraph(
+                        "Remediation: avoid API keys on admin accounts (use a break-glass process instead), "
+                        "or move day-to-day admin actions to a lower-privileged, scoped identity."
+                    ),
+                )
+            )
 
 
 class ArtifactRegistryServiceAuditor(ServiceAuditor):

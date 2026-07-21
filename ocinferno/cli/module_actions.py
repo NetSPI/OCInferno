@@ -120,6 +120,16 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    # Process module: run_audit(session, ...) sweeps every saved service table across
+    # the whole workspace in one pass -- no compartment_id involved at all. Without
+    # this entry it fell back to the PER_TARGET default, which triggers the
+    # "Scan (A)ll or (C)urrent only?" prompt for no reason (there's no per-compartment
+    # scan to scope) whenever the workspace already has more than one known compartment.
+    "process_config_check": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     # Tenancy-global: list_region_subscriptions is per-tenant, not per-compartment.
     # Standalone BloodHound styling push; no compartment context.
     "process_og_node_color_images": ModulePolicySpec(

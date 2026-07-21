@@ -29,6 +29,7 @@ try:
         IoTServiceAuditor,
         ManagedKafkaServiceAuditor,
         IntegrationServiceAuditor,
+        FileStorageServiceAuditor,
     )
     _CONFIG_AUDIT_AVAILABLE = True
 except Exception:  # pragma: no cover - optional deps (oci) may be missing
@@ -2350,3 +2351,265 @@ class TestConfigAuditIntegration(unittest.TestCase):
         res = IntegrationServiceAuditor(session=session).run_checks()
         codes = {f.issue_code for f in res.findings}
         self.assertNotIn("INTEGRATION_INSTANCE_NO_NETWORK_ALLOWLIST", codes)
+
+
+@unittest.skipUnless(_CONFIG_AUDIT_AVAILABLE, "config_audit dependencies not available")
+class TestConfigAuditFileStorageCmk(unittest.TestCase):
+    def test_file_system_without_cmk_is_flagged(self):
+        session = _Session(
+            {
+                "file_storage_file_systems": [
+                    {
+                        "id": "ocid1.filesystem.oc1..fs1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "ACTIVE",
+                        "kms_key_id": "",
+                    }
+                ]
+            }
+        )
+        res = FileStorageServiceAuditor(session=session).run_checks()
+        findings = [f for f in res.findings if f.issue_code == "FILE_STORAGE_FILE_SYSTEM_NO_CMK"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "LOW")
+
+    def test_file_system_with_cmk_not_flagged(self):
+        session = _Session(
+            {
+                "file_storage_file_systems": [
+                    {
+                        "id": "ocid1.filesystem.oc1..fs1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "ACTIVE",
+                        "kms_key_id": "ocid1.key.oc1..k1",
+                    }
+                ]
+            }
+        )
+        res = FileStorageServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("FILE_STORAGE_FILE_SYSTEM_NO_CMK", codes)
+
+    def test_deleted_file_system_not_flagged(self):
+        session = _Session(
+            {
+                "file_storage_file_systems": [
+                    {
+                        "id": "ocid1.filesystem.oc1..fs1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "DELETED",
+                        "kms_key_id": "",
+                    }
+                ]
+            }
+        )
+        res = FileStorageServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("FILE_STORAGE_FILE_SYSTEM_NO_CMK", codes)
+
+
+@unittest.skipUnless(_CONFIG_AUDIT_AVAILABLE, "config_audit dependencies not available")
+class TestConfigAuditIdentityApiKeyRotationAndAdminExposure(unittest.TestCase):
+    @staticmethod
+    def _iso_days_ago(days):
+        from datetime import datetime, timedelta, timezone
+
+        return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    def test_stale_active_api_key_is_flagged(self):
+        session = _Session(
+            {
+                "identity_user_api_keys": [
+                    {
+                        "key_id": "k1",
+                        "user_id": "u1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "ACTIVE",
+                        "time_created": self._iso_days_ago(200),
+                    }
+                ]
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        findings = [f for f in res.findings if f.issue_code == "IAM_USER_API_KEY_STALE"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "MEDIUM")
+
+    def test_fresh_active_api_key_not_flagged(self):
+        session = _Session(
+            {
+                "identity_user_api_keys": [
+                    {
+                        "key_id": "k1",
+                        "user_id": "u1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "ACTIVE",
+                        "time_created": self._iso_days_ago(5),
+                    }
+                ]
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_USER_API_KEY_STALE", codes)
+
+    def test_stale_inactive_api_key_not_flagged(self):
+        session = _Session(
+            {
+                "identity_user_api_keys": [
+                    {
+                        "key_id": "k1",
+                        "user_id": "u1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "INACTIVE",
+                        "time_created": self._iso_days_ago(400),
+                    }
+                ]
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_USER_API_KEY_STALE", codes)
+
+    def test_admin_group_member_with_active_key_is_flagged(self):
+        session = _Session(
+            {
+                "identity_user_group_memberships": [
+                    {"user_id": "u1", "group_name": "Administrators"},
+                ],
+                "identity_user_api_keys": [
+                    {
+                        "key_id": "k1",
+                        "user_id": "u1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "ACTIVE",
+                        "time_created": self._iso_days_ago(5),
+                    }
+                ],
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        findings = [f for f in res.findings if f.issue_code == "IAM_ADMIN_USER_HAS_API_KEY"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "HIGH")
+
+    def test_non_admin_group_member_with_active_key_not_flagged(self):
+        session = _Session(
+            {
+                "identity_user_group_memberships": [
+                    {"user_id": "u1", "group_name": "Developers"},
+                ],
+                "identity_user_api_keys": [
+                    {
+                        "key_id": "k1",
+                        "user_id": "u1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "ACTIVE",
+                        "time_created": self._iso_days_ago(5),
+                    }
+                ],
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_ADMIN_USER_HAS_API_KEY", codes)
+
+    def test_admin_group_member_with_inactive_key_not_flagged(self):
+        session = _Session(
+            {
+                "identity_user_group_memberships": [
+                    {"user_id": "u1", "group_name": "Administrators"},
+                ],
+                "identity_user_api_keys": [
+                    {
+                        "key_id": "k1",
+                        "user_id": "u1",
+                        "compartment_id": "ocid1.compartment.oc1..example",
+                        "lifecycle_state": "DELETED",
+                        "time_created": self._iso_days_ago(5),
+                    }
+                ],
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_ADMIN_USER_HAS_API_KEY", codes)
+
+
+@unittest.skipUnless(_CONFIG_AUDIT_AVAILABLE, "config_audit dependencies not available")
+class TestConfigAuditIdentityPolicyPrivilegeEscalation(unittest.TestCase):
+    def _policy(self, statements):
+        return {
+            "compartment_id": "ocid1.compartment.oc1..example",
+            "id": "ocid1.policy.oc1..example",
+            "statements": statements,
+        }
+
+    def test_non_admin_group_manage_all_resources_is_flagged(self):
+        session = _Session(
+            {"identity_policies": [self._policy(["Allow group DevOps to manage all-resources in tenancy"])]}
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        findings = [
+            f for f in res.findings if f.issue_code == "IAM_POLICY_MANAGE_ALL_RESOURCES_NON_ADMIN_GROUP"
+        ]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "HIGH")
+
+    def test_administrators_group_manage_all_resources_not_flagged(self):
+        session = _Session(
+            {
+                "identity_policies": [
+                    self._policy(["Allow group Administrators to manage all-resources in tenancy"])
+                ]
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_POLICY_MANAGE_ALL_RESOURCES_NON_ADMIN_GROUP", codes)
+
+    def test_scoped_grant_not_flagged(self):
+        session = _Session(
+            {"identity_policies": [self._policy(["Allow group DevOps to manage instances in tenancy"])]}
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_POLICY_MANAGE_ALL_RESOURCES_NON_ADMIN_GROUP", codes)
+
+    def test_use_groups_without_admin_exclusion_is_flagged(self):
+        session = _Session(
+            {"identity_policies": [self._policy(["Allow group IAMAdmins to use groups in tenancy"])]}
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        findings = [f for f in res.findings if f.issue_code == "IAM_POLICY_ADMIN_GROUP_NOT_PROTECTED"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "HIGH")
+
+    def test_use_groups_with_admin_exclusion_not_flagged(self):
+        session = _Session(
+            {
+                "identity_policies": [
+                    self._policy(
+                        [
+                            "Allow group IAMAdmins to use groups in tenancy "
+                            "where target.group.name != 'Administrators'"
+                        ]
+                    )
+                ]
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_POLICY_ADMIN_GROUP_NOT_PROTECTED", codes)
+
+    def test_use_users_compartment_scoped_not_flagged(self):
+        session = _Session(
+            {
+                "identity_policies": [
+                    self._policy(["Allow group HelpDesk to use users in compartment Sandbox"])
+                ]
+            }
+        )
+        res = IdentityServiceAuditor(session=session).run_checks()
+        codes = {f.issue_code for f in res.findings}
+        self.assertNotIn("IAM_POLICY_ADMIN_GROUP_NOT_PROTECTED", codes)
