@@ -1,0 +1,83 @@
+{
+  "description": "Per OCI policy syntax docs, any-user matches all users, resource principals, and instance principals in the tenancy. A compute instance in the granted compartment should be wired up as an any-user resource-principal member (OCI_ANY_USER_MEMBER_OF), unconditionally (no where-clause narrowing here).",
+  "workspace": {
+    "workspace_id": 10101,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..any_user_compute_instance_direct",
+          "name": "AnyUserComputeInstanceDirect",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "compute_instances": [
+        {
+          "id": "ocid1.instance.oc1..webserver01",
+          "display_name": "webserver01",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "RUNNING"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "kind": "allow",
+          "subject": {
+            "type": "any-user",
+            "values": []
+          },
+          "actions": {
+            "type": "verbs",
+            "values": [
+              "manage"
+            ]
+          },
+          "resources": {
+            "type": "all-resources",
+            "values": []
+          },
+          "location": {
+            "type": "compartment_id",
+            "values": [
+              "ocid1.compartment.oc1..app"
+            ]
+          },
+          "conditions": {}
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Allow any-group to manage all-resources in compartment AppTeam

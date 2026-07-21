@@ -40,6 +40,7 @@ wiki/
 # Runtime output
 ocinferno_output/
 /ocinferno/databases/
+scratchpad_live/
 
 # Databases and artifacts
 *.sqlite

@@ -7,6 +7,7 @@ import sys
 import tempfile
 import types
 import unittest
+import unittest.mock
 import zipfile
 from pathlib import Path
 
@@ -308,6 +309,68 @@ class TestDataExports(unittest.TestCase):
             self.assertIn("app1", xml_blob)
             self.assertIn("ocid1.instance.oc1..aaaa", xml_blob)
             self.assertIn('"metadata_json"', xml_blob)
+
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
+    def test_single_sheet_export_splits_into_multiple_sheets_past_excel_row_limit(self):
+        """A single-sheet export whose row count would exceed Excel's real per-sheet
+        limit (1,048,576 rows, previously an unrecoverable crash reported as a
+        misleading "install pandas/xlsxwriter" error) must split into multiple numbered
+        sheets instead of raising. Uses a monkeypatched threshold so the test runs fast
+        without generating a million real rows."""
+        from ocinferno.core.utils import exports as exports_mod
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            db_one = root / "service_info.db"
+            out_xlsx = root / "sqlite_chunked.xlsx"
+
+            _build_db(db_one, "alpha_table", [(str(i), f"a{i}") for i in range(10)])
+
+            with unittest.mock.patch.object(exports_mod, "_EXCEL_MAX_DATA_ROWS_PER_SHEET", 3):
+                result = export_sqlite_dbs_to_excel_blob(
+                    db_paths=[str(db_one)],
+                    out_xlsx_path=str(out_xlsx),
+                    single_sheet=True,
+                )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["rows"], 10)
+            xml_blob = _xlsx_xml_blob(result["xlsx_path"])
+            # 10 rows / 3-per-sheet -> 4 sheets: all_tables, all_tables_2, _3, _4
+            self.assertIn("all_tables", xml_blob)
+            self.assertIn("all_tables_2", xml_blob)
+            self.assertIn("all_tables_3", xml_blob)
+            self.assertIn("all_tables_4", xml_blob)
+
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
+    def test_writer_failure_message_reports_real_cause_not_missing_dependency(self):
+        """A write-time failure (row limit, disk space, etc -- anything other than a
+        genuinely missing pandas/xlsxwriter, which is guarded separately at the top of
+        the function) must surface its real exception type/message, not the old
+        catch-all "Ensure pandas and xlsxwriter are installed" text that was actively
+        misleading when the dependencies were already installed."""
+        from ocinferno.core.utils import exports as exports_mod
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            db_one = root / "service_info.db"
+            out_xlsx = root / "sqlite_writer_fail.xlsx"
+            _build_db(db_one, "alpha_table", [("1", "a1")])
+
+            def _boom(*a, **kw):
+                raise ValueError("This sheet is too large! boom")
+
+            with unittest.mock.patch.object(exports_mod, "_write_records_chunked", side_effect=_boom):
+                with self.assertRaises(RuntimeError) as ctx:
+                    export_sqlite_dbs_to_excel_blob(
+                        db_paths=[str(db_one)],
+                        out_xlsx_path=str(out_xlsx),
+                        single_sheet=True,
+                    )
+            msg = str(ctx.exception)
+            self.assertIn("ValueError", msg)
+            self.assertIn("too large", msg)
+            self.assertNotIn("Ensure pandas and xlsxwriter are installed", msg)
 
     @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
     def test_condensed_display_name_falls_back_to_service_specific_name_column(self):

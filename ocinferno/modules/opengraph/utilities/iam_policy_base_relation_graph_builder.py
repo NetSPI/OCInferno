@@ -1254,6 +1254,19 @@ def _filter_known_subjects(ctx, subjects: list[dict], *, include_all: bool = Fal
         if kind in {"any-user", "any_user", "anyuser", "any-group", "any_group", "anygroup"}:
             out.append(subj)
             continue
+        if kind == "resource":
+            # Resource-principal subjects produced by a conditional handler (e.g.
+            # request.instance.compartment.id / request.principal.type resolving
+            # ANY-USER down to specific instances/functions/mysqldbsystem/etc. rows).
+            # These are already validated against enumerated data by the handler that
+            # produced them -- there is no separate "known resource principal id" set
+            # to re-check against here, unlike user/group/dynamic-group. Rejecting
+            # them silently discards a correct narrowing and (via the `subjects =
+            # option.delta_candidate_subjects or state.base_candidate_subjects`
+            # fallback in _build_option_runtime) makes the statement look
+            # unconditioned instead of correctly scoped.
+            out.append(subj)
+            continue
         if kind == "service":
             # Service subjects ("Allow service <name> to ...") are dropped by
             # default -- not real users/groups/dynamic-groups to attribute an

@@ -154,6 +154,12 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    # Exploit: create one group (tenancy/domain global); no per-compartment loop.
+    "exploit_create_group": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     # Exploit: edit/reset a single user; no per-compartment loop.
     "exploit_update_user": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,

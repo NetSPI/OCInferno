@@ -118,6 +118,47 @@ def _excel_sheet_title(base: str, used_titles: set[str]) -> str:
         i += 1
 
 
+# Excel's real limit is 1,048,576 rows per sheet INCLUDING the header row that
+# pandas' to_excel writes -- so the true data-row ceiling is one less.
+_EXCEL_MAX_DATA_ROWS_PER_SHEET = 1_048_575
+
+
+def _write_records_chunked(
+    *,
+    pd: Any,
+    writer: Any,
+    records: List[Dict[str, Any]],
+    columns: List[str],
+    base_sheet_name: str,
+    used_titles: set[str],
+    apply_layout=None,
+) -> List[str]:
+    """
+    Write ``records`` to one or more sheets, splitting into
+    ``_EXCEL_MAX_DATA_ROWS_PER_SHEET``-row chunks so a large export can't hit Excel's
+    per-sheet row limit (a real crash we've hit in practice on big tenancies, previously
+    masked by a catch-all "install pandas/xlsxwriter" error message that had nothing to
+    do with the actual cause). Returns the list of sheet names written (always at least
+    one, even for zero records).
+    """
+    if not records:
+        title = _excel_sheet_title(base_sheet_name, used_titles)
+        pd.DataFrame(columns=columns).to_excel(writer, sheet_name=title, index=False)
+        if apply_layout:
+            apply_layout(title)
+        return [title]
+
+    written: List[str] = []
+    for start in range(0, len(records), _EXCEL_MAX_DATA_ROWS_PER_SHEET):
+        chunk = records[start:start + _EXCEL_MAX_DATA_ROWS_PER_SHEET]
+        title = _excel_sheet_title(base_sheet_name, used_titles)
+        pd.DataFrame(chunk, columns=columns).to_excel(writer, sheet_name=title, index=False)
+        if apply_layout:
+            apply_layout(title)
+        written.append(title)
+    return written
+
+
 def _apply_xlsx_condensed_layout(
     *,
     writer: Any,
@@ -670,13 +711,15 @@ def export_sqlite_dbs_to_excel_blob(
                     for table_name, rd in _iter_table_rows(db):
                         records.append(_build_condensed_record(db, table_name, rd))
                 exported_rows = len(records)
-                sheet_name = "all_resources"
-                pd.DataFrame(records, columns=condensed_header).to_excel(
-                    writer, sheet_name=sheet_name, index=False
-                )
-                _apply_xlsx_condensed_layout(
+                used_titles: set[str] = set()
+                _write_records_chunked(
+                    pd=pd,
                     writer=writer,
-                    sheet_name=sheet_name,
+                    records=records,
+                    columns=condensed_header,
+                    base_sheet_name="all_resources",
+                    used_titles=used_titles,
+                    apply_layout=lambda title: _apply_xlsx_condensed_layout(writer=writer, sheet_name=title),
                 )
             elif condensed and not single_sheet:
                 used_titles: set[str] = set()
@@ -713,8 +756,14 @@ def export_sqlite_dbs_to_excel_blob(
                             row_obj[c] = _excel_safe_value(rd.get(c))
                         records.append(row_obj)
                 exported_rows = len(records)
-                pd.DataFrame(records, columns=wide_columns).to_excel(
-                    writer, sheet_name="all_tables", index=False
+                used_titles = set()
+                _write_records_chunked(
+                    pd=pd,
+                    writer=writer,
+                    records=records,
+                    columns=wide_columns,
+                    base_sheet_name="all_tables",
+                    used_titles=used_titles,
                 )
             else:
                 used_titles: set[str] = set()
@@ -739,9 +788,14 @@ def export_sqlite_dbs_to_excel_blob(
                         writer, sheet_name="all_tables", index=False
                     )
     except Exception as e:
+        # pandas/xlsxwriter are already confirmed importable by this point (see the
+        # `import pandas as _pd` guard above) -- a failure here is never "not installed",
+        # it's a real write-time error (row-limit, disk space, permissions, etc). Report
+        # the actual exception instead of a misleading "install pandas/xlsxwriter" message
+        # that has nothing to do with the real cause.
         writer_errors.append(f"pandas xlsxwriter writer failed: {type(e).__name__}: {e}")
         raise RuntimeError(
-            "Excel export failed. Ensure pandas and xlsxwriter are installed."
+            f"Excel export failed while writing the workbook: {type(e).__name__}: {e}"
         ) from e
 
     return {

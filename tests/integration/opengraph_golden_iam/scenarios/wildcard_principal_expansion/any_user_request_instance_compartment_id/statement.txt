@@ -1,0 +1,1 @@
+Allow any-user to manage all-resources in compartment AppTeam where request.instance.compartment.id = 'ocid1.compartment.oc1..app'

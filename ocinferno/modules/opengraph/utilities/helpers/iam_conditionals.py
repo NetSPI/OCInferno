@@ -196,6 +196,49 @@ _SUPPORTED_VAR_KEYS = {
     if isinstance(_k, str)
 }
 
+# request.principal.type: OCI's per-service policy variable for narrowing any-user/
+# any-group grants to a specific resource-principal type (e.g. "Allow any-user to
+# manage all-resources in tenancy where request.principal.type='mysqldbsystem'").
+# There is no single OCI master reference for these values -- each is documented on
+# its own service's policy page. Two buckets:
+#
+# RESOLVABLE: OCInferno already enumerates this resource type as an OpenGraph node
+# (via RESOURCE_SCOPE_MAP), so the condition can be resolved to the *actual* matching
+# nodes in scope. table/id_col/comp_col/node_type mirror the RESOURCE_SCOPE_MAP entry
+# for the same resource so this can't drift from what resource_scope_graph_builder.py
+# wires into any-user unconditionally.
+#   - resourceschedule: docs.oracle.com/en-us/iaas/Content/resource-scheduler/tasks/listing-schedules.htm
+#   - apigateway (docs use 'ApiGateway'): docs.oracle.com/en-us/iaas/Content/APIGateway/Tasks/apigatewaycreatingpolicies.htm
+#   - mysqldbsystem: docs.oracle.com/en-us/iaas/mysql-database/doc/resource-principals.html
+#   - iotdomain: docs.oracle.com/en-us/iaas/Content/internet-of-things/* (several scenario pages)
+#   - dataflowrun: docs.oracle.com/en-us/iaas/Content/data-flow/using/resource-principal-policies.htm
+_REQUEST_PRINCIPAL_TYPE_RESOLVABLE = {
+    "resourceschedule": {"table": "resource_schedules", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIResourceSchedule"},
+    "apigateway": {"table": "apigw_gateways", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIAPIGateway"},
+    "mysqldbsystem": {"table": "db_mysql_db_systems", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIMySqlDbSystem"},
+    "iotdomain": {"table": "iot_domains", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIIoTDomain"},
+    "dataflowrun": {"table": "dataflow_runs", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIDataFlowRun"},
+}
+
+# KNOWN-BUT-UNRESOLVABLE: confirmed real request.principal.type values via official
+# docs, but OCInferno has no enumerated table/node for the resource type yet, so we
+# can't add the correct node. Still narrow to "no match" (drop the edge) rather than
+# leave it attached to whatever any-user members we DO know about (users, instances,
+# functions, ...) -- none of them are actually this type, so showing the edge on them
+# would be a false positive, not a safe over-approximation.
+#   - workload (OKE Workload Identity; also needs live K8s pod/service-account data,
+#     not just enumeration): docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contenggrantingworkloadaccesstoresources.htm
+#   - disworkspace / disapplication (Data Integration): docs.oracle.com/en-us/iaas/Content/data-integration/using/policy-examples.htm
+#   - bigdataservice (Big Data Service): docs.oracle.com/en-us/iaas/Content/bigdata/manage-cluster-resource-principal.htm
+#   - datasciencemodeldeployment (Data Science): docs.oracle.com/en-us/iaas/Content/data-science/using/policies.htm
+_REQUEST_PRINCIPAL_TYPE_KNOWN_UNRESOLVABLE = {
+    "workload",
+    "disworkspace",
+    "disapplication",
+    "bigdataservice",
+    "datasciencemodeldeployment",
+}
+
 _TIME_HANDLER_VARS = (
     "request.utc-timestamp",
     "request.utc-timestamp.month-of-year",
@@ -249,6 +292,60 @@ _TARGET_COLUMN_HANDLER_SPECS = {
         "token": "orm-stacks",
         "col": "id",
         "applicable": {"orm_stacks", "stacks", "orm-stacks", "resource-manager-stacks"},
+        "allow_patterns": False,
+        "allow_in": False,
+        "missing_is_match_for_neq": True,
+    },
+    # Confirmed via docs.oracle.com/en-us/iaas/Content/Identity/policyreference/objectstoragepolicyreference.htm
+    "target.bucket.name": {
+        "token": "buckets",
+        "col": "name",
+        "applicable": {"buckets", "objects"},
+        "allow_patterns": True,
+        "allow_in": True,
+        "missing_is_match_for_neq": True,
+    },
+    # OKE trio confirmed via docs.oracle.com/en-us/iaas/Content/Identity/policyreference/contengpolicyreference.htm
+    "target.cluster.id": {
+        "token": "clusters",
+        "col": "id",
+        "applicable": {"clusters"},
+        "allow_patterns": False,
+        "allow_in": False,
+        "missing_is_match_for_neq": True,
+    },
+    "target.nodepool.id": {
+        "token": "cluster-node-pools",
+        "col": "id",
+        "applicable": {"cluster-node-pools"},
+        "allow_patterns": False,
+        "allow_in": False,
+        "missing_is_match_for_neq": True,
+    },
+    "target.virtualnodepool.id": {
+        "token": "cluster-virtualnode-pools",
+        "col": "id",
+        "applicable": {"cluster-virtualnode-pools"},
+        "allow_patterns": False,
+        "allow_in": False,
+        "missing_is_match_for_neq": True,
+    },
+    # Confirmed via docs.oracle.com/en-us/iaas/Content/Security/Reference/network-firewall_security.htm
+    # (documented literally as "target.display-name", no resource-type prefix, unlike
+    # every other variable here -- specific to Network Firewall policies).
+    "target.display-name": {
+        "token": "network-firewall-policies",
+        "col": "display_name",
+        "applicable": {"firewallpolicies", "network-firewall-policies"},
+        "allow_patterns": True,
+        "allow_in": True,
+        "missing_is_match_for_neq": True,
+    },
+    # Confirmed via docs.oracle.com/iaas/data-flow/using/policies.htm
+    "target.run.id": {
+        "token": "dataflowrun",
+        "col": "id",
+        "applicable": {"dataflow-run", "dataflowrun"},
         "allow_patterns": False,
         "allow_in": False,
         "missing_is_match_for_neq": True,
@@ -1051,6 +1148,7 @@ class StatementConditionalsEngine:
 
             "request.user.id": self._h_request_user_id,
             "request.user.name": self._h_request_user_name,
+            "request.principal.type": self._h_request_principal_type,
 
             "request.principal.compartment.tag": self._h_request_principal_compartment_tag,
             "request.principal.group.tag": self._h_request_principal_group_tag,
@@ -2917,6 +3015,62 @@ class StatementConditionalsEngine:
             filter_subject_ids={want},
             unresolved=False,
             reason="request.user.id: filtered to explicit user id",
+        )
+
+    def _h_request_principal_type(self, *, op: str, rhs_val, ctx: EvalContext, **_):
+        o = _CondUtil.norm_op(op)
+        if o != "eq":
+            return _delta_unknown(f"request.principal.type unsupported op={o}", unresolved=True)
+
+        want = _CondUtil.l(_CondUtil.s(rhs_val))
+        if not want:
+            return _delta_unknown("request.principal.type rhs empty", unresolved=True)
+
+        # In practice this only meaningfully narrows any-user/any-group (a named
+        # group/dynamic-group subject already has a fixed, known principal type, so
+        # the condition is either trivially true or a statement authoring mistake --
+        # not something we should guess at here).
+        has_any_user, has_any_group = self._is_any_principal(ctx)
+        if not (has_any_user or has_any_group):
+            return _delta_unknown("request.principal.type: not an any-user/any-group subject", unresolved=True)
+
+        spec = _REQUEST_PRINCIPAL_TYPE_RESOLVABLE.get(want)
+        if spec is None:
+            if want in _REQUEST_PRINCIPAL_TYPE_KNOWN_UNRESOLVABLE:
+                # Real OCI value, but we don't enumerate this resource-principal type
+                # locally -- narrow to "nothing we can show" rather than leave every
+                # currently-known any-user member (users/instances/functions/...)
+                # attached, since none of them actually are this type.
+                return ContextDelta(
+                    tri=BoolTri.TRUE,
+                    replace_subjects=[],
+                    unresolved=False,
+                    reason=f"request.principal.type={want}: recognized but not locally enumerated",
+                )
+            return _delta_unknown(f"request.principal.type: unrecognized value {want}", unresolved=True)
+
+        locs = set(ctx.location_ids or ())
+        rows = self._query_rows_cached(spec["table"], None)
+        id_col = spec["id_col"]
+        comp_col = spec["comp_col"]
+        matched = []
+        for r in rows:
+            if not isinstance(r, dict):
+                continue
+            if locs and _CondUtil.s(r.get(comp_col)) not in locs:
+                continue
+            rid = _CondUtil.s(r.get(id_col))
+            if rid:
+                matched.append(rid)
+
+        if not matched:
+            return _delta_false(f"request.principal.type={want}: no matching resources in scoped compartments")
+
+        return ContextDelta(
+            tri=BoolTri.TRUE,
+            replace_subjects=[{"id": rid, "node_type": spec["node_type"], "kind": "resource"} for rid in matched],
+            unresolved=False,
+            reason=f"request.principal.type={want}: expanded to matching {spec['node_type']} resources ({len(matched)})",
         )
 
     def _h_request_user_name(self, *, op: str, rhs_val, ctx: EvalContext, **_):

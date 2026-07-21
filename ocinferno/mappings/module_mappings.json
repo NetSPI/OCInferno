@@ -194,6 +194,14 @@
       "service": "IdentityClient"
     },
     {
+      "module_name": "exploit_create_group",
+      "module_category": "Exploit",
+      "info_blurb": "Create a new IAM group (classic or identity domain)",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.identityclient.exploit.exploit_create_group",
+      "service": "IdentityClient"
+    },
+    {
       "module_name": "exploit_update_user",
       "module_category": "Exploit",
       "info_blurb": "Edit a user's email/description (classic or identity domain) -> redirect a later password reset",

@@ -1,0 +1,170 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..any_group_compute_instance_direct:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..any_group_compute_instance_direct"
+          ],
+          "resolved_statements": [
+            "Allow any-group to manage all-resources in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ANY_GROUP@ocid1.compartment.oc1..app"
+        }
+      },
+      {
+        "end": {
+          "value": "ANY_GROUP@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_ANY_GROUP_MEMBER_OF",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Wildcard principal expansion."
+        },
+        "start": {
+          "value": "ocid1.group.oc1..devops"
+        }
+      },
+      {
+        "end": {
+          "value": "ANY_GROUP@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_ANY_GROUP_MEMBER_OF",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "standard",
+          "matching_rules": "Wildcard principal expansion."
+        },
+        "start": {
+          "value": "ocid1.instance.oc1..webserver01"
+        }
+      },
+      {
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Grants broad access to ALL RESOURCES in the target scope.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..any_group_compute_instance_direct"
+          ],
+          "resolved_statements": [
+            "Allow any-group to manage all-resources in compartment AppTeam"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..any_group_compute_instance_direct:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all-resources@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "all-resources@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ANY_GROUP@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIAnyGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "ANY_GROUP@app-team",
+          "principal_kind": "any-group",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.instance.oc1..webserver01",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "display_name": "webserver01",
+          "id": "ocid1.instance.oc1..webserver01",
+          "lifecycle_state": "RUNNING",
+          "name": "webserver01",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant",
+          "workspace_id": "10105"
+        }
+      },
+      {
+        "id": "ocid1.group.oc1..devops",
+        "kinds": [
+          "OCIGroup",
+          "OCIPrincipal"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "in_identity_domain": false,
+          "lifecycle_state": "ACTIVE",
+          "name": "DevOps",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..any_group_compute_instance_direct:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "AnyGroupComputeInstanceDirect:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..any_group_compute_instance_direct",
+          "policy_name": "AnyGroupComputeInstanceDirect",
+          "raw_statement": "Allow any-group to manage all-resources in compartment AppTeam",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

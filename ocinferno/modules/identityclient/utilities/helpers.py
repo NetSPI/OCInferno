@@ -67,6 +67,7 @@ TABLE_POLICY_PARSED = "identity_policy_statements"
 # SCIM schema URNs used by the User/Group write paths below.
 IDD_API_KEY_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:apikey"
 IDD_USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
+IDD_GROUP_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:Group"
 PATCHOP_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
 PW_RESETTER_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:UserPasswordResetter"
 
@@ -3175,6 +3176,44 @@ class Group(_DualPathClientMixin):
     @staticmethod
     def _fetch_classic(session, classic_ops, *, compartment_id: str) -> List[Dict[str, Any]]:
         return classic_ops.list_groups(compartment_id=compartment_id) or []
+
+    @classmethod
+    def create_oci(cls, session, *, name: str, description: str = "", compartment_id: str = "") -> "Group":
+        """Create a classic IAM group (in the tenancy root unless a compartment is given)."""
+        client = cls._classic_client(session)
+        tenancy, _ = _tenancy_and_region(session)
+        comp = _s(compartment_id) or tenancy
+        if not comp:
+            raise ValueError("could not resolve a compartment/tenancy for the new group")
+        details = oci.identity.models.CreateGroupDetails(
+            compartment_id=comp, name=name, description=description or "ocinferno-created group",
+        )
+        resp = client.create_group(details)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return cls(kind="classic", ocid=_s(data.get("id")), name=_s(data.get("name") or name))
+
+    @classmethod
+    def create_idd(cls, session, *, domain_url: str, display_name: str) -> "Group":
+        """Create an identity-domain group via the domain SCIM endpoint."""
+        if not _s(domain_url):
+            raise ValueError("identity-domain group requires the domain URL (--domain-url).")
+        client = cls._idd_client(session, domain_url)
+        m = oci.identity_domains.models
+        body = m.Group(schemas=[IDD_GROUP_SCHEMA], display_name=display_name)
+        resp = client.create_group(group=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return cls(kind="idd", ocid=_s(data.get("ocid")), scim_id=_s(data.get("id")),
+                   name=_s(data.get("display_name") or display_name), domain_url=domain_url)
+
+    @classmethod
+    def create(cls, session, *, force_idd: bool = False, **kw) -> "Group":
+        """Dispatch to the classic or identity-domain create path."""
+        if force_idd:
+            return cls.create_idd(session, domain_url=_s(kw.get("domain_url")), display_name=_s(kw.get("name")))
+        return cls.create_oci(
+            session, name=_s(kw.get("name")), description=_s(kw.get("description")),
+            compartment_id=_s(kw.get("compartment_id")),
+        )
 
     def add_member_oci(self, session, user: "User") -> Dict[str, Any]:
         client = self._classic_client(session)

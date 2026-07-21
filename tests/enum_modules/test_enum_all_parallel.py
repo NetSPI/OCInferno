@@ -92,6 +92,46 @@ def test_parallel_runs_all_units_and_records_ledger():
     assert len(done) == 4
 
 
+def test_parallel_progress_counter_is_global_not_per_compartment(capsys):
+    """The "(done/total)" progress line must reflect the WHOLE run (every unit across
+    every compartment), not reset back to a small per-compartment count each time a
+    worker moves to a new compartment -- previously each compartment's units were
+    counted independently (e.g. "1/2" repeating for every compartment instead of
+    counting up through the true run total)."""
+    with stub_optional_dependencies():
+        mod = import_module(MODULE)
+        session = _session_with_ledger()
+        args = mod._parse_args(["--modules", "logging", "--parallel-services", "1"])
+
+        mod._run_other_module = lambda sess, ua, mn: {"ok": True}
+
+        # 3 compartments x 2 modules = 6 units total. threads=1 forces sequential
+        # execution so the printed progress order is deterministic for this assertion.
+        targets = [
+            "ocid1.compartment.oc1..a", "ocid1.compartment.oc1..b", "ocid1.compartment.oc1..c",
+        ]
+        plan = _plan(["modA", "modB"])
+
+        mod.clear_cancel()
+        mod._run_execution_plan_parallel(
+            session, args, targets, plan,
+            download_all=False, module_download_extras=None,
+            run_id="tok-progress", threads=1, skip_units=set(),
+            scan_regions=[""], home_region=None,
+        )
+
+    out = capsys.readouterr().out
+    progress_lines = [ln for ln in out.splitlines() if "Running mod" in ln]
+    assert len(progress_lines) == 6
+    # Denominator must always be the global total (6), never a per-compartment count
+    # (which would repeat small values like "1/2", "2/2" for each of the 3 compartments).
+    for ln in progress_lines:
+        assert "/6)" in ln, ln
+    # Numerator counts up through the whole run, one increment per unit, in order.
+    seen_numerators = [ln.split("(", 1)[1].split("/", 1)[0] for ln in progress_lines]
+    assert seen_numerators == [str(i) for i in range(1, 7)]
+
+
 def test_resume_skips_completed_units():
     with stub_optional_dependencies():
         mod = import_module(MODULE)

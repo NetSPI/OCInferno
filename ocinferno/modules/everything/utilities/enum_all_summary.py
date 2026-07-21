@@ -290,7 +290,10 @@ def summarize_resources_by_compartment(session, target_cids: List[str]) -> dict:
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
     tables = [r[0] for r in cur.fetchall() if isinstance(r[0], str) and r[0] not in _NON_RESOURCE_TABLES]
 
-    for table_name in tables:
+    # A big scan (thousands of rows per table x up to ~280 tables) can take a real while
+    # here with a GROUP BY aggregation per table -- in-place progress so this doesn't
+    # read as a hang the way a fully silent sweep did.
+    for table_name in UtilityTools.progress_iter(tables, label="enum_all summary: tables swept", min_items=20):
         try:
             cur.execute(f'PRAGMA table_info("{table_name}")')
             cols = {str(r[1]) for r in cur.fetchall() if len(r) > 1}

@@ -19,9 +19,9 @@ into:
 
 3) Wildcard principal expansion (IAM semantics):
 
-    <user_ocid> --OCI_ANY_USER_MEMBER_OF--> ANY_USER@<loc>
+    <user_or_resource_principal_ocid> --OCI_ANY_USER_MEMBER_OF--> ANY_USER@<loc>
 
-    <group_or_dg_ocid> --OCI_ANY_GROUP_MEMBER_OF--> ANY_GROUP@<loc>
+    <group_or_dg_or_resource_principal_ocid> --OCI_ANY_GROUP_MEMBER_OF--> ANY_GROUP@<loc>
 
 Notes:
 - Uses ctx.og_state dedupe sets:
@@ -37,6 +37,7 @@ from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_GROUP,
     NODE_TYPE_OCI_USER,
     RESOURCE_SCOPE_MAP,
+    RESOURCE_PRINCIPAL_SCOPE_TOKENS,
 )
 from ocinferno.modules.opengraph.utilities.helpers import (
     build_edge_properties as _build_edge_properties,
@@ -66,12 +67,24 @@ EDGE_BELONGS_TO = "OCI_BELONGS_TO"
 EDGE_INCLUDES = "OCI_INCLUDES"
 NEW_USER_SCOPE_TOKENS = {"new-users", "new_users", "new-user", "new_user"}
 
-# ANY_USER resource-principal expansion:
-# Keep this intentionally narrow for now (Functions only) to avoid overly broad
-# wildcard principal expansion. Add more targets later as:
-#   "<OpenGraphNodeType>"
-# Example future adds: "OCIComputeInstance", "OCIContainerInstance".
-ANY_USER_RESOURCE_PRINCIPAL_SCOPE_TOKENS = ("OCIFunctionFunction",)
+# ANY_USER/ANY_GROUP resource-principal expansion:
+# Per OCI's policy syntax docs, any-user matches "all users, resource principals, and
+# instance principals in your tenancy" (plus service principals); any-group matches the
+# same minus service principals. Derived from RESOURCE_PRINCIPAL_SCOPE_TOKENS
+# (constants.py) -- the SAME token set iam_conditionals.py's
+# _resource_principal_subjects_by_compartment uses for request.instance.compartment.id
+# trimming -- instead of a second, independently-maintained list here, so the two
+# can't silently drift apart on "what counts as a wildcard resource principal" again
+# (this file used to hardcode ("OCIFunctionFunction",) for any-user only, missing
+# instances, container instances, DevOps pipelines, API Gateway, MySQL, IoT Domain, and
+# any-group entirely).
+def _wildcard_resource_principal_node_types() -> set[str]:
+    out = set()
+    for tok in (RESOURCE_PRINCIPAL_SCOPE_TOKENS or ()):
+        for spec in _iter_scope_specs(RESOURCE_SCOPE_MAP.get(_l(tok))):
+            if isinstance(spec, dict) and spec.get("node_type"):
+                out.add(_s(spec["node_type"]))
+    return out
 
 def _is_scope_node_id(node_id):
     if not isinstance(node_id, str) or "@" not in node_id:
@@ -454,17 +467,24 @@ def _expand_principal_scope(ctx, scope_id, scope_type, res_token_l, loc, princip
     return True
 
 
-def _expand_any_user_to_resource_principals(session, ctx, scope_id, scope_type, loc, stats, debug=False):
+def _expand_wildcard_to_resource_principals(session, ctx, scope_id, scope_type, loc, stats, *, edge_type, default_scope_type, debug=False):
     """
-    For ANY_USER scope nodes, emit MEMBER_OF edges from resource principals in the compartment.
-    Resource-principal candidates come from RESOURCE_SCOPE_MAP.
+    For ANY_USER/ANY_GROUP scope nodes, emit MEMBER_OF edges from resource principals in
+    the compartment. Resource-principal candidates come from RESOURCE_SCOPE_MAP, gated by
+    RESOURCE_PRINCIPAL_SCOPE_TOKENS (via _wildcard_resource_principal_node_types()).
+
+    Per OCI's policy syntax docs, any-group matches the same resource/instance principals
+    any-user does (any-user additionally matches service principals, which aren't part of
+    this resource-principal set either way -- see the "service" subject handling in
+    iam_policy_base_relation_graph_builder.py instead), so both callers share this one
+    implementation rather than maintaining two copies that could drift.
     """
     og = _og(ctx)
     existing_edges = og["existing_edges_set"]
     existing_nodes = og["existing_nodes_set"]
-    query_cache = og.setdefault("any_user_resource_query_cache", {})
+    query_cache = og.setdefault("wildcard_resource_query_cache", {})
 
-    allowed_node_types = set(ANY_USER_RESOURCE_PRINCIPAL_SCOPE_TOKENS or ())
+    allowed_node_types = _wildcard_resource_principal_node_types()
     for raw_spec in RESOURCE_SCOPE_MAP.values():
         for spec in _iter_scope_specs(raw_spec):
 
@@ -489,7 +509,7 @@ def _expand_any_user_to_resource_principals(session, ctx, scope_id, scope_type, 
                 loc=loc,
                 stats=stats,
                 debug=debug,
-                log_tag="resource-scope: any-user resource query failed",
+                log_tag="resource-scope: wildcard resource query failed",
             )
             if not rows:
                 continue
@@ -522,7 +542,7 @@ def _expand_any_user_to_resource_principals(session, ctx, scope_id, scope_type, 
                         existing_nodes.add(rid)
                     except Exception as e:
                         if debug:
-                            _dlog(debug, "resource-scope: any-user resource node write failed", id=rid, node_type=node_type, err=f"{type(e).__name__}: {e}")
+                            _dlog(debug, "resource-scope: wildcard resource node write failed", id=rid, node_type=node_type, err=f"{type(e).__name__}: {e}")
                         continue
 
                 _write_any_edge(
@@ -530,8 +550,8 @@ def _expand_any_user_to_resource_principals(session, ctx, scope_id, scope_type, 
                     src_id=rid,
                     src_type=node_type,
                     dst_id=scope_id,
-                    dst_type=scope_type or "OCIAnyUser",
-                    edge_type=EDGE_ANY_USER_MEMBER_OF,
+                    dst_type=scope_type or default_scope_type,
+                    edge_type=edge_type,
                     existing_edges=existing_edges,
                     stats=stats,
                     debug=debug,
@@ -934,8 +954,9 @@ def build_resource_scope_expansion_edges_offline(
         #   <function_resource_principal> --OCI_ANY_USER_MEMBER_OF--> ANY_USER@<loc>
         # -----------------------------------------------------------------
         # Wildcard principal expansion (ANY_USER)
-        # ANY_USER goes to users, instance principals, and resource principals
-        # for now resource principals are just functions but will add more in the future if needed
+        # ANY_USER goes to users, instance principals (compute instances), and other
+        # resource principals -- the full resource-principal set comes from
+        # RESOURCE_PRINCIPAL_SCOPE_TOKENS, see _wildcard_resource_principal_node_types above.
         if res_l == "any_user":
             stats["any_user_nodes_seen"] += 1
             users = (principal_index.get("any-user") or {}).get(loc) or []
@@ -950,13 +971,15 @@ def build_resource_scope_expansion_edges_offline(
                 stats=stats,
                 debug=debug,
             )
-            _expand_any_user_to_resource_principals(
+            _expand_wildcard_to_resource_principals(
                 session,
                 ctx,
                 scope_id=scope_id,
                 scope_type=scope_type,
                 loc=loc,
                 stats=stats,
+                edge_type=EDGE_ANY_USER_MEMBER_OF,
+                default_scope_type="OCIAnyUser",
                 debug=debug,
             )
             continue
@@ -965,7 +988,13 @@ def build_resource_scope_expansion_edges_offline(
         # 2C: Wildcard principal expansion for ANY_GROUP
         # Creates:
         #   <group_or_dynamic_group> --OCI_ANY_GROUP_MEMBER_OF--> ANY_GROUP@<loc>
+        #   <instance_or_other_resource_principal> --OCI_ANY_GROUP_MEMBER_OF--> ANY_GROUP@<loc>
         # -----------------------------------------------------------------
+        # Per OCI's policy syntax docs, any-group matches "all users, instance
+        # principals and resource principals in the tenancy" -- the same
+        # resource-principal set as any-user (any-user's only addition is service
+        # principals, which aren't part of this resource-principal expansion for
+        # either wildcard -- see the "service" subject handling elsewhere).
         if res_l == "any_group":
             stats["any_group_nodes_seen"] += 1
             groups = (principal_index.get("any-group") or {}).get(loc) or []
@@ -978,6 +1007,17 @@ def build_resource_scope_expansion_edges_offline(
                 existing_edges=existing_edges,
                 existing_nodes=existing_nodes,
                 stats=stats,
+                debug=debug,
+            )
+            _expand_wildcard_to_resource_principals(
+                session,
+                ctx,
+                scope_id=scope_id,
+                scope_type=scope_type,
+                loc=loc,
+                stats=stats,
+                edge_type=EDGE_ANY_GROUP_MEMBER_OF,
+                default_scope_type="OCIAnyGroup",
                 debug=debug,
             )
             continue

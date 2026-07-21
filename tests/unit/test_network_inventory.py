@@ -53,6 +53,21 @@ def test_ocid_not_mistaken_for_fqdn():
     assert "ocid1.instance.oc1.phx.abc" not in k.get(ni.KIND_FQDN, set())
 
 
+def test_private_ip_row_resolves_resource_name_from_hostname_label():
+    # virtual_network_private_ips/_public_ips have no id/name/display_name/bucket_name/
+    # hostname column -- hostname_label is the real field. Without it, the "resource"
+    # column in the printed report falls through to blank instead of something that
+    # lets an operator tell which instance/VNIC this IP belongs to.
+    rows = [{
+        "id": "ocid1.privateip.oc1..pip1", "ip_address": "10.0.1.5",
+        "hostname_label": "webserver01", "vnic_id": "ocid1.vnic.oc1..v1",
+        "subnet_id": "ocid1.subnet.oc1..s1", "compartment_id": "ocid1.compartment.oc1..c",
+    }]
+    recs = ni.extract_from_rows("virtual_network_private_ips", rows)
+    ip_recs = [r for r in recs if r["kind"] == ni.KIND_IP and r["value"] == "10.0.1.5"]
+    assert ip_recs and ip_recs[0]["resource_name"] == "webserver01"
+
+
 def test_dedupe_and_summarize():
     recs = ni.extract_from_rows("t", [{"id": "x", "ip_address": "1.1.1.1"}])
     recs = recs + recs  # duplicate

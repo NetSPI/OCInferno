@@ -1214,25 +1214,25 @@ def _run_execution_plan_parallel(
     print(f"{UtilityTools.BRIGHT_CYAN}[*] Running {len(units)} {scope_word} unit(s) across {threads} worker(s).{UtilityTools.RESET}")
     print(f"{UtilityTools.YELLOW}[!] Interrupt-safe: one Ctrl+C stops the pool; resume with  enum_all --parallel-services {threads} --resume {run_id}{UtilityTools.RESET}")
 
-    # Per-(region, compartment) (done/total) counter, mirroring the serial path's
-    # "(done/total) Running <module> for <compartment>" line -- workers interleave
-    # across compartments, so this is tracked per-target rather than as one global count.
-    target_totals: Dict[Tuple[str, str], int] = {}
-    for region, cid, _module_name in units:
-        target_totals[(region, cid)] = target_totals.get((region, cid), 0) + 1
-    target_progress: Dict[Tuple[str, str], int] = {}
+    # Global (done/total) counter across every (region, compartment, module) unit in this
+    # run -- workers interleave across compartments, so a per-compartment count resets
+    # misleadingly (e.g. "1/3" repeating for every compartment) instead of reflecting
+    # overall progress through the whole run the way the serial path's line does.
+    total_units = len(units)
+    completed_units = 0
     progress_lock = threading.Lock()
 
     def _worker(unit: Tuple[str, str, str]):
+        nonlocal completed_units
         region, cid, module_name = unit
         if cancel_requested():
             return None
         scoped = CompartmentScopedSession(session, cid, region or None)
         where = f"{cid}@{region}" if region else cid
         with progress_lock:
-            done = target_progress[(region, cid)] = target_progress.get((region, cid), 0) + 1
-        total_for_target = target_totals.get((region, cid), done)
-        print(f"{UtilityTools.BRIGHT_CYAN}[*] ({done}/{total_for_target}) Running {module_name} for {UtilityTools.condense_ocid(cid)}"
+            completed_units += 1
+            done = completed_units
+        print(f"{UtilityTools.BRIGHT_CYAN}[*] ({done}/{total_units}) Running {module_name} for {UtilityTools.condense_ocid(cid)}"
               f"{(' @ ' + region) if region else ''}{UtilityTools.RESET}")
         UtilityTools._log_action("module", f"START enum_all {module_name} @ {where}", "N/A")
         _ledger_mark(session, run_id, region, cid, module_name, "running")
@@ -1371,6 +1371,12 @@ def _run_once_modules(
 
 
 def _render_scan_summary(session, final_targets: List[str]) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, int]]]:
+    # All enum modules (and any --config-check/--opengraph/--network-resources) are done at
+    # this point. Building the summary means sweeping every service table for row counts per
+    # compartment -- for a large scan (many compartments x up to ~280 tables) this can take a
+    # while with zero stdout otherwise, which reads as a hang. Print before starting it.
+    print(f"{UtilityTools.BRIGHT_CYAN}[*] enum_all: all modules complete -- building resource summary "
+          f"(sweeping saved tables for {len(final_targets)} compartment(s), this can take a bit)...{UtilityTools.RESET}")
     summary = _summarize_resources_by_compartment(session, final_targets)
     tally_rows = summary.get("totals", [])
     detailed_rows = summary.get("detailed", {})

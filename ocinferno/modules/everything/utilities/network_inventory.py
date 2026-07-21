@@ -133,7 +133,7 @@ def extract_from_value(column: str, value: Any) -> List[Dict[str, str]]:
 
 
 def _resource_id(row: Dict[str, Any]) -> str:
-    for key in ("id", "name", "display_name", "bucket_name", "email_address"):
+    for key in ("id", "name", "display_name", "bucket_name", "hostname_label", "email_address"):
         v = row.get(key)
         if v:
             return str(v)
@@ -141,7 +141,10 @@ def _resource_id(row: Dict[str, Any]) -> str:
 
 
 def _resource_name(row: Dict[str, Any]) -> str:
-    for key in ("display_name", "name", "bucket_name", "hostname", "email_address"):
+    # hostname_label is virtual_network_private_ips'/_public_ips' actual field name (not
+    # "hostname") -- without it, private/public IP rows fall through to a blank resource
+    # name instead of the one thing that lets you tell which instance/VNIC an IP belongs to.
+    for key in ("display_name", "name", "bucket_name", "hostname", "hostname_label", "email_address"):
         v = row.get(key)
         if v:
             return str(v)

@@ -128,6 +128,16 @@ RESOURCE_TYPE_ALIASES = {
 
 # Resource-scope tokens that represent resource principals for ANY-USER expansion
 # and conditional request.instance.compartment.id trimming.
+# These are RESOURCE_SCOPE_MAP keys (the resource_iam_name / first element of each
+# "(<resource_iam_name>,<dynamic_group_name>)" pair in resource_scope_map.json),
+# NOT request.principal.type values -- e.g. "api-gateways" here corresponds to the
+# request.principal.type value 'apigateway' (see iam_conditionals.py's
+# _REQUEST_PRINCIPAL_TYPE_RESOLVABLE), and "mysql-db-systems" to 'mysqldbsystem'.
+# api-gateways / mysql-db-systems / iot-domain added because OCInferno already
+# enumerates each as an OpenGraph node (OCIAPIGateway / OCIMySqlDbSystem /
+# OCIIoTDomain) and each is a confirmed real resource-principal type via official
+# OCI docs, so they belong in the any-user resource-principal set the same as
+# instances/functions/etc.
 RESOURCE_PRINCIPAL_SCOPE_TOKENS = {
     "instances",
     "fn-function",
@@ -138,6 +148,9 @@ RESOURCE_PRINCIPAL_SCOPE_TOKENS = {
     "devopsbuildpipeline",
     "devopsrepository",
     "devopsconnection",
+    "api-gateways",
+    "mysql-db-systems",
+    "iot-domain",
 }
 
 @dataclass(slots=True)

@@ -251,5 +251,108 @@ class TestIamConditionalsTargetResourceCompartmentTag(unittest.TestCase):
         self.assertFalse(delta.unresolved)
 
 
+class TestIamConditionalsTargetColumnAdditions(unittest.TestCase):
+    """New target.* handlers added from the OCI conditional-variable gap survey:
+    target.bucket.name, target.cluster.id, target.nodepool.id,
+    target.virtualnodepool.id, target.display-name (network firewall), target.run.id
+    (data flow)."""
+
+    def _ctx(self, *, tokens, locs):
+        return EvalContext(
+            subjects=[],
+            verbs_l={"manage"},
+            perms=set(),
+            resource_tokens_l=set(tokens),
+            location_ids=set(locs),
+        )
+
+    def test_target_bucket_name_matches(self):
+        session = _Session(
+            {
+                "object_storage_buckets": [
+                    {"id": "ocid1.bucket.oc1..b1", "name": "prod-bucket", "compartment_id": "ocid1.compartment.oc1..app"},
+                    {"id": "ocid1.bucket.oc1..b2", "name": "dev-bucket", "compartment_id": "ocid1.compartment.oc1..app"},
+                ]
+            }
+        )
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"buckets"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.bucket.name"](
+            var="target.bucket.name", op="eq", rhs_val="prod-bucket", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.TRUE)
+        self.assertEqual(delta.matched_resource_node_ids, {"ocid1.bucket.oc1..b1"})
+
+    def test_target_bucket_name_no_match_is_false(self):
+        session = _Session({"object_storage_buckets": [{"id": "ocid1.bucket.oc1..b1", "name": "prod-bucket", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"buckets"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.bucket.name"](
+            var="target.bucket.name", op="eq", rhs_val="no-such-bucket", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.FALSE)
+
+    def test_target_bucket_name_not_applicable_to_other_resource_type(self):
+        session = _Session({"object_storage_buckets": [{"id": "ocid1.bucket.oc1..b1", "name": "prod-bucket", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"instances"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.bucket.name"](
+            var="target.bucket.name", op="eq", rhs_val="prod-bucket", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.FALSE)
+        self.assertIn("resource-token mismatch", delta.reason)
+
+    def test_target_cluster_id_matches_and_family_scoped_statement_still_applies(self):
+        session = _Session({"containerengine_clusters": [{"id": "ocid1.cluster.oc1..c1", "name": "prod", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        for tokens in ({"clusters"}, {"cluster-family"}):
+            ctx = self._ctx(tokens=tokens, locs={"ocid1.compartment.oc1..app"})
+            delta = engine._handlers["target.cluster.id"](
+                var="target.cluster.id", op="eq", rhs_val="ocid1.cluster.oc1..c1", rhs_type="string", ctx=ctx, st=None
+            )
+            self.assertEqual(delta.tri, BoolTri.TRUE, f"failed for tokens={tokens}")
+            self.assertEqual(delta.matched_resource_node_ids, {"ocid1.cluster.oc1..c1"})
+
+    def test_target_nodepool_id_matches(self):
+        session = _Session({"containerengine_node_pools": [{"id": "ocid1.nodepool.oc1..np1", "name": "pool1", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"cluster-node-pools"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.nodepool.id"](
+            var="target.nodepool.id", op="eq", rhs_val="ocid1.nodepool.oc1..np1", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.TRUE)
+        self.assertEqual(delta.matched_resource_node_ids, {"ocid1.nodepool.oc1..np1"})
+
+    def test_target_virtualnodepool_id_matches(self):
+        session = _Session({"containerengine_virtual_node_pools": [{"id": "ocid1.virtualnodepool.oc1..vnp1", "display_name": "vpool1", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"cluster-virtualnode-pools"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.virtualnodepool.id"](
+            var="target.virtualnodepool.id", op="eq", rhs_val="ocid1.virtualnodepool.oc1..vnp1", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.TRUE)
+        self.assertEqual(delta.matched_resource_node_ids, {"ocid1.virtualnodepool.oc1..vnp1"})
+
+    def test_target_display_name_matches_network_firewall_policy(self):
+        session = _Session({"network_firewall_policies": [{"id": "ocid1.networkfirewallpolicy.oc1..fw1", "display_name": "MyFirewallPolicy", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"firewallpolicies"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.display-name"](
+            var="target.display-name", op="eq", rhs_val="MyFirewallPolicy", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.TRUE)
+        self.assertEqual(delta.matched_resource_node_ids, {"ocid1.networkfirewallpolicy.oc1..fw1"})
+
+    def test_target_run_id_matches_dataflow_run(self):
+        session = _Session({"dataflow_runs": [{"id": "ocid1.dataflowrun.oc1..r1", "display_name": "nightly-etl", "compartment_id": "ocid1.compartment.oc1..app"}]})
+        engine = StatementConditionalsEngine(ctx=_Ctx(), session=session, debug=False)
+        ctx = self._ctx(tokens={"dataflow-run"}, locs={"ocid1.compartment.oc1..app"})
+        delta = engine._handlers["target.run.id"](
+            var="target.run.id", op="eq", rhs_val="ocid1.dataflowrun.oc1..r1", rhs_type="string", ctx=ctx, st=None
+        )
+        self.assertEqual(delta.tri, BoolTri.TRUE)
+        self.assertEqual(delta.matched_resource_node_ids, {"ocid1.dataflowrun.oc1..r1"})
+
+
 if __name__ == "__main__":
     unittest.main()

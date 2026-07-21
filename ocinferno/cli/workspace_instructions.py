@@ -1140,6 +1140,14 @@ class CommandProcessor:
             print(f"{UtilityTools.RED}No matching modules found.{reset}")
             return
 
+        # Group-by-service below only merges *consecutive* rows sharing a service name --
+        # module_mappings.json entries aren't guaranteed contiguous by service (e.g.
+        # get_network_resources was added to module_mappings.json far from enum_all's
+        # entry despite sharing service="AllCoverage"), so without this sort a service
+        # could silently split into two separate, identically-labeled header blocks
+        # instead of merging, making later entries easy to miss.
+        rows.sort(key=lambda r: (r["service"], r["category"], r["module"]))
+
         row_tuples = [(r["service"], r["category"], r["module"]) for r in rows]
         col_widths = [max(map(len, col)) for col in zip(*row_tuples)]
         header = ("Service", "Category", "Module")
