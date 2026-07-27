@@ -35,7 +35,7 @@
         },
         "kind": "OCI_UPDATE_DYNAMIC_GROUP_RULES",
         "properties": {
-          "description": "Update dynamic-group rules (can target attacker-controlled resources and inherit the group's permissions).",
+          "description": "Update dynamic-group rules (can target pentester-controlled resources and inherit the group's permissions).",
           "edge_category": "PERMISSION",
           "has_direct": false,
           "has_impossible_conditionals": false,
