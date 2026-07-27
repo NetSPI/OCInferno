@@ -1193,8 +1193,6 @@ def _write_derived_edge(
         on_conflict="update",
         dedupe=True,
     )
-    if wrote:
-        emit_ctx.existing_edges.add((source_id, edge_type, destination_id))
     return bool(wrote)
 
 
@@ -1656,7 +1654,7 @@ def _emit_add_self_to_group_edges(
                 edge_key = (scope_group_id, EDGE_SCOPE_INCLUDES, gid)
                 if edge_key in emit_ctx.existing_edges:
                     continue
-                wrote = _emit_edge_shared(
+                _emit_edge_shared(
                     emit_ctx.ctx,
                     src_id=scope_group_id,
                     src_type="OCIResourceGroup",
@@ -1675,8 +1673,6 @@ def _emit_add_self_to_group_edges(
                     on_conflict="update",
                     dedupe=True,
                 )
-                if wrote:
-                    emit_ctx.existing_edges.add(edge_key)
 
     for gid in sorted(_s(x) for x in (cap.specific_groups or set()) if _s(x)):
         group_loc = _s(emit_ctx.node_compartment_by_id.get(gid) or "")
@@ -1755,7 +1751,6 @@ def _ensure_instance_agent_scope_and_instance_expansion(
                 commit=False,
                 dedupe=True,
             )
-            emit_ctx.existing_nodes.add(command_id)
             emit_ctx.node_type_by_id[command_id] = "OCIInstanceAgentCommand"
             emit_ctx.node_compartment_by_id[command_id] = loc
             command_type = "OCIInstanceAgentCommand"
@@ -1764,7 +1759,7 @@ def _ensure_instance_agent_scope_and_instance_expansion(
         if edge_key in emit_ctx.existing_edges:
             pass
         else:
-            wrote = _emit_edge_shared(
+            _emit_edge_shared(
                 emit_ctx.ctx,
                 src_id=scope_id,
                 src_type="OCIResourceGroup",
@@ -1783,8 +1778,6 @@ def _ensure_instance_agent_scope_and_instance_expansion(
                 on_conflict="update",
                 dedupe=True,
             )
-            if wrote:
-                emit_ctx.existing_edges.add(edge_key)
 
         for instance_id in sorted(_s(x) for x in (emit_ctx.instance_target_ids_by_command.get(command_id, set()) or set()) if _s(x)):
             if not _looks_like_instance_ocid(instance_id):
@@ -1804,7 +1797,6 @@ def _ensure_instance_agent_scope_and_instance_expansion(
                     commit=False,
                     dedupe=True,
                 )
-                emit_ctx.existing_nodes.add(instance_id)
                 emit_ctx.node_type_by_id[instance_id] = "OCIComputeInstance"
                 emit_ctx.node_compartment_by_id[instance_id] = loc
                 instance_type = "OCIComputeInstance"
@@ -1812,7 +1804,7 @@ def _ensure_instance_agent_scope_and_instance_expansion(
             belongs_key = (command_id, EDGE_BELONGS_TO, instance_id)
             if belongs_key in emit_ctx.existing_edges:
                 continue
-            wrote_belongs = _emit_edge_shared(
+            _emit_edge_shared(
                 emit_ctx.ctx,
                 src_id=command_id,
                 src_type=command_type or "OCIInstanceAgentCommand",
@@ -1831,8 +1823,6 @@ def _ensure_instance_agent_scope_and_instance_expansion(
                 on_conflict="update",
                 dedupe=True,
             )
-            if wrote_belongs:
-                emit_ctx.existing_edges.add(belongs_key)
 
     return scope_id
 
@@ -1901,7 +1891,6 @@ def _ensure_compute_instance_target_node(
             commit=False,
             dedupe=True,
         )
-        emit_ctx.existing_nodes.add(instance_id)
 
     if not instance_type:
         instance_type = "OCIComputeInstance"

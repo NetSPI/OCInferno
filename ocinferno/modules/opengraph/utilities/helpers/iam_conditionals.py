@@ -212,12 +212,24 @@ _SUPPORTED_VAR_KEYS = {
 #   - mysqldbsystem: docs.oracle.com/en-us/iaas/mysql-database/doc/resource-principals.html
 #   - iotdomain: docs.oracle.com/en-us/iaas/Content/internet-of-things/* (several scenario pages)
 #   - dataflowrun: docs.oracle.com/en-us/iaas/Content/data-flow/using/resource-principal-policies.htm
+#   - cluster (OKE control plane, e.g. LB/NSG auto-provisioning):
+#     docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengconfiguringloadbalancersnetworkloadbalancers-subtopic.htm
+#     Live-validated 2026-07: this credential is minted and consumed entirely inside
+#     Oracle's managed OKE backend -- a real Enhanced cluster's node IMDS (/opc/v2/identity)
+#     only ever issues a plain Instance Principal cert, kube-system has no OCI-token-shaped
+#     secret/configmap/env var, and the OCI Python SDK's signer catalog (oci.auth.signers)
+#     has no "cluster" signer at all (contrast: OkeWorkloadIdentityResourcePrincipalSigner
+#     exists and was confirmed working end-to-end for request.principal.type='workload').
+#     So unlike 'workload', there's no live token to fetch from customer compute -- but
+#     unlike 'workload' the resource side IS fully enumerated (containerengine_clusters),
+#     so this resolves cleanly to real OCIKubernetesCluster nodes rather than dropping.
 _REQUEST_PRINCIPAL_TYPE_RESOLVABLE = {
     "resourceschedule": {"table": "resource_schedules", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIResourceSchedule"},
     "apigateway": {"table": "apigw_gateways", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIAPIGateway"},
     "mysqldbsystem": {"table": "db_mysql_db_systems", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIMySqlDbSystem"},
     "iotdomain": {"table": "iot_domains", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIIoTDomain"},
     "dataflowrun": {"table": "dataflow_runs", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIDataFlowRun"},
+    "cluster": {"table": "containerengine_clusters", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIKubernetesCluster"},
 }
 
 # KNOWN-BUT-UNRESOLVABLE: confirmed real request.principal.type values via official

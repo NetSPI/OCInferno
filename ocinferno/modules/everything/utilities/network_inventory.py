@@ -2,7 +2,7 @@
 """Cross-service network-inventory extraction.
 
 Sweeps every saved service table in the workspace DB and pulls out every network
-identifier attackers care about -- IPv4/IPv6 addresses, CIDR blocks, URLs, and
+identifier pentesters care about -- IPv4/IPv6 addresses, CIDR blocks, URLs, and
 FQDNs/hostnames -- from anywhere they appear (plain columns *or* nested JSON like
 ``ip_addresses``, ``endpoints``, ``connection_urls``, ``network_endpoint_details``).
 

@@ -7,7 +7,7 @@ name = "ocinferno"
 version = "0.5.66"
 description = "OCI offensive security assessment and enumeration framework."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [
@@ -17,9 +17,10 @@ dynamic = ["dependencies"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
   "Intended Audience :: Information Technology",
   "Topic :: Security",
@@ -32,8 +33,7 @@ dev = [
   "mypy==2.3.0"
 ]
 excel = [
-  "pandas==2.3.3; python_version < '3.11'",
-  "pandas==3.0.1; python_version >= '3.11'",
+  "pandas==3.0.1",
   "xlsxwriter==3.2.9"
 ]
 # Prettier boxed tables. Optional: without it, output falls back to a plain ASCII table.
@@ -67,7 +67,7 @@ namespaces = true
 # existing large codebase. Grow `select` over time (B, UP, SIM, ...) as the
 # code is cleaned up.
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 120
 extend-exclude = ["tests/**/data"]
 
@@ -81,7 +81,7 @@ select = ["E9", "F"]
 # Goal: drive `ocinferno/core` to zero errors, then flip CI to blocking and
 # widen the scope to cli and modules.
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 files = ["ocinferno/core"]
 ignore_missing_imports = true
 warn_unused_ignores = false

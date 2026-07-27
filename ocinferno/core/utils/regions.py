@@ -85,7 +85,6 @@ def fetch_subscribed_regions(session: Any, *, proxy: Optional[str] = None) -> Li
             cfg.get("tenancy")
             or getattr(session, "tenant_id", None)
             or getattr(session, "tenancy_id", None)
-            or getattr(session, "compartment_id", None)
         )
         resp = oci.pagination.list_call_get_all_results(identity.list_region_subscriptions, tenancy_id)
         out: List[str] = []

@@ -1,0 +1,112 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "end": {
+          "value": "policy_stmt:ocid1.policy.oc1..any_user_request_principal_type_cluster:0"
+        },
+        "kind": "OCI_POLICY_SUBJECT",
+        "properties": {
+          "description": "Subject included in IAM policy statement.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..any_user_request_principal_type_cluster"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage all-resources in compartment AppTeam where request.principal.type = 'cluster'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.cluster.oc1..prodoke01"
+        }
+      },
+      {
+        "end": {
+          "value": "all-resources@ocid1.compartment.oc1..app"
+        },
+        "kind": "OCI_MANAGE",
+        "properties": {
+          "description": "Grants broad access to ALL RESOURCES in the target scope.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "includes_other_edges": [],
+          "is_priv_escalation": false,
+          "resolved_false": false,
+          "resolved_policy": [
+            "ocid1.policy.oc1..any_user_request_principal_type_cluster"
+          ],
+          "resolved_statements": [
+            "Allow any-user to manage all-resources in compartment AppTeam where request.principal.type = 'cluster'"
+          ],
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "policy_stmt:ocid1.policy.oc1..any_user_request_principal_type_cluster:0"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all-resources@ocid1.compartment.oc1..app",
+        "kinds": [
+          "OCIAllResources",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "is_known_family": false,
+          "location": "ocid1.compartment.oc1..app",
+          "name": "all-resources@app-team",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "ocid1.cluster.oc1..prodoke01",
+        "kinds": [
+          "OCIKubernetesCluster",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "prodoke01",
+          "principal_kind": "resource",
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      },
+      {
+        "id": "policy_stmt:ocid1.policy.oc1..any_user_request_principal_type_cluster:0",
+        "kinds": [
+          "OCIPolicyStatement",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "name": "AnyUserRequestPrincipalTypeCluster:Statement_1@app-team",
+          "policy_id": "ocid1.policy.oc1..any_user_request_principal_type_cluster",
+          "policy_name": "AnyUserRequestPrincipalTypeCluster",
+          "raw_statement": "Allow any-user to manage all-resources in compartment AppTeam where request.principal.type = 'cluster'",
+          "statement_index": 0,
+          "statement_number": 1,
+          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "source_kind": "OCIBase"
+  }
+}

@@ -129,7 +129,7 @@ class CommandProcessor:
     CREDS_SUBCOMMANDS = ["me", "me-full", "list", "list-full", "db-row", "swap"]
     MODULES_SUBCOMMANDS = ["list", "search", "info", "run"]
     COMPARTMENTS_SUBCOMMANDS = ["list", "add", "set", "rm"]
-    CONFIGS_SUBCOMMANDS = ["list", "set", "unset", "regions"]
+    CONFIGS_SUBCOMMANDS = ["list", "set", "unset", "regions", "auth-tokens"]
     DATA_SUBCOMMANDS = ["export", "sql", "wipe-service"]
     EXPORT_FORMATS = ["csv", "json", "excel", "treeimage"]
     EXPORT_FLAGS = ["--out-dir", "--out-file"]
@@ -484,6 +484,21 @@ class CommandProcessor:
         regions_cmd = sub.add_parser("regions", help="Region helpers")
         regions_sub = regions_cmd.add_subparsers(dest="configs_regions_subcommand")
         regions_sub.add_parser("list", help="List known OCI regions")
+
+        auth_tokens_cmd = sub.add_parser("auth-tokens", help="Manage stored OCI auth tokens")
+        at_sub = auth_tokens_cmd.add_subparsers(dest="configs_auth_tokens_subcommand")
+        at_sub.add_parser("list", help="List stored auth tokens (token value masked)")
+        add_at = at_sub.add_parser("add", help="Manually store an auth token")
+        add_at.add_argument("--token-id", dest="token_id", default="",
+                            help="Token ID from OCI (from oci iam auth-token list). If omitted, a local ID is generated.")
+        add_at.add_argument("--user-ocid", dest="user_ocid", default="",
+                            help="OCI user OCID the token belongs to.")
+        add_at.add_argument("--token", dest="token", default="",
+                            help="The auth token value (prompted if omitted).")
+        add_at.add_argument("--description", dest="description", default="",
+                            help="Description label for the token.")
+        del_at = at_sub.add_parser("delete", help="Remove a stored auth token")
+        del_at.add_argument("token_id", help="Token ID to remove")
 
     def _print_known_regions(self) -> None:
         cfg = self.session.get_config_keys(self.workspace_id) or {}
@@ -1554,6 +1569,73 @@ class CommandProcessor:
         print(f"{UtilityTools.RED}[X] Unsupported export format: {export_format}{UtilityTools.RESET}")
 
     # -----------------------------
+    # Auth token management helper
+    # -----------------------------
+    def _process_configs_auth_tokens(self, args) -> None:
+        import os
+        sub = str(getattr(args, "configs_auth_tokens_subcommand", "") or "list").strip().lower()
+
+        if sub in ("", "list"):
+            tokens = self.session.list_auth_tokens()
+            if not tokens:
+                print("[*] No auth tokens stored. Use 'configs auth-tokens add' to save one.")
+                return
+            print(f"\n{UtilityTools.BRIGHT_CYAN}Stored auth tokens:{UtilityTools.RESET}")
+            print(f"  {'token_id':<36}  {'user_ocid':<20}  {'description':<25}  token")
+            print("  " + "-" * 100)
+            for t in tokens:
+                tid = str(t.get("token_id", ""))[:36]
+                uid = str(t.get("user_ocid", ""))
+                uid_short = uid[-20:] if len(uid) > 20 else uid
+                desc = str(t.get("description", ""))[:25]
+                tok = str(t.get("token", "***"))
+                print(f"  {tid:<36}  {uid_short:<20}  {desc:<25}  {tok}")
+            print()
+            return
+
+        if sub == "add":
+            token_id = str(getattr(args, "token_id", "") or "").strip()
+            user_ocid = str(getattr(args, "user_ocid", "") or "").strip()
+            token_val = str(getattr(args, "token", "") or "").strip()
+            description = str(getattr(args, "description", "") or "").strip()
+
+            if not token_val:
+                try:
+                    import getpass
+                    token_val = getpass.getpass("[?] Auth token value (input hidden): ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    print(f"{UtilityTools.RED}[X] Cancelled.{UtilityTools.RESET}")
+                    return
+            if not token_val:
+                print(f"{UtilityTools.RED}[X] Token value is required.{UtilityTools.RESET}")
+                return
+            if not token_id:
+                token_id = f"manual-{os.urandom(4).hex()}"
+            ok = self.session.save_auth_token(token_id=token_id, user_ocid=user_ocid,
+                                              token=token_val, description=description)
+            if ok:
+                print(f"{UtilityTools.GREEN}[+] Auth token saved (id={token_id}).{UtilityTools.RESET}")
+                print("    Use 'configs auth-tokens list' to review stored tokens.")
+            else:
+                print(f"{UtilityTools.RED}[X] Failed to save auth token.{UtilityTools.RESET}")
+            return
+
+        if sub == "delete":
+            token_id = str(getattr(args, "token_id", "") or "").strip()
+            if not token_id:
+                print(f"{UtilityTools.RED}[X] token_id is required.{UtilityTools.RESET}")
+                return
+            ok = self.session.delete_auth_token_record(token_id)
+            if ok:
+                print(f"{UtilityTools.GREEN}[+] Auth token {token_id} removed.{UtilityTools.RESET}")
+            else:
+                print(f"{UtilityTools.RED}[X] Failed to remove token (may not exist).{UtilityTools.RESET}")
+            return
+
+        print(f"{UtilityTools.RED}[X] Unknown auth-tokens subcommand: {sub!r}. "
+              f"Try: list | add | delete{UtilityTools.RESET}")
+
+    # -----------------------------
     # Config command (UPDATED)
     # -----------------------------
     def process_configs_command(self, args):
@@ -1569,6 +1651,10 @@ class CommandProcessor:
                 self._print_known_regions()
                 return
             print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Unknown configs regions command: {subcommand}{UtilityTools.RESET}")
+            return
+
+        if command == "auth-tokens":
+            self._process_configs_auth_tokens(args)
             return
 
         if command == "set":
@@ -1844,12 +1930,15 @@ def workspace_instructions(
     # and will have the workspace/auth/config context needed to execute on user's input
     command_processor = CommandProcessor(workspace_id, session)
 
-    # Add tab completion + history
-    import readline
-    readline.parse_and_bind("tab: complete")
-    readline.set_completer_delims(" \t\n")
-    readline.set_completer(command_processor.readline_complete)
-    readline.set_history_length(25)
+    # Add tab completion + history (readline is unavailable on Windows)
+    try:
+        import readline
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer_delims(" \t\n")
+        readline.set_completer(command_processor.readline_complete)
+        readline.set_history_length(25)
+    except ImportError:
+        readline = None
 
     # Main loop for interactive prompts
     while True:
@@ -1863,13 +1952,14 @@ def workspace_instructions(
 
             user_input = input(f"({short_compartment_id}:{cli_prefix})> ")
 
-            readline.set_auto_history(False)
+            if readline is not None:
+                readline.set_auto_history(False)
 
             keep_running = command_processor.process_command(user_input)
             if keep_running == -1:
                 exit()
 
-        except (ValueError, KeyboardInterrupt):
+        except (EOFError, KeyboardInterrupt):
             break
 
         except Exception:
@@ -1877,4 +1967,5 @@ def workspace_instructions(
             print(traceback.format_exc())
 
         finally:
-            readline.set_auto_history(True)
+            if readline is not None:
+                readline.set_auto_history(True)

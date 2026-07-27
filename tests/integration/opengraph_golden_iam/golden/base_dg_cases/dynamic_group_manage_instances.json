@@ -84,7 +84,9 @@
           "has_impossible_conditionals": false,
           "has_inherited": false,
           "has_unresolved_conditionals": false,
-          "includes_other_edges": [],
+          "includes_other_edges": [
+            "GENERATE_RPST"
+          ],
           "is_priv_escalation": false,
           "resolved_false": false,
           "resolved_policy": [

@@ -371,6 +371,16 @@
         "BASTION_SESSION_DELETE"
       ]
     },
+    "container_instances": {
+      "compute-container-instances": [
+        "COMPUTE_CONTAINER_INSTANCE_INSPECT",
+        "COMPUTE_CONTAINER_INSTANCE_READ",
+        "COMPUTE_CONTAINER_INSTANCE_CREATE",
+        "COMPUTE_CONTAINER_INSTANCE_UPDATE",
+        "COMPUTE_CONTAINER_INSTANCE_DELETE",
+        "COMPUTE_CONTAINER_INSTANCE_MOVE"
+      ]
+    },
     "container_registry": {
       "repos": [
         "REPOSITORY_INSPECT",
@@ -393,6 +403,79 @@
         "INSTANCE_ATTACH_SECONDARY_VNIC",
         "INSTANCE_DETACH_SECONDARY_VNIC",
         "INSTANCE_MOVE"
+      ]
+    },
+    "data_flow": {
+      "dataflow-applications": [
+        "DATA_FLOW_APPLICATION_INSPECT",
+        "DATA_FLOW_APPLICATION_READ",
+        "DATA_FLOW_APPLICATION_CREATE",
+        "DATA_FLOW_APPLICATION_UPDATE",
+        "DATA_FLOW_APPLICATION_DELETE",
+        "DATA_FLOW_APPLICATION_MOVE"
+      ],
+      "dataflow-runs": [
+        "DATA_FLOW_RUN_INSPECT",
+        "DATA_FLOW_RUN_READ",
+        "DATA_FLOW_RUN_CREATE",
+        "DATA_FLOW_RUN_UPDATE",
+        "DATA_FLOW_RUN_DELETE",
+        "DATA_FLOW_RUN_CANCEL"
+      ],
+      "dataflow-sql-endpoints": [
+        "DATA_FLOW_SQL_ENDPOINT_INSPECT",
+        "DATA_FLOW_SQL_ENDPOINT_READ",
+        "DATA_FLOW_SQL_ENDPOINT_CREATE",
+        "DATA_FLOW_SQL_ENDPOINT_UPDATE",
+        "DATA_FLOW_SQL_ENDPOINT_DELETE"
+      ]
+    },
+    "data_science": {
+      "data-science-job-runs": [
+        "DATA_SCIENCE_JOB_RUN_INSPECT",
+        "DATA_SCIENCE_JOB_RUN_READ",
+        "DATA_SCIENCE_JOB_RUN_CREATE",
+        "DATA_SCIENCE_JOB_RUN_DELETE",
+        "DATA_SCIENCE_JOB_RUN_CANCEL"
+      ],
+      "data-science-notebook-sessions": [
+        "DATA_SCIENCE_NOTEBOOK_SESSION_INSPECT",
+        "DATA_SCIENCE_NOTEBOOK_SESSION_READ",
+        "DATA_SCIENCE_NOTEBOOK_SESSION_CREATE",
+        "DATA_SCIENCE_NOTEBOOK_SESSION_UPDATE",
+        "DATA_SCIENCE_NOTEBOOK_SESSION_DELETE",
+        "DATA_SCIENCE_NOTEBOOK_SESSION_ACTIVATE",
+        "DATA_SCIENCE_NOTEBOOK_SESSION_DEACTIVATE"
+      ],
+      "data-science-models": [
+        "DATA_SCIENCE_MODEL_INSPECT",
+        "DATA_SCIENCE_MODEL_READ",
+        "DATA_SCIENCE_MODEL_CREATE",
+        "DATA_SCIENCE_MODEL_UPDATE",
+        "DATA_SCIENCE_MODEL_DELETE"
+      ],
+      "data-science-model-deployments": [
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_INSPECT",
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_READ",
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_CREATE",
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_UPDATE",
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_DELETE",
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_ACTIVATE",
+        "DATA_SCIENCE_MODEL_DEPLOYMENT_DEACTIVATE"
+      ],
+      "data-science-pipelines": [
+        "DATA_SCIENCE_PIPELINE_INSPECT",
+        "DATA_SCIENCE_PIPELINE_READ",
+        "DATA_SCIENCE_PIPELINE_CREATE",
+        "DATA_SCIENCE_PIPELINE_UPDATE",
+        "DATA_SCIENCE_PIPELINE_DELETE"
+      ],
+      "data-science-pipeline-runs": [
+        "DATA_SCIENCE_PIPELINE_RUN_INSPECT",
+        "DATA_SCIENCE_PIPELINE_RUN_READ",
+        "DATA_SCIENCE_PIPELINE_RUN_CREATE",
+        "DATA_SCIENCE_PIPELINE_RUN_DELETE",
+        "DATA_SCIENCE_PIPELINE_RUN_CANCEL"
       ]
     },
     "database_management": {

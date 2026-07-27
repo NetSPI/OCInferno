@@ -71,8 +71,6 @@ def run_module(user_args, session):
         print(f"{UtilityTools.RED}[X] session.compartment_id is not set.{UtilityTools.RESET}")
         return -1
         
-    lifecycle: Optional[str] = None if args.lifecycle == "ALL" else args.lifecycle
-
     discovered: list[dict[str, Any]] = []
     seen: set[str] = set()
 

@@ -496,7 +496,7 @@
         "token": "dynamic-groups"
       },
       "edge": {
-        "description": "Update dynamic-group rules (can target attacker-controlled resources and inherit the group's permissions).",
+        "description": "Update dynamic-group rules (can target pentester-controlled resources and inherit the group's permissions).",
         "label": "OCI_UPDATE_DYNAMIC_GROUP_RULES"
       },
       "id": "UPDATE_DYNAMIC_GROUP",
@@ -526,6 +526,375 @@
         ],
         "resource_tokens": [
           "secret-bundles"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIFunctionFunction",
+        "token": "fn-function"
+      },
+      "edge": {
+        "description": "Manage OCI Functions \u2192 update function code to inject RPST exfil script \u2192 steal the function's v2.2 resource-principal session token at next invocation. RPST env: OCI_RESOURCE_PRINCIPAL_RPST (file path). Exploit: `modules run exploit_generate_rpst_fn`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_FN_FUNCTION",
+      "match": {
+        "resource_tokens": [
+          "fn-function",
+          "functions-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDevOpsBuildPipeline",
+        "token": "devopsbuildpipeline"
+      },
+      "edge": {
+        "description": "Manage DevOps build pipelines \u2192 inject a custom build stage or modify the inline build spec \u2192 steal the pipeline's resource-principal session token during a build run. Exploit: `modules run exploit_generate_rpst_devops`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DEVOPS_BUILD_PIPELINE",
+      "match": {
+        "resource_tokens": [
+          "devops-build-pipeline",
+          "devops-build-family",
+          "devops-family"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataFlowRun",
+        "token": "dataflowrun"
+      },
+      "edge": {
+        "description": "Manage DataFlow runs \u2192 submit a custom PySpark script as a DataFlow run \u2192 steal the run's v2.2 RPST from /var/run/secrets/resource-principal/rpst.jwt. Live-validated. Exploit: `modules run exploit_generate_rpst_df`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DATAFLOW_RUN",
+      "match": {
+        "resource_tokens": [
+          "dataflow-run",
+          "dataflow-runs",
+          "dataflow-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIContainerInstance",
+        "token": "computecontainerinstance"
+      },
+      "edge": {
+        "description": "Manage Container Instances \u2192 launch or restart an instance with a custom container image containing RPST exfil code \u2192 steal the instance's v2.2 RPST from /var/oci/rp-identity/latest/session_token. Live-validated. Exploit: `modules run exploit_generate_rpst_ci`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_CONTAINER_INSTANCE",
+      "match": {
+        "resource_tokens": [
+          "compute-container-instances",
+          "compute-container-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataScienceJobRun",
+        "token": "data-science-job-run"
+      },
+      "edge": {
+        "description": "Manage Data Science job runs \u2192 submit a custom Python script as a job run \u2192 steal the job run's resource-principal session token during execution. Exploit: `modules run exploit_generate_rpst_ds`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DS_JOB_RUN",
+      "match": {
+        "resource_tokens": [
+          "data-science-job-runs",
+          "data-science-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataScienceNotebookSession",
+        "token": "data-science-notebook-session"
+      },
+      "edge": {
+        "description": "Manage Data Science notebook sessions \u2192 create or activate a session with custom startup code \u2192 steal the session's resource-principal session token during initialization. Exploit: `modules run exploit_generate_rpst_ds`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DS_NOTEBOOK_SESSION",
+      "match": {
+        "resource_tokens": [
+          "data-science-notebook-sessions",
+          "data-science-family"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataSciencePipelineRun",
+        "token": "data-science-pipeline-run"
+      },
+      "edge": {
+        "description": "Manage Data Science pipeline runs \u2192 submit a pipeline run with a malicious step script \u2192 steal the pipeline run's v2.2 resource-principal session token during execution. Exploit: `modules run exploit_generate_rpst_ds`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DS_PIPELINE_RUN",
+      "match": {
+        "resource_tokens": [
+          "data-science-pipeline-runs",
+          "data-science-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataScienceModelDeployment",
+        "token": "data-science-model-deployment"
+      },
+      "edge": {
+        "description": "Manage Data Science model deployments \u2192 create or update a deployment with a poisoned model container \u2192 steal the deployment container's v2.2 resource-principal session token during model serving. Exploit: `modules run exploit_generate_rpst_ds`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DS_MODEL_DEPLOYMENT",
+      "match": {
+        "resource_tokens": [
+          "data-science-model-deployments",
+          "data-science-family"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIKubernetesCluster",
+        "token": "clusters"
+      },
+      "edge": {
+        "description": "Manage OKE clusters or node pools \u2192 schedule a pentester-controlled pod \u2192 call proxymux in-cluster (https://$KUBERNETES_SERVICE_HOST:12250/resourcePrincipalSessionTokens) with the pod's K8s service-account JWT \u2192 receive an OCI v3.0 workload-identity RPST. Mechanism differs from v2.2 (no env-var file path; explicit API call required). See wiki: RPST-Extraction#OKE. Exploit: `modules run exploit_generate_rpst_oke`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_OKE_CLUSTER",
+      "match": {
+        "resource_tokens": [
+          "clusters",
+          "cluster-family",
+          "cluster-node-pools"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIComputeInstance",
+        "token": "instances"
+      },
+      "edge": {
+        "description": "Manage compute instances → create/modify a VM with a malicious cloud-init script → steal Instance Principal v1.1 cert material from IMDS (http://169.254.169.254/opc/v2/identity/cert.pem + intermediate.pem + key.pem). Mechanism is v1.1 Instance Principal (IMDS cert exchange at auth.<region>.oraclecloud.com/v1/x509), not file-based v2.2 RPST. Load via OCInferno `instance-principal` mode, not `resource-principal`. Exploit: harvest IMDS cert material from the VM then use --reference-file.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_COMPUTE_INSTANCE",
+      "match": {
+        "resource_tokens": [
+          "instances",
+          "instance-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIBigDataInstance",
+        "token": "bds-instance"
+      },
+      "edge": {
+        "description": "Use/manage Big Data Service instances → set a malicious bootstrapScriptUrl via UpdateBdsInstance then trigger AddWorkerNodes → the new node runs the bootstrap script which reads v2.2 RPST from /etc/security/tokens/rpst.token and /etc/security/tokens/rpst.pem. No SSH required; all done via OCI API.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_BDS_INSTANCE",
+      "match": {
+        "resource_tokens": [
+          "bds-instance",
+          "big-data-service-family"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataIntegrationWorkspace",
+        "token": "dis-workspaces"
+      },
+      "edge": {
+        "description": "Use/manage Data Integration (DIS) workspaces → create a REST task (no code required, low-code UI) pointing to a pentester-controlled endpoint with OCI request signing enabled → CreateTaskRun triggers the task → the workspace's v2.2 resource-principal RPST signs the outbound request (visible in Authorization header). Dynamic group rule: resource.id='<workspace-ocid>' (resource.type='disworkspace' not supported for DG matching).",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DIS_WORKSPACE",
+      "match": {
+        "resource_tokens": [
+          "dis-workspaces",
+          "dis-workspace-family"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDevOpsDeployPipeline",
+        "token": "devops-deploy-pipeline"
+      },
+      "edge": {
+        "description": "Manage/use DevOps deploy pipelines → inject a shell stage or modify deployment config → steal the pipeline's resource-principal RPST during a deployment run. Separate principal from Build Pipeline (resource.type='devopsdeploypipeline'). Exploit: `modules run exploit_generate_rpst_devops`.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_DEVOPS_DEPLOY_PIPELINE",
+      "match": {
+        "resource_tokens": [
+          "devops-deploy-pipeline",
+          "devops-deploy-family",
+          "devops-family"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIAutonomousDatabase",
+        "token": "autonomous-databases"
+      },
+      "edge": {
+        "description": "Manage Autonomous Databases → enable resource principal via DBMS_CLOUD_ADMIN.ENABLE_RESOURCE_PRINCIPAL() → exfil the RPST via SQL/PL-SQL (UTL_HTTP) or select from DBMS_CLOUD_ADMIN.ALL_CLOUD_STORE_LOCATIONS. Token is managed by the ADB runtime (not a file path). Dynamic group rule: resource.type='autonomousdatabase'.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_AUTONOMOUS_DB",
+      "match": {
+        "resource_tokens": [
+          "autonomous-databases",
+          "autonomous-database-family",
+          "database-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIMySQLDbSystem",
+        "token": "mysql-db-systems"
+      },
+      "edge": {
+        "description": "Manage MySQL HeatWave DB systems → execute stored procedures or HeatWave ML calls → exfil RPST via outbound HTTP from within the DB runtime. Dynamic group rule: resource.type='mysqldbsystem'.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_MYSQL_HEATWAVE",
+      "match": {
+        "resource_tokens": [
+          "mysql-db-systems",
+          "mysql-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIIntegrationInstance",
+        "token": "integration-instances"
+      },
+      "edge": {
+        "description": "Manage Oracle Integration Cloud 3 (OIC) instances → create/update an integration flow with a REST adapter targeting a pentester-controlled endpoint → trigger the flow → the flow's resource-principal RPST signs outbound requests. Requires IAM Domains. Dynamic group rule: resource.type='integration-instance'.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_OIC",
+      "match": {
+        "resource_tokens": [
+          "integration-instances",
+          "integration-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIGoldenGateDeployment",
+        "token": "goldengate-deployments"
+      },
+      "edge": {
+        "description": "Manage GoldenGate deployments → update deployment image/config → the deployment's resource-principal RPST is available in standard env vars inside the GoldenGate runtime. Dynamic group rule: resource.type='goldengatedeployment'.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_GOLDENGATE",
+      "match": {
+        "resource_tokens": [
+          "goldengate-deployments",
+          "goldengate-deployment-family"
+        ],
+        "verbs_any": [
+          "manage"
         ]
       }
     }

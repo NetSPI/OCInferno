@@ -4,7 +4,7 @@ import hashlib
 import os
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import oci
@@ -218,94 +218,6 @@ class IdentityHelperUtils:
                 region = cls.safe_str(creds.get("region") or (creds.get("config") or {}).get("region"))
         return tenancy, region
 
-    @staticmethod
-    def generate_rsa_keypair_with_fingerprint() -> tuple[str, str, str]:
-        # Lazy import so modules can still run read/selection logic if cryptography is unavailable.
-        from cryptography.hazmat.primitives import serialization
-        from cryptography.hazmat.primitives.asymmetric import rsa
-
-        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        public_key = private_key.public_key()
-
-        private_pem = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        ).decode("utf-8")
-
-        public_pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ).decode("utf-8")
-
-        public_der = public_key.public_bytes(
-            encoding=serialization.Encoding.DER,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-        digest = hashlib.md5(public_der).hexdigest()
-        fingerprint = ":".join(digest[i : i + 2] for i in range(0, len(digest), 2))
-        return private_pem, public_pem, fingerprint
-
-    @classmethod
-    def default_generated_profile_credname(cls, *, prefix: str, user_label: str, stamp: str, user_len: int = 10) -> str:
-        user_part = cls.safe_str(user_label).strip().lower()
-        if user_part:
-            user_part = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in user_part).strip("._-")
-        user_part = (user_part or "user")[: max(1, int(user_len))]
-        compact_stamp = cls.safe_str(stamp).replace("T", "").replace("Z", "")[2:]  # yymmddHHMMSS
-        return f"{cls.safe_str(prefix) or 'cred'}_{user_part}_{compact_stamp}"
-
-    @staticmethod
-    def register_generated_profile_credential(
-        session,
-        *,
-        credname: str,
-        user_ocid: str,
-        fingerprint: str,
-        tenancy: str,
-        region: str,
-        private_key_pem: str,
-        source: str,
-        no_prompt: bool,
-        extra_payload: Optional[dict[str, Any]] = None,
-    ) -> tuple[bool, str]:
-        if not tenancy or not region or not user_ocid or not fingerprint or not private_key_pem:
-            return False, "missing tenancy/region/user/fingerprint/private key for profile registration"
-
-        existing = session.data_master.fetch_cred(session.workspace_id, credname)
-        if existing:
-            if no_prompt:
-                return False, f"credname '{credname}' already exists"
-            answer = input(f"Credential '{credname}' already exists. Overwrite? [y/N]: ").strip().lower()
-            if answer not in ("y", "yes"):
-                return False, "user declined overwrite"
-
-        payload: dict[str, Any] = {
-            "user": user_ocid,
-            "fingerprint": fingerprint,
-            "tenancy": tenancy,
-            "region": region,
-            "key_content": private_key_pem,
-            "source": source,
-            "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        }
-        if isinstance(extra_payload, dict):
-            for key_name, value in extra_payload.items():
-                payload[key_name] = value
-
-        try:
-            session.data_master.insert_creds(
-                session.workspace_id,
-                credname,
-                "Profile - API Key - GENERATED",
-                json.dumps(payload),
-            )
-            return True, ""
-        except Exception as e:
-            return False, f"{type(e).__name__}: {e}"
-
-
-
 
 
 # =============================================================================
@@ -411,10 +323,6 @@ class IdentityDomainResourceClient:
         return row
 
 
-    # ✅ Make this accept a list (your enum module passes a list)
-    def save_password_policies(self, password_policies: list[dict[str, Any]]) -> None:
-        self.session.save_resources(password_policies or [], TABLE_IDD_PASSWORD_POLICIES)
-
     # -------------------------------------------------------------------------
     # MFA / Authentication Factor Settings
     # -------------------------------------------------------------------------
@@ -494,7 +402,7 @@ class IdentityDomainResourceClient:
         data = oci.util.to_dict(rows.data)
         return data.get("resources", []) or []
 
-    def save_idd_apps(self, *, apps: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+    def save_idd_apps(self, *, apps: list[dict[str, Any]], compartment_id: str) -> None:
         self.session.save_resources(apps or [], TABLE_IDD_APPS)
 
     # -------------------------------------------------------------------------
@@ -532,43 +440,12 @@ class IdentityDomainResourceClient:
 
 
     # -------------------------------------------------------------------------
-    # Helpers used by enum_iam + postproc (keep)
-    # -------------------------------------------------------------------------
-    @staticmethod
-    def approle_display_name(r: dict[str, Any]) -> str:
-        return IdentityHelperUtils.safe_str(r.get("display_name") or "")
-
-    @staticmethod
-    def grant_grantee_id(g: dict[str, Any]) -> str:
-        grantee = g.get("grantee")
-        if isinstance(grantee, dict):
-            return IdentityHelperUtils.safe_str(grantee.get("value") or "")
-        return IdentityHelperUtils.safe_str(g.get("grantee_id") or "")
-
-    @staticmethod
-    def grant_approle_id(g: dict[str, Any]) -> str:
-        app_role = g.get("app_role")
-        if isinstance(app_role, dict):
-            return IdentityHelperUtils.safe_str(app_role.get("value") or "")
-        return IdentityHelperUtils.safe_str(g.get("app_role_id") or "")
-
-    @staticmethod
-    def grant_entitlement_id(g: dict[str, Any]) -> str:
-        aeid = g.get("app_entitlement_id")
-        if isinstance(aeid, str) and aeid:
-            return aeid
-        ent = g.get("entitlement")
-        if isinstance(ent, dict):
-            return IdentityHelperUtils.safe_str(ent.get("value") or "")
-        return IdentityHelperUtils.safe_str(g.get("entitlement_id") or "")
-
-    # -------------------------------------------------------------------------
     # DB-save helpers (normalized rows) used by enum_iam / enum_idd_grants
     # -------------------------------------------------------------------------
-    def save_idd_app_roles(self, *, app_roles: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+    def save_idd_app_roles(self, *, app_roles: list[dict[str, Any]], compartment_id: str) -> None:
         self.session.save_resources(app_roles or [], TABLE_IDD_APP_ROLES)
 
-    def save_idd_grants(self, *, grants: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+    def save_idd_grants(self, *, grants: list[dict[str, Any]], compartment_id: str) -> None:
         self.session.save_resources(grants or [], TABLE_IDD_GRANTS)
 
     # -------------------------------------------------------------------------
@@ -628,6 +505,7 @@ class IdentityDomainResourceClient:
 
     def save_idd_auth_tokens(self, *, auth_tokens: list[dict[str, Any]]) -> None:
         self.session.save_resources(auth_tokens or [], TABLE_IDD_USER_AUTH_TOKENS)
+
 
 
 # =============================================================================
@@ -697,10 +575,10 @@ class IdentityResourceClient:
         return output
 
     def save_compartment(self, comp_dict: dict[str, Any]) -> None:
-
-        comp_dict["parent_compartment_id"] = comp_dict.pop("compartment_id", None)
-        comp_dict["compartment_id"] = comp_dict.pop("id", None)
-        self.session.save_resources([comp_dict], TABLE_COMPARTMENTS)
+        row = dict(comp_dict)
+        row["parent_compartment_id"] = row.pop("compartment_id", None)
+        row["compartment_id"] = row.pop("id", None)
+        self.session.save_resources([row], TABLE_COMPARTMENTS)
 
     def list_identity_domains(self, *, compartment_id: str) -> list[dict[str, Any]]:
         kwargs = {"compartment_id": compartment_id}
@@ -2432,6 +2310,7 @@ class IdentityResourceSuite(ResourceBase):
         return {"ok": True, "mfa_settings": int(total), "saved": True}
 
 
+
 class IdentityDomainsResource(IdentityResourceSuite):
     def list(self, *, user_args):
         return self.enumerate_domains(user_args)
@@ -2560,6 +2439,7 @@ class IdentityIddMfaSettingsResource(IdentityResourceSuite):
     def save(self, rows):
         _ = rows
         return None
+
 
 
 # =============================================================================
@@ -3221,9 +3101,6 @@ class Group(_DualPathClientMixin):
         resp = client.add_user_to_group(details)
         data = oci.util.to_dict(getattr(resp, "data", None)) or {}
         return {"mode": "classic", "user_ocid": user.ocid, "group_ocid": self.ocid, "membership_id": data.get("id")}
-
-    def remove_member_oci(self, session, *, membership_id: str) -> None:
-        self._classic_client(session).remove_user_from_group(user_group_membership_id=membership_id)
 
     def add_member_idd(self, session, user: "User") -> Dict[str, Any]:
         """Add a user to a domain group via SCIM patch (op ADD to `members`)."""

@@ -9,86 +9,21 @@ from __future__ import annotations
 
 import importlib
 import json
-import sys
 import tempfile
-import types
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
-def _install_oci_stub() -> None:
-    # Only stub when the real SDK is genuinely not installed -- unconditionally
-    # installing a fake module here would permanently shadow the real `oci` for
-    # the rest of the pytest session for any other test file that needs it
-    # (collection-order dependent).
-    try:
-        import oci  # noqa: F401
-        return
-    except ImportError:
-        pass
-
-    class _DynamicStub:
-        def __init__(self, name: str = "stub"):
-            self._name = name
-
-        def __getattr__(self, item: str):
-            return _DynamicStub(f"{self._name}.{item}")
-
-        def __call__(self, *a, **k):
-            return _DynamicStub(f"{self._name}()")
-
-        def __iter__(self):
-            return iter(())
-
-        def __bool__(self):
-            return False
-
-    oci_mod = types.ModuleType("oci")
-    auth_mod = types.ModuleType("oci.auth")
-    sign_mod = types.ModuleType("oci.auth.signers")
-    util_mod = types.ModuleType("oci.util")
-    exc_mod = types.ModuleType("oci.exceptions")
-    util_mod.to_dict = lambda o: o
-    auth_mod.signers = sign_mod
-    oci_mod.auth = auth_mod
-    oci_mod.util = util_mod
-    oci_mod.exceptions = exc_mod
-    oci_mod.__getattr__ = lambda a: _DynamicStub(f"oci.{a}")
-    auth_mod.__getattr__ = lambda a: _DynamicStub(f"oci.auth.{a}")
-    for name, mod in [("oci", oci_mod), ("oci.auth", auth_mod), ("oci.auth.signers", sign_mod),
-                      ("oci.util", util_mod), ("oci.exceptions", exc_mod)]:
-        sys.modules[name] = mod
-
-
-def _import_session_module():
-    try:
-        return importlib.import_module("ocinferno.core.session")
-    except ModuleNotFoundError as e:
-        if e.name != "oci":
-            raise
-        _install_oci_stub()
-        sys.modules.pop("ocinferno.core.session", None)
-        return importlib.import_module("ocinferno.core.session")
-
+from tests.unit._session_helpers import (
+    FakeDataMaster as _FakeDataMaster,
+    _import_session_module,
+)
 
 SESSION_MOD = _import_session_module()
 AUTH_MOD = importlib.import_module("ocinferno.core.auth")
 SessionUtility = SESSION_MOD.SessionUtility
 CredRecord = SESSION_MOD.CredRecord
-
-
-class _FakeDataMaster:
-    def __init__(self):
-        self.records = {}
-
-    def fetch_cred(self, workspace_id, credname):
-        return self.records.get((workspace_id, credname))
-
-    def insert_creds(self, workspace_id, credname, credtype, session_creds):
-        self.records[(workspace_id, credname)] = {"credname": credname, "credtype": credtype, "session_creds": session_creds}
-        return True
 
 
 class _FakeX509Base:

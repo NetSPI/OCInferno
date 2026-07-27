@@ -53,11 +53,15 @@ def prompt_new_workspace(dc: DataController) -> Tuple[str, int]:
             print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] Name must be between 1 and 80 characters.{UtilityTools.RESET}")
 
 def list_workspaces(workspaces: List[Tuple[int, str]]) -> None:
+    # Exit sentinel is max DB primary key + 1 so it never collides with a real
+    # workspace ID after rows have been deleted (IDs are not necessarily 1..N).
+    exit_num = max(idx for idx, _ in workspaces) + 1 if workspaces else 1
     print("[*] Found existing sessions:")
     print("  [0] Create new workspace")
     for idx, name in workspaces:
         print(f"  [{idx}] {name}")
-    print(f"  [{len(workspaces)+1}] Exit")
+    print(f"  [{exit_num}] Exit")
+    return exit_num
 
 def choose_workspace(
     workspaces: List[Tuple[int, str]],
@@ -66,6 +70,7 @@ def choose_workspace(
     startup_silent: bool = False,
 ) -> None:
     workspace_map = {idx: name for idx, name in workspaces}
+    exit_num = max(workspace_map) + 1 if workspace_map else 1
 
     while True:
         try:
@@ -85,7 +90,7 @@ def choose_workspace(
             startup_auth_proxy=startup_auth_proxy,
             startup_silent=startup_silent,
         )
-    elif choice == len(workspaces) + 1:
+    elif choice == exit_num:
         exit()
     elif choice in workspace_map:
         workspace_instructions(
@@ -334,28 +339,32 @@ def main() -> None:
     args = parser.parse_args(raw_argv)
 
     dc = DataController()
-    workspaces = dc.get_workspaces()
+    try:
+        workspaces = dc.get_workspaces()
 
-    # If we have no existing workspaces prompt for a new one
-    if not workspaces:
-        print("[*] No workspaces detected. Please create your first workspace.")
-        name, workspace_id = prompt_new_workspace(dc)
-        workspace_instructions(
-            workspace_id,
-            name,
-            startup_auth_proxy=args.auth_proxy,
-            startup_silent=args.silent,
-        )
+        # If we have no existing workspaces prompt for a new one
+        if not workspaces:
+            print("[*] No workspaces detected. Please create your first workspace.")
+            name, workspace_id = prompt_new_workspace(dc)
+            dc.close()
+            workspace_instructions(
+                workspace_id,
+                name,
+                startup_auth_proxy=args.auth_proxy,
+                startup_silent=args.silent,
+            )
 
-    # If workspaces exist presetn options and have user choose one
-    else:
-        list_workspaces(workspaces)
-        choose_workspace(
-            workspaces,
-            dc,
-            startup_auth_proxy=args.auth_proxy,
-            startup_silent=args.silent,
-        )
+        # If workspaces exist present options and have user choose one
+        else:
+            list_workspaces(workspaces)
+            choose_workspace(
+                workspaces,
+                dc,
+                startup_auth_proxy=args.auth_proxy,
+                startup_silent=args.silent,
+            )
+    finally:
+        dc.close()
 
 if __name__ == "__main__":
     try:

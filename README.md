@@ -2,7 +2,7 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/NetSPI/OCInferno/ci.yml?branch=main&label=ci)](https://github.com/NetSPI/OCInferno/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ocinferno)](https://pypi.org/project/ocinferno/)
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 [![OCI SDK](https://img.shields.io/badge/oci--sdk-2.182.0-orange)](https://pypi.org/project/oci/)
@@ -62,8 +62,12 @@ privilege-escalation paths. It is the OCI sibling of
 - **Reporting Exports:** Resource export to CSV, JSON, Excel, and compartment-tree
   SVG images.
 - **Exploit Modules:** Offensive (write) modules under the `Exploit` category — add user
-  API keys, create/update users, reset passwords, add yourself to a group, and write IAM
-  policies — corresponding to the dangerous edges surfaced by OpenGraph.
+  API keys, create users and groups, add yourself to a group, write IAM policies, download
+  DevOps repositories, and extract resource principal tokens (RPST) via DevOps build
+  pipelines — corresponding to the dangerous edges surfaced by OpenGraph.
+  DevOps cloning (`exploit_devops_repositories_download`) and RPST extraction via DevOps
+  (`exploit_devops_pipelines_rpst`) use OCI HTTPS auth tokens for git operations. Tokens
+  can be pre-stored with `configs auth-tokens add` or created on-demand by the module.
 - **Artifact Downloads:** Download support across many modules with `--download`
   and selective routing.
 - **OpenGraph / BloodHound:** OpenGraph export for BloodHound ingestion, including:
@@ -397,7 +401,7 @@ data export excel
 data export treeimage
 
 # Run SQL directly against the SQLite service tables.
-data sql "SELECT * FROM compute_instances LIMIT 25"
+data sql --db service "SELECT * FROM compute_instances LIMIT 25"
 ```
 
 Downloaded artifacts and exports are written under `ocinferno_output/` by default.
@@ -438,11 +442,11 @@ tooling live in `[project.optional-dependencies]`.
 
 | Dependency | Scope | Purpose |
 | --- | --- | --- |
-| `oci==2.181.1` | Required | OCI SDK: clients/auth/providers for enumeration and actions. |
+| `oci==2.182.0` | Required | OCI SDK: clients/auth/providers for enumeration and actions. |
 | `requests==2.34.2` | Required | HTTP operations and API helper requests. |
-| `prettytable==3.17.0` | Required | Terminal table rendering. |
+| `prettytable==3.18.0` | Optional (`[table]`) | Terminal table rendering. |
 | `oci-lexer-parser==0.1.2` | Required | OCI IAM policy lexing/parsing for OpenGraph. |
-| `pandas` | Optional (`[excel]`) | Excel export pipeline. |
+| `pandas==3.0.1` | Optional (`[excel]`) | Excel export pipeline. |
 | `xlsxwriter==3.2.9` | Optional (`[excel]`) | `.xlsx` writer engine for exports. |
 | `pytest`, `ruff`, `mypy` | Dev (`[dev]`) | Tests, lint (blocking), type-check (informational). |
 | `pyinstaller==6.21.0` | Release-build only | Used by `.github/workflows/build_release.yml` to package the standalone executables uploaded to GitHub Releases. Not required for normal runtime. |

@@ -142,24 +142,6 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
     def individual_run_debug(self, value: Any) -> None:
         self._individual_run_debug = bool(value)
 
-    # These path helpers now live in core/output_paths.py; kept as thin delegating
-    # wrappers so existing call sites and the class API are unchanged.
-    @staticmethod
-    def _safe_path_component(x: str) -> str:
-        return _output_paths.safe_path_component(x)
-
-    @staticmethod
-    def _compact_filename_component(filename: str, *, max_len: int = 128) -> str:
-        return _output_paths.compact_filename_component(filename, max_len=max_len)
-
-    @classmethod
-    def _default_output_base_root(cls) -> Path:
-        return _output_paths.default_output_base_root()
-
-    @classmethod
-    def _compact_compartment_path_component(cls, x: str) -> str:
-        return _output_paths.compact_compartment_path_component(x)
-
     def _default_workspace_slug(self) -> str:
         safe = re.sub(r"\s+", "_", (self.workspace_name or "workspace").strip().lower())
         safe = re.sub(r"[^a-z0-9_\-]+", "", safe) or "workspace"
@@ -385,7 +367,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
                         if owner and 200 <= status_code < 300 and not should_retry:
                             owner._record_operation_permissions(operation, service, path_s)
                         if should_retry:
-                            delay_s = owner._compute_retry_delay(
+                            delay_s = HttpPolicyService.compute_retry_delay(
                                 attempt=attempt,
                                 base_delay=float(retry_policy.get("base_delay_seconds", 0.0) or 0.0),
                                 max_delay=float(retry_policy.get("max_delay_seconds", 0.0) or 0.0),
@@ -401,7 +383,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
                             owner
                             and retry_policy.get("enabled")
                             and attempt < max_attempts
-                            and owner._is_retryable_exception(e, retry_statuses)
+                            and HttpPolicyService.is_retryable_exception(e, retry_statuses)
                         )
                         if should_log:
                             duration_ms = int((time.time() - t0) * 1000)
@@ -441,7 +423,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
                                 event_type=("oci_api_retry" if should_retry else "oci_api_call"),
                             )
                         if should_retry:
-                            delay_s = owner._compute_retry_delay(
+                            delay_s = HttpPolicyService.compute_retry_delay(
                                 attempt=attempt,
                                 base_delay=float(retry_policy.get("base_delay_seconds", 0.0) or 0.0),
                                 max_delay=float(retry_policy.get("max_delay_seconds", 0.0) or 0.0),
@@ -628,9 +610,6 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
     # ----------------------------
     # Transactions / proxy helpers
     # ----------------------------
-    def tx(self, db: str = "service"):
-        return self.data_master.transaction(db)
-
     def _resolve_proxy(self, explicit: Optional[str] = None, *, include_auth_proxy: bool = False) -> str:
         proxy = (explicit or "").strip()
         if not proxy and include_auth_proxy:
@@ -698,17 +677,6 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             max_delay_seconds=self._coerce_non_negative_float(self.config_http_retry_max_delay_seconds, default=8.0),
             jitter_seconds=self._coerce_non_negative_float(self.config_http_retry_jitter_seconds, default=0.25),
             statuses=statuses,
-        )
-
-    def _is_retryable_exception(self, exc: Exception, retry_statuses: List[int]) -> bool:
-        return HttpPolicyService.is_retryable_exception(exc, retry_statuses)
-
-    def _compute_retry_delay(self, *, attempt: int, base_delay: float, max_delay: float, jitter: float) -> float:
-        return HttpPolicyService.compute_retry_delay(
-            attempt=attempt,
-            base_delay=base_delay,
-            max_delay=max_delay,
-            jitter=jitter,
         )
 
     def _wait_for_http_rate_limit(self) -> None:
@@ -1134,7 +1102,12 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             path_candidate = raw[len("file://"):]
         p = Path(path_candidate).expanduser()
 
-        if p.exists():
+        try:
+            path_exists = p.exists()
+        except OSError:
+            path_exists = False
+
+        if path_exists:
             text, err = self._read_text_file(str(p), label)
             if err:
                 return "", "", err
@@ -1304,9 +1277,6 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         except Exception as e:
             print(f"[X] purge_cid failed: {e}")
 
-    def is_tenant(self, compartment_id: str) -> bool:
-        return UtilityTools.is_tenancy_ocid(compartment_id)
-
     def add_compartment_id(self, compartment_id: str, parent_compartment_id: Optional[str] = None, override: bool = False):
         row_details = {
             "workspace_id": self.workspace_id,
@@ -1412,6 +1382,57 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             where=where,
             as_dict=True,
         )
+
+    # =============================================================================
+    # Auth token helpers
+    # =============================================================================
+
+    _AUTH_TOKEN_TABLE = "identity_auth_tokens"
+
+    def save_auth_token(self, token_id: str, user_ocid: str, token: str,
+                        description: str = "", lifecycle_state: str = "ACTIVE",
+                        time_created: str = "") -> bool:
+        """Save an OCI auth token to the workspace DB for later reuse."""
+        from datetime import datetime, timezone
+        row = {
+            "token_id": token_id,
+            "user_ocid": user_ocid or "",
+            "description": description or "",
+            "token": token,
+            "lifecycle_state": lifecycle_state,
+            "time_created": time_created or datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            self.save_resource(row, self._AUTH_TOKEN_TABLE)
+            return True
+        except Exception:
+            return False
+
+    def list_auth_tokens(self) -> list:
+        """Return all stored auth tokens for this workspace (token value masked)."""
+        rows = self.get_resource_fields(self._AUTH_TOKEN_TABLE) or []
+        masked = []
+        for r in rows:
+            r = dict(r)
+            tok = r.get("token", "")
+            r["token"] = (tok[:4] + "..." + tok[-4:]) if len(tok) > 8 else "***"
+            masked.append(r)
+        return masked
+
+    def get_auth_token_value(self, token_id: str) -> str:
+        """Return the plaintext token value for a given token_id."""
+        rows = self.get_resource_fields(
+            self._AUTH_TOKEN_TABLE, where_conditions={"token_id": token_id}) or []
+        return rows[0].get("token", "") if rows else ""
+
+    def delete_auth_token_record(self, token_id: str) -> bool:
+        """Remove a stored auth token from the workspace DB."""
+        try:
+            self.delete_resource(self._AUTH_TOKEN_TABLE, where={"token_id": token_id})
+            return True
+        except Exception:
+            return False
+
     # =============================================================================
     # OpenGraph write helpers (nodes/edges)
     # =============================================================================

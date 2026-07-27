@@ -73,6 +73,15 @@
     "table": "bastion_work_requests",
     "tenant_col": null
   },
+  "(bds-instance,bdsinstance)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIBigDataInstance",
+    "table": "bds_instances",
+    "tenant_col": null
+  },
   "(buckets,bucket)": {
     "compartment_col": "compartment_id",
     "display_col": "name",
@@ -221,6 +230,51 @@
       }
     ]
   },
+  "(data-science-job-run,datasciencejobrun)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataScienceJobRun",
+    "table": "data_science_job_runs",
+    "tenant_col": null
+  },
+  "(data-science-model-deployment,datasciencemodeldeployment)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataScienceModelDeployment",
+    "table": "data_science_model_deployments",
+    "tenant_col": null
+  },
+  "(data-science-notebook-session,datasciencenotebooksession)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataScienceNotebookSession",
+    "table": "data_science_notebook_sessions",
+    "tenant_col": null
+  },
+  "(data-science-pipeline-run,datasciencepipelinerun)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataSciencePipelineRun",
+    "table": "data_science_pipeline_runs",
+    "tenant_col": null
+  },
+  "(dataflow-application,dataflowapplication)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataFlowApplication",
+    "table": "dataflow_applications",
+    "tenant_col": null
+  },
   "(dataflowrun,dataflowrun)": {
     "compartment_col": "compartment_id",
     "defined_tags_col": "defined_tags",
@@ -326,6 +380,15 @@
     "name_col": "display_name",
     "node_type": "OCIDevOpsRepository",
     "table": "devops_repositories",
+    "tenant_col": null
+  },
+  "(dis-workspaces,disworkspace)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIDataIntegrationWorkspace",
+    "table": "data_integration_workspaces",
     "tenant_col": null
   },
   "(dns-records,dnsrecord)": {

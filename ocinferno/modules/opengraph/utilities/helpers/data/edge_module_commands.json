@@ -47,6 +47,11 @@
       "module": "exploit_write_policy",
       "authz": "OCI IAM policy permission (POLICY_UPDATE)",
       "template": "modules run exploit_write_policy --append-to {destination_id} --self  # append an admin grant to an existing policy"
+    },
+    "GENERATE_RPST": {
+      "module": "exploit_generate_rpst_fn",
+      "authz": "OCI IAM manage permissions on the target resource type (fn-function, devops-build-pipeline, dataflow-runs, compute-container-instances, data-science-job-runs, etc.)",
+      "template": "modules run exploit_generate_rpst_fn --resource-ocid {dest_ocid}  # inject RPST exfil into {dest_name}; see wiki RPST-Extraction for per-service procedure"
     }
   }
 }

@@ -155,7 +155,9 @@
           "has_impossible_conditionals": false,
           "has_inherited": true,
           "has_unresolved_conditionals": false,
-          "includes_other_edges": [],
+          "includes_other_edges": [
+            "GENERATE_RPST"
+          ],
           "is_priv_escalation": false,
           "resolved_false": false,
           "resolved_policy": [
@@ -184,7 +186,9 @@
           "has_impossible_conditionals": false,
           "has_inherited": true,
           "has_unresolved_conditionals": false,
-          "includes_other_edges": [],
+          "includes_other_edges": [
+            "GENERATE_RPST"
+          ],
           "is_priv_escalation": false,
           "resolved_false": false,
           "resolved_policy": [
@@ -336,20 +340,6 @@
           "is_known_family": false,
           "location": "ocid1.compartment.oc1..dev",
           "name": "instances@dev-team",
-          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
-        }
-      },
-      {
-        "id": "instances@ocid1.compartment.oc1..root",
-        "kinds": [
-          "OCIResource",
-          "OCIResourceGroup"
-        ],
-        "properties": {
-          "compartment_id": "ocid1.compartment.oc1..root",
-          "is_known_family": false,
-          "location": "ocid1.compartment.oc1..root",
-          "name": "instances@root-team",
           "tenant_id": "ocid1.tenancy.oc1..goldtenant"
         }
       },

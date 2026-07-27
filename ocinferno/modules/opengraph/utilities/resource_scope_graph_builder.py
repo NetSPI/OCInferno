@@ -369,7 +369,6 @@ def _write_any_edge(ctx, *, src_id: str, src_type: str, dst_id: str, dst_type: s
             dedupe=True,
         )
         if wrote:
-            existing_edges.add(ek)
             if edge_type == EDGE_ANY_USER_MEMBER_OF:
                 stats["any_user_member_edges_created"] += 1
             elif edge_type == EDGE_ANY_GROUP_MEMBER_OF:
@@ -458,7 +457,6 @@ def _expand_principal_scope(ctx, scope_id, scope_type, res_token_l, loc, princip
                 dedupe=True,
             )
             if wrote:
-                existing_edges.add(ek)
                 stats["scope_include_edges_created"] += 1
         except Exception as e:
             if debug:
@@ -707,7 +705,6 @@ def _expand_scope_to_resources(session, ctx, scope_id, scope_type, res_token_l, 
                     dedupe=True,
                 )
                 if wrote:
-                    existing_edges.add(ek)
                     stats["scope_include_edges_created"] += 1
             except Exception as e:
                 if debug:
@@ -809,7 +806,6 @@ def _emit_tag_definition_namespace_edges(session, ctx, stats, debug=False):
                 dedupe=True,
             )
             if wrote:
-                existing_edges.add(ek)
                 stats["tag_namespace_includes_definition_edges_created"] = int(
                     stats.get("tag_namespace_includes_definition_edges_created", 0)
                 ) + 1

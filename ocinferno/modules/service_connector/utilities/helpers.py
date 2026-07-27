@@ -9,7 +9,7 @@ from ocinferno.core.resource import OciListResource
 class ServiceConnectorServiceConnectorsResource(OciListResource):
     """OCI Service Connectors -- source->task->target data pipelines. High value:
     reveals data-movement topology and offers an exfil/persistence surface (route
-    logs/streams/object-storage to attacker-controlled targets)."""
+    logs/streams/object-storage to pentester-controlled targets)."""
 
     CLIENT_CLS = oci.sch.ServiceConnectorClient
     SERVICE_NAME = "Service Connector Hub"

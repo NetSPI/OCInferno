@@ -934,12 +934,9 @@ class OfflineIamContext:
         if not tenant_id and comp_id:
             tenant_id = _s(self.tenant_for_compartment(comp_id) or "")
 
-        if node_properties is None:
-            props = dict(row)
-        else:
-            props = dict(row)
-            if isinstance(node_properties, dict):
-                props.update(node_properties)
+        props = dict(row)
+        if node_properties is not None and isinstance(node_properties, dict):
+            props.update(node_properties)
 
         props["name"] = display
         if comp_id:

@@ -44,10 +44,7 @@ def invoke_run_module(module, passthrough_args: Sequence[str], session):
         if p0 in ("session",) and p1 in ("args", "argv", "user_args", "namespace", "parsed"):
             return fn(session, list(passthrough_args))
 
-    try:
-        return fn(list(passthrough_args), session)
-    except TypeError:
-        return fn(session, list(passthrough_args))
+    return fn(list(passthrough_args), session)
 
 
 def component_error_summary(err: Exception) -> str:
@@ -317,7 +314,6 @@ def parse_wrapper_args(
     components: Sequence[ComponentSpec],
     add_extra_args: Optional[Callable[[argparse.ArgumentParser], None]] = None,
     include_get: bool = True,
-    include_save: bool = True,  # accepted but unused; enumeration always persists to the DB
     include_download: bool = False,
 ):
     # conflict_handler="resolve": a few hand-rolled download modules define their own

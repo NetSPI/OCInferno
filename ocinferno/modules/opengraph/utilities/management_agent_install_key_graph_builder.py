@@ -4,7 +4,7 @@
 A management-agent install key is a portable BEARER credential. Whoever holds a
 *usable* key can register a NEW management agent -- from ANY host, on- or off-OCI --
 as a principal created in the KEY'S compartment (Oracle: "if the unlimited install key
-is compromised, an attacker can install rogue agents in your tenancy"). If a dynamic
+is compromised, a pentester can install rogue agents in your tenancy"). If a dynamic
 group there matches ``resource.type='managementagent'``, that rogue agent joins the DG
 and inherits its IAM policy grants.
 
@@ -43,7 +43,7 @@ def _key_is_usable(key: dict) -> bool:
     """A key is exploitable when ACTIVE, not expired, and has install slots left.
 
     Fail-open on unparseable fields (an unknown value must not silently drop a
-    potentially-usable key from the attacker's perspective)."""
+    potentially-usable key from the pentester's perspective)."""
     state = str(key.get("lifecycle_state") or "").strip().upper()
     if state and state != "ACTIVE":
         return False

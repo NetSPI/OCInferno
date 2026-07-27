@@ -145,7 +145,7 @@ def _write_records_chunked(
         title = _excel_sheet_title(base_sheet_name, used_titles)
         pd.DataFrame(columns=columns).to_excel(writer, sheet_name=title, index=False)
         if apply_layout:
-            apply_layout(title)
+            apply_layout(title, 0)
         return [title]
 
     written: List[str] = []
@@ -154,7 +154,7 @@ def _write_records_chunked(
         title = _excel_sheet_title(base_sheet_name, used_titles)
         pd.DataFrame(chunk, columns=columns).to_excel(writer, sheet_name=title, index=False)
         if apply_layout:
-            apply_layout(title)
+            apply_layout(title, len(chunk))
         written.append(title)
     return written
 
@@ -163,11 +163,15 @@ def _apply_xlsx_condensed_layout(
     *,
     writer: Any,
     sheet_name: str,
+    data_row_count: int = 0,
 ) -> None:
     """
     Apply readability formatting for condensed sheets:
       - sensible column widths
       - wrapped JSON column
+      - autofilter over the header + data rows (so Excel's built-in column filter --
+        e.g. to exclude TERMINATED/DELETED rows via Lifecycle State -- actually has
+        rows to filter, not just a header with nothing beneath it)
     """
     try:
         ws = (writer.sheets or {}).get(sheet_name)
@@ -184,7 +188,9 @@ def _apply_xlsx_condensed_layout(
         ws.set_column(3, 3, 20)   # Service Category
         ws.set_column(4, 4, 34)   # Resource Category
         ws.set_column(5, 5, 34)   # Resource Display Name
-        ws.set_column(6, 6, 120, wrap_fmt)  # Remaining JSON
+        ws.set_column(6, 6, 18)   # Lifecycle State
+        ws.set_column(7, 7, 120, wrap_fmt)  # Remaining JSON
+        ws.autofilter(0, 0, max(0, int(data_row_count)), 7)
     except Exception:
         return
 
@@ -689,7 +695,8 @@ def export_sqlite_dbs_to_excel_blob(
             "Service Category": resource_type_area(table_name),
             "Resource Category": _simple_resource_label_from_table_name(table_name),
             "Resource Display Name": display_name,
-            "Remaining JSON": _row_remaining_json(rd, display_key=display_key),
+            "Lifecycle State": _row_lifecycle_state(rd),
+            "Remaining JSON": _row_remaining_json(rd, display_key=display_key, extra_drop_keys={"lifecycle_state", "lifecycleState"}),
         }
 
     condensed_header = [
@@ -699,6 +706,7 @@ def export_sqlite_dbs_to_excel_blob(
         "Service Category",
         "Resource Category",
         "Resource Display Name",
+        "Lifecycle State",
         "Remaining JSON",
     ]
 
@@ -719,7 +727,7 @@ def export_sqlite_dbs_to_excel_blob(
                     columns=condensed_header,
                     base_sheet_name="all_resources",
                     used_titles=used_titles,
-                    apply_layout=lambda title: _apply_xlsx_condensed_layout(writer=writer, sheet_name=title),
+                    apply_layout=lambda title, count: _apply_xlsx_condensed_layout(writer=writer, sheet_name=title, data_row_count=count),
                 )
             elif condensed and not single_sheet:
                 used_titles: set[str] = set()
@@ -736,6 +744,7 @@ def export_sqlite_dbs_to_excel_blob(
                         _apply_xlsx_condensed_layout(
                             writer=writer,
                             sheet_name=title,
+                            data_row_count=len(records),
                         )
                 if not used_titles:
                     sheet_name = "all_resources"
@@ -1020,6 +1029,20 @@ def _row_simple_resource_display_name(row: Dict[str, Any]) -> tuple[str, str]:
     return "", ""
 
 
+def _row_lifecycle_state(row: Dict[str, Any]) -> str:
+    # lifecycle_state (snake_case, matching oci.util.to_dict()'s convention -- how every
+    # DB column here got its name in the first place) is the near-universal OCI field for
+    # resource state (ACTIVE/TERMINATED/DELETED/etc). Deliberately narrow -- generic
+    # fallbacks like "state"/"status" mean different things on different tables (e.g. a
+    # work request's status, a health check's status) and would misrepresent them as a
+    # resource lifecycle state.
+    for key in ("lifecycle_state", "lifecycleState"):
+        v = row.get(key)
+        if v:
+            return str(v)
+    return ""
+
+
 def _simple_resource_label_from_table_name(table_name: str) -> str:
     tokens = [t for t in str(table_name or "").strip().split("_") if t]
     if not tokens:
@@ -1038,6 +1061,7 @@ def _row_remaining_json(
     row: Dict[str, Any],
     *,
     display_key: str = "",
+    extra_drop_keys: set[str] | None = None,
 ) -> str:
     drop_keys = {
         "compartment_id",
@@ -1050,6 +1074,8 @@ def _row_remaining_json(
     }
     if display_key:
         drop_keys.add(display_key)
+    if extra_drop_keys:
+        drop_keys |= set(extra_drop_keys)
 
     remaining = {
         k: _maybe_parse_json_text(v)

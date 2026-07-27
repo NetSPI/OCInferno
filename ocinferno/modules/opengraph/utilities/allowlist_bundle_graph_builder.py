@@ -38,7 +38,7 @@ from ocinferno.modules.opengraph.utilities.helpers import (
     EDGE_CATEGORY_PERMISSION,
 )
 from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
-from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared, ensure_node
 from ocinferno.modules.opengraph.utilities.iam_policy_advanced_relation_graph_builder import (
     _edge_statement_texts,
     _entry_field,
@@ -147,11 +147,12 @@ def build_allowlist_bundle_edges_offline(*, session, ctx, debug: bool = False, a
                 continue
             matched = True
             dst_id = f"{rule['dest_token']}@{loc}"
-            ctx.upsert_node(
+            ensure_node(
+                ctx,
                 node_id=dst_id, node_type=rule["dest_node_type"], compartment_id=loc,
                 node_properties={"scope_token": rule["dest_token"], "bundle_rule_id": rule["id"],
                                  "description": rule["edge_description"]},
-                commit=False,
+                commit=False, dedupe=False,
             )
             wrote = _emit_edge_shared(
                 ctx, src_id=pid, src_type=ptype, dst_id=dst_id, dst_type=rule["dest_node_type"],

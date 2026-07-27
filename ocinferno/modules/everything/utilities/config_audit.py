@@ -1721,6 +1721,7 @@ class IdentityDomainsServiceAuditor(ServiceAuditor):
             )
 
 
+
 class ApiGatewayServiceAuditor(ServiceAuditor):
     service = "api_gateway"
 
@@ -2050,24 +2051,39 @@ class NetworkingServiceAuditor(ServiceAuditor):
     # part of a live VCN -- shared across all three tables (identical SDK enum).
     _TERMINAL_VCN_STATES = {"TERMINATED", "TERMINATING"}
 
-    def _attached_security_list_ids(self) -> set:
-        """Security list IDs referenced by at least one non-terminal subnet.
+    def _security_list_subnet_map(self) -> dict:
+        """Map security list ID -> list of attached subnet IDs, read from the
+        denormalized attached_subnet_ids column written by enum_core_network.
 
-        A security list is a standalone rules container in OCI -- it only filters
-        traffic once a subnet actually references it via `security_list_ids`. A
-        security list with risky rules but no subnet attachment poses no current
-        traffic-path risk (mirrors NetworkFirewallServiceAuditor's policy/firewall
-        attachment split).
+        Falls back to building the map from the subnets table directly so the
+        audit still works if the backfill hasn't run yet (e.g. subnets were
+        enumerated before the column was added).
         """
-        ids = set()
+        sl_rows = self.get_rows(self.T_SECURITY_LISTS)
+        mapping: dict = {}
+        any_populated = False
+        for sl in sl_rows:
+            sl_id = _safe_str(sl.get("id"))
+            attached = _as_json_list(sl.get("attached_subnet_ids"))
+            if attached:
+                any_populated = True
+            mapping[sl_id] = [_safe_str(s) for s in attached if s]
+
+        if any_populated:
+            return mapping
+
+        # Fallback: derive from subnets table cross-compartment
         for sn in self.get_rows(self.T_SUBNETS):
             if _safe_str(sn.get("lifecycle_state")).upper() in self._TERMINAL_VCN_STATES:
                 continue
+            sn_id = _safe_str(sn.get("id"))
             for sid in _as_json_list(sn.get("security_list_ids")):
                 sid = _safe_str(sid)
                 if sid:
-                    ids.add(sid)
-        return ids
+                    mapping.setdefault(sid, [])
+                    if sn_id not in mapping[sid]:
+                        mapping[sid].append(sn_id)
+        return mapping
 
     def _attached_route_table_ids(self) -> set:
         """Route table IDs referenced by at least one non-terminal subnet."""
@@ -2098,7 +2114,7 @@ class NetworkingServiceAuditor(ServiceAuditor):
 
     def _check_security_lists(self, res: ServiceAuditResult) -> None:
         rows = self.get_rows(self.T_SECURITY_LISTS)
-        attached = self._attached_security_list_ids()
+        sl_subnet_map = self._security_list_subnet_map()
         not_attached_suffix = _wrap_paragraph(
             """
             This security list is not currently referenced by any live subnet's
@@ -2115,11 +2131,15 @@ class NetworkingServiceAuditor(ServiceAuditor):
             if _safe_str(r.get("lifecycle_state")).upper() in self._TERMINAL_VCN_STATES:
                 continue
 
-            is_live = sid in attached
+            attached_subnets = sl_subnet_map.get(sid, [])
+            is_live = bool(attached_subnets)
 
             ingress = _as_json_list(r.get("ingress_security_rules"))
             egress = _as_json_list(r.get("egress_security_rules"))
             loc = _loc_base(compartment_id=cid, entity_id=sid, vcn_id=_safe_str(r.get("vcn_id")) or None)
+            subnet_note = (
+                _wrap_paragraph(f"Attached subnets: {', '.join(attached_subnets)}") if attached_subnets else ""
+            )
 
             for rule in ingress:
                 if not isinstance(rule, dict):
@@ -2147,7 +2167,8 @@ class NetworkingServiceAuditor(ServiceAuditor):
                             location=loc,
                             row=r,
                             recommended_module="modules run enum_core_network --security-lists --get",
-                            notes=_wrap_paragraph("Remediation: restrict source CIDRs and allowed protocols/ports."),
+                            notes=_wrap_paragraph("Remediation: restrict source CIDRs and allowed protocols/ports.")
+                            + subnet_note,
                         )
                     )
                     continue
@@ -2167,7 +2188,8 @@ class NetworkingServiceAuditor(ServiceAuditor):
                                 location=loc,
                                 row=r,
                                 recommended_module="modules run enum_core_network --security-lists --get",
-                                notes=_wrap_paragraph("Remediation: restrict SSH ingress to approved admin CIDRs."),
+                                notes=_wrap_paragraph("Remediation: restrict SSH ingress to approved admin CIDRs.")
+                                + subnet_note,
                             )
                         )
                     if port_min == 3389 and port_max == 3389:
@@ -2184,7 +2206,8 @@ class NetworkingServiceAuditor(ServiceAuditor):
                                 location=loc,
                                 row=r,
                                 recommended_module="modules run enum_core_network --security-lists --get",
-                                notes=_wrap_paragraph("Remediation: restrict RDP ingress to approved admin CIDRs."),
+                                notes=_wrap_paragraph("Remediation: restrict RDP ingress to approved admin CIDRs.")
+                                + subnet_note,
                             )
                         )
 
@@ -2208,7 +2231,8 @@ class NetworkingServiceAuditor(ServiceAuditor):
                             location=loc,
                             row=r,
                             recommended_module="modules run enum_core_network --security-lists --get",
-                            notes=_wrap_paragraph("Remediation: tighten egress to least privilege."),
+                            notes=_wrap_paragraph("Remediation: tighten egress to least privilege.")
+                            + subnet_note,
                         )
                     )
 
@@ -7502,31 +7526,6 @@ class TenantManagerServiceAuditor(ServiceAuditor):
 
         return res
 
-    @staticmethod
-    def _age_days(ts: Any) -> Optional[float]:
-        """Best-effort age (in days) of an ISO-8601 timestamp string, None if unparseable."""
-        s = _safe_str(ts).strip()
-        if not s:
-            return None
-
-        # Local import: datetime is not needed elsewhere in this module.
-        from datetime import datetime, timezone
-
-        candidate = s
-        if candidate.endswith("Z"):
-            candidate = candidate[:-1] + "+00:00"
-        try:
-            dt = datetime.fromisoformat(candidate)
-        except Exception:
-            return None
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        try:
-            delta = datetime.now(timezone.utc) - dt
-            return delta.total_seconds() / 86400.0
-        except Exception:
-            return None
-
     def _check_domain_verification_lapsed(self, res: ServiceAuditResult) -> None:
         rows = self.get_rows(self.T_DOMAINS, where_conditions={"lifecycle_state": "ACTIVE"})
         for r in rows:
@@ -7586,7 +7585,7 @@ class TenantManagerServiceAuditor(ServiceAuditor):
             if status != "PENDING":
                 continue
 
-            age_days = self._age_days(r.get("time_created"))
+            age_days = _age_days(r.get("time_created"))
             if age_days is None or age_days <= self._STALE_PENDING_DAYS:
                 continue
 
@@ -8409,10 +8408,8 @@ class WlmsServiceAuditor(ServiceAuditor):
             if not cid or not mid:
                 continue
 
-            plugin_status = _safe_str(r.get("plugin_status")).upper()
-            if plugin_status == "INACTIVE":
-                loc = _loc_base(compartment_id=cid, entity_id=mid)
-                res.findings.append(
+            loc = _loc_base(compartment_id=cid, entity_id=mid)
+            res.findings.append(
                     self.finding(
                         table_name=self.T_MANAGED_INSTANCES,
                         issue_code="WLMS_MANAGED_INSTANCE_PLUGIN_INACTIVE",

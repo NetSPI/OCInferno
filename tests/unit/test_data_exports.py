@@ -408,6 +408,59 @@ class TestDataExports(unittest.TestCase):
             xml_blob = _xlsx_xml_blob(result["xlsx_path"])
             self.assertIn("db-password", xml_blob)
 
+    @unittest.skipUnless(_HAS_EXCEL, _EXCEL_SKIP_REASON)
+    def test_condensed_lifecycle_state_column_populated_and_excluded_from_remaining_json(self):
+        """lifecycle_state must land in its own "Lifecycle State" column (so Excel's
+        autofilter can filter out TERMINATED/DELETED rows in two clicks) and must NOT
+        also be duplicated inside the Remaining JSON blob."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            db_one = root / "service_info.db"
+            out_xlsx = root / "sqlite_blob_lifecycle.xlsx"
+
+            conn = sqlite3.connect(str(db_one))
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    'CREATE TABLE "compute_instances" '
+                    '(id TEXT, name TEXT, compartment_id TEXT, lifecycle_state TEXT)'
+                )
+                cur.execute(
+                    'INSERT INTO "compute_instances" (id, name, compartment_id, lifecycle_state) '
+                    "VALUES (?, ?, ?, ?)",
+                    (
+                        "ocid1.instance.oc1..aaaa",
+                        "app1",
+                        "ocid1.compartment.oc1..aaaa",
+                        "TERMINATED",
+                    ),
+                )
+                conn.commit()
+            finally:
+                cur.close()
+                conn.close()
+
+            result = export_sqlite_dbs_to_excel_blob(
+                db_paths=[str(db_one)],
+                out_xlsx_path=str(out_xlsx),
+                single_sheet=True,
+                condensed=True,
+            )
+
+            self.assertTrue(result["ok"])
+            xml_blob = _xlsx_xml_blob(result["xlsx_path"])
+            self.assertIn("Lifecycle State", xml_blob)
+            self.assertIn("TERMINATED", xml_blob)
+            # Excel's built-in filter dropdown must cover the data rows, not just the header.
+            self.assertIn("autoFilter", xml_blob)
+
+            with zipfile.ZipFile(result["xlsx_path"], "r") as zf:
+                sheet_xml = next(
+                    zf.read(n).decode("utf-8") for n in zf.namelist() if n.startswith("xl/worksheets/sheet")
+                )
+            # lifecycle_state must not be duplicated inside the Remaining JSON cell text.
+            self.assertNotIn('"lifecycle_state"', sheet_xml)
+
     def test_export_compartment_tree_image_svg(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

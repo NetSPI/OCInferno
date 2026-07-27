@@ -1,757 +1,813 @@
 {
-  "schema_version": 1,
-  "modules": [
-    {
-      "module_name": "enum_all",
-      "module_category": "Enumeration",
-      "info_blurb": "Run cross-service enumeration in dependency order",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.everything.enumeration.enum_all",
-      "service": "AllCoverage"
-    },
-    {
-      "module_name": "process_config_check",
-      "module_category": "Process",
-      "info_blurb": "Run saved-data configuration audits",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.everything.processing.process_config_check",
-      "service": "AllCoverage"
-    },
-    {
-      "module_name": "enum_apigateway",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate API Gateway resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.apigateway.enumeration.enum_apigateway",
-      "service": "ApiGateway"
-    },
-    {
-      "module_name": "enum_artifactregistry",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Artifact Registry resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.artifactregistry.enumeration.enum_artifactregistry",
-      "service": "ArtifactRegistry"
-    },
-    {
-      "module_name": "enum_blockchain",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Blockchain resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.blockchain.enumeration.enum_blockchain",
-      "service": "Blockchain"
-    },
-    {
-      "module_name": "enum_cloudguard",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Cloud Guard resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.cloudguard.enumeration.enum_cloudguard",
-      "service": "CloudGuard"
-    },
-    {
-      "module_name": "enum_container_instances",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Container Instances",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.containerinstances.enumeration.enum_container_instances",
-      "service": "ContainerInstances"
-    },
-    {
-      "module_name": "enum_containerregistry",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Container Registry resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.containerregistry.enumeration.enum_containerregistry",
-      "service": "ContainerRegistry"
-    },
-    {
-      "module_name": "enum_core_block_storage",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Core Block Storage resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.core.enumeration.enum_core_block_storage",
-      "service": "Core"
-    },
-    {
-      "module_name": "enum_core_compute",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Core Compute resources (instances/images/compute management + instance-agent plugins)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.core.enumeration.enum_core_compute",
-      "service": "Core"
-    },
-    {
-      "module_name": "enum_core_network",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Core Networking resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.core.enumeration.enum_core_network",
-      "service": "Core"
-    },
-    {
-      "module_name": "enum_databases",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Database resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.databases.enumeration.enum_databases",
-      "service": "Databases"
-    },
-    {
-      "module_name": "enum_dataflow",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Data Flow resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.dataflow.enumeration.enum_dataflow",
-      "service": "DataFlow"
-    },
-    {
-      "module_name": "enum_datascience",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Data Science resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.datascience.enumeration.enum_datascience",
-      "service": "DataScience"
-    },
-    {
-      "module_name": "enum_desktops",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Desktops resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.desktops.enumeration.enum_desktops",
-      "service": "Desktops"
-    },
-    {
-      "module_name": "enum_devops",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate DevOps resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.devops.enumeration.enum_devops",
-      "service": "DevOps"
-    },
-    {
-      "module_name": "enum_dns",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate DNS resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.dns.enumeration.enum_dns",
-      "service": "DNS"
-    },
-    {
-      "module_name": "enum_email",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Email Delivery resources (senders, domains, DKIM/SPF, submit endpoints)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.email.enumeration.enum_email",
-      "service": "EmailDelivery"
-    },
-    {
-      "module_name": "enum_filestorage",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate File Storage resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.filestorage.enumeration.enum_filestorage",
-      "service": "FileStorage"
-    },
-    {
-      "module_name": "enum_functions",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Functions resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.functions.enumeration.enum_functions",
-      "service": "Functions"
-    },
-    {
-      "module_name": "enum_comp",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI compartments",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.enumeration.enum_comp",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "enum_identity",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Identity (IAM + IDD) resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.enumeration.enum_identity",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_add_user_api_key",
-      "module_category": "Exploit",
-      "info_blurb": "Add an API signing key to a target user (classic IAM or identity domain) -> creds as that user",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_add_user_api_key",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_create_user",
-      "module_category": "Exploit",
-      "info_blurb": "Create a new IAM user (classic or identity domain), optionally minting an API key + assuming it",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_create_user",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_create_group",
-      "module_category": "Exploit",
-      "info_blurb": "Create a new IAM group (classic or identity domain)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_create_group",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_update_user",
-      "module_category": "Exploit",
-      "info_blurb": "Edit a user's email/description (classic or identity domain) -> redirect a later password reset",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_update_user",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_reset_password",
-      "module_category": "Exploit",
-      "info_blurb": "Reset a user's password (classic returns it; IDD returns a one-time password or emails a reset link)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_reset_password",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_add_self_to_group",
-      "module_category": "Exploit",
-      "info_blurb": "Add a user (default self) to a group to inherit its permissions (classic or identity domain)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_add_self_to_group",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "exploit_write_policy",
-      "module_category": "Exploit",
-      "info_blurb": "Create/append an IAM policy granting broad access (any-user, self via condition, group, or dynamic-group)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_write_policy",
-      "service": "IdentityClient"
-    },
-    {
-      "module_name": "enum_iot",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate IoT resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.iot.enumeration.enum_iot",
-      "service": "IoT"
-    },
-    {
-      "module_name": "enum_kubernetes",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Kubernetes resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.kubernetes.enumeration.enum_kubernetes",
-      "service": "Kubernetes"
-    },
-    {
-      "module_name": "enum_logs",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate all buckets and corresponding blobs",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.logging.enumeration.enum_logs",
-      "service": "Logging"
-    },
-    {
-      "module_name": "enum_managedkafka",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Managed Kafka resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.managedkafka.enumeration.enum_managedkafka",
-      "service": "ManagedKafka"
-    },
-    {
-      "module_name": "enum_networkfirewall",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Network Firewall resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.networkfirewall.enumeration.enum_networkfirewall",
-      "service": "NetworkFirewall"
-    },
-    {
-      "module_name": "enum_notifications",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Notifications resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.notifications.enumeration.enum_notifications",
-      "service": "Notifications"
-    },
-    {
-      "module_name": "enum_objectstorage",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Object Storage resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.objectstorage.enumeration.enum_objectstorage",
-      "service": "ObjectStorage"
-    },
-    {
-      "module_name": "process_oracle_cloud_hound_data",
-      "module_category": "Process",
-      "info_blurb": "Build OpenGraph nodes/edges and export OCI CloudHound JSON",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data",
-      "service": "OpenGraph"
-    },
-    {
-      "module_name": "enum_resourcemanager",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Resource Manager resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.resourcemanager.enumeration.enum_resourcemanager",
-      "service": "ResourceManager"
-    },
-    {
-      "module_name": "enum_resource_schedules",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Resource Scheduler schedules",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.resourcescheduler.enumeration.enum_resource_schedules",
-      "service": "ResourceScheduler"
-    },
-    {
-      "module_name": "enum_tagging",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Tagging resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.tagging.enumeration.enum_tagging",
-      "service": "Tagging"
-    },
-    {
-      "module_name": "enum_vault",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Vault resources",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.vault.enumeration.enum_vault",
-      "service": "Vault"
-    },
-    {
-      "module_name": "enum_bastion",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Bastion jump hosts + active sessions (private-host access paths)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.bastion.enumeration.enum_bastion",
-      "service": "Bastion"
-    },
-    {
-      "module_name": "enum_os_management_hub",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OS Management Hub managed instances, groups + scheduled jobs (command-exec-at-scale surface)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub",
-      "service": "OS Management Hub"
-    },
-    {
-      "module_name": "enum_service_connector",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Service Connector Hub connectors (source->task->target data pipelines / exfil + data topology)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.service_connector.enumeration.enum_service_connector",
-      "service": "Service Connector Hub"
-    },
-    {
-      "module_name": "enum_resource_search",
-      "module_category": "Enumeration",
-      "info_blurb": "Tenancy-wide resource inventory via OCI Search (asset inventory; feeds OpenGraph --from-inventory)",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.resource_search.enumeration.enum_resource_search",
-      "service": "Resource Search"
-    },
-    {
-      "module_name": "enum_loadbalancer",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI classic L7 Load Balancers (LBaaS) including listeners, backend sets, certificates, NSGs, subnets and ingress IPs",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.loadbalancer.enumeration.enum_loadbalancer",
-      "service": "LoadBalancer"
-    },
-    {
-      "module_name": "enum_network_load_balancers",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Network Load Balancers (L3/L4 NLBs)",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.networkloadbalancer.enumeration.enum_network_load_balancers",
-      "service": "NetworkLoadBalancer"
-    },
-    {
-      "module_name": "enum_mysql",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate MySQL HeatWave DB systems in a compartment",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.mysql.enumeration.enum_mysql",
-      "service": "MySQL"
-    },
-    {
-      "module_name": "enum_postgresql",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate PostgreSQL DB systems in a compartment",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.postgresql.enumeration.enum_postgresql",
-      "service": "PostgreSQL"
-    },
-    {
-      "module_name": "enum_nosql",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate NoSQL Database tables (incl. DDL schema) in a compartment",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.nosql.enumeration.enum_nosql",
-      "service": "NoSQL"
-    },
-    {
-      "module_name": "enum_events",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Events service rules (event-pattern conditions and action targets that fire Functions/Streams/Notifications - a persistence surface).",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.events.enumeration.enum_events",
-      "service": "Events"
-    },
-    {
-      "module_name": "enum_certificates",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Certificates Management resources: certificates, certificate authorities, and CA bundles.",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.certificates.enumeration.enum_certificates",
-      "service": "Certificates"
-    },
-    {
-      "module_name": "enum_audit",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Audit events over a time window (default last 24h; --hours/--start-time/--end-time), flattened to per-event rows.",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.audit.enumeration.enum_audit",
-      "service": "Audit"
-    },
-    {
-      "module_name": "enum_goldengate",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI GoldenGate deployments and connections (connections carry DB credentials / vault + key secret references).",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.goldengate.enumeration.enum_goldengate",
-      "service": "GoldenGate"
-    },
-    {
-      "module_name": "enum_dataintegration",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Data Integration workspaces (VCN/subnet, private-network and DNS endpoint details).",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.dataintegration.enumeration.enum_dataintegration",
-      "service": "DataIntegration"
-    },
-    {
-      "module_name": "enum_integration",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Integration Cloud (OIC) integration instances (URLs, message packs, shape, network endpoints).",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.integration.enumeration.enum_integration",
-      "service": "IntegrationCloud"
-    },
-    {
-      "module_name": "enum_monitoring",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Monitoring alarms (metric queries, notification destinations, severity) - maps blue-team detection coverage per compartment",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.monitoring.enumeration.enum_monitoring",
-      "service": "Monitoring"
-    },
-    {
-      "module_name": "enum_streaming",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Streaming streams and stream pools (data-plane messages endpoints, Kafka settings, encryption keys) - exfil/interception surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.streaming.enumeration.enum_streaming",
-      "service": "Streaming"
-    },
-    {
-      "module_name": "enum_queue",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Queue queues (data-plane messages endpoints, retention/visibility, DLQ, encryption keys) - read/inject message surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.queue.enumeration.enum_queue",
-      "service": "Queue"
-    },
-    {
-      "module_name": "enum_redis",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OCI Cache (Redis) clusters (endpoints/FQDNs, node sizing, subnet, cluster mode). Caches frequently hold session tokens, credentials, and PII - a high-value data-exfiltration surface.",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.redis.enumeration.enum_redis",
-      "service": "Redis"
-    },
-    {
-      "module_name": "enum_opensearch",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate OpenSearch clusters (OpenSearch/Dashboard FQDNs and private IPs, security mode, subnet/VCN, node/storage sizing). Clusters aggregate logs and application data and often have weak internal auth.",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.opensearch.enumeration.enum_opensearch",
-      "service": "OpenSearch"
-    },
-    {
-      "module_name": "enum_waf",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate WAF web application firewalls and firewall policies (backend/LB bindings, actions, access-control and rate-limiting rules). Policy rules reveal bypass conditions of value to blue and red teams.",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.waf.enumeration.enum_waf",
-      "service": "WAF"
-    },
-    {
-      "module_name": "get_network_resources",
-      "module_category": "Process",
-      "info_blurb": "Aggregate all network identifiers (IPs, CIDRs, URLs, FQDNs, subnet/VCN refs) from every saved resource into one inventory",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.everything.processing.get_network_resources",
-      "service": "AllCoverage"
-    },
-    {
-      "module_name": "enum_analytics",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Analytics Cloud instances - exposes analytics service URLs, network endpoint exposure (public vs private), and KMS key usage",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.analytics.enumeration.enum_analytics",
-      "service": "Analytics Cloud"
-    },
-    {
-      "module_name": "enum_bds",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Big Data Service (BDS) instances - managed Hadoop/Spark clusters run jobs as the cluster identity, so a compromised cluster is code-exec-as-cluster-identity",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.bds.enumeration.enum_bds",
-      "service": "Big Data"
-    },
-    {
-      "module_name": "enum_data_catalog",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Data Catalog catalogs, private endpoints, and metastores - maps where sensitive data lives plus the network endpoints and object-storage table locations backing it",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.data_catalog.enumeration.enum_data_catalog",
-      "service": "Data Catalog"
-    },
-    {
-      "module_name": "enum_data_safe",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Data Safe target databases, security/user assessments, and sensitive data models - reveals where sensitive data lives, which databases are monitored, and risky DB users",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.data_safe.enumeration.enum_data_safe",
-      "service": "Data Safe"
-    },
-    {
-      "module_name": "enum_management_agent",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Management Agents and install keys - install keys are a lateral-movement primitive that let an attacker enroll new agents to run commands on hosts",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.management_agent.enumeration.enum_management_agent",
-      "service": "Management Agent"
-    },
-    {
-      "module_name": "enum_vulnerability_scanning",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Vulnerability Scanning scan targets and detected vulnerabilities - reveals exploitable CVEs and exactly which hosts/container images are affected",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.vulnerability_scanning.enumeration.enum_vulnerability_scanning",
-      "service": "Vulnerability Scanning"
-    },
-    {
-      "module_name": "enum_ai_language",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate AI Language projects, custom models, and inference endpoints - custom models expose training-data lineage and endpoints are hijackable inference surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.ai_language.enumeration.enum_ai_language",
-      "service": "AI Language"
-    },
-    {
-      "module_name": "enum_database_management",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Database Management resources (named credentials, managed databases, cloud DB systems, private endpoints) - named credentials are stored DB credential references and DB systems expose the database attack surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.database_management.enumeration.enum_database_management",
-      "service": "Database Management"
-    },
-    {
-      "module_name": "enum_delegate_access_control",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Delegate Access Control resources - reveals which Oracle/3rd-party operators can break-glass into your resources and any pending/active delegated access requests",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.delegate_access_control.enumeration.enum_delegate_access_control",
-      "service": "Delegate Access Control"
-    },
-    {
-      "module_name": "enum_fusion_apps",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Fusion Applications environments and families - exposes public SaaS ERP/HCM/SCM endpoints, DNS prefixes, and break-glass/lockbox access controls",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.fusion_apps.enumeration.enum_fusion_apps",
-      "service": "Fusion Applications"
-    },
-    {
-      "module_name": "enum_generative_ai",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Generative AI projects, endpoints, dedicated AI clusters, and API keys - dedicated endpoints/clusters are hijackable inference surface and API keys expose the credential surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.generative_ai.enumeration.enum_generative_ai",
-      "service": "Generative AI"
-    },
-    {
-      "module_name": "enum_oda",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Digital Assistant (ODA) instances - exposes web-app/connector endpoints and identity-domain bindings that front conversational AI channels",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.oda.enumeration.enum_oda",
-      "service": "Digital Assistant"
-    },
-    {
-      "module_name": "enum_visual_builder",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Visual Builder instances - low-code app-hosting VMs exposing instance URLs and public/private network endpoints",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.visual_builder.enumeration.enum_visual_builder",
-      "service": "Visual Builder"
-    },
-    {
-      "module_name": "enum_regions",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate + persist the tenancy's SUBSCRIBED regions (list_region_subscriptions) - drives multi-region enum_all --find-regions/--regions",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.identityclient.enumeration.enum_regions",
-      "service": "Identity"
-    },
-    {
-      "module_name": "enum_apiaccesscontrol",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Privileged API Access Control resources - reveals which sensitive API operations are gated, who can invoke them, and pending privilege-elevation requests ripe for abuse",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.apiaccesscontrol.enumeration.enum_apiaccesscontrol",
-      "service": "Privileged API Access Control"
-    },
-    {
-      "module_name": "enum_autoscaling",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate auto-scaling configurations - reveal instance-pool launch templates that embed cloud-init/user-data secrets and enable stealthy compute-spawn persistence",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.autoscaling.enumeration.enum_autoscaling",
-      "service": "Autoscaling"
-    },
-    {
-      "module_name": "enum_cloud_bridge",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Cloud Bridge inventories, asset-sources, and agents - maps discovered on-prem/other-cloud assets and the discovery agents that can pivot into them",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.cloud_bridge.enumeration.enum_cloud_bridge",
-      "service": "Cloud Bridge"
-    },
-    {
-      "module_name": "enum_cloud_migrations",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Cloud Migrations migrations - exposes migration projects and their replication schedules, revealing source/target workload inventory and migration configuration",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.cloud_migrations.enumeration.enum_cloud_migrations",
-      "service": "Cloud Migrations"
-    },
-    {
-      "module_name": "enum_database_migration",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Database Migration connections and migrations - exposes source/target DB credential references (Vault/KMS OCIDs) and migration topology",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.database_migration.enumeration.enum_database_migration",
-      "service": "Database Migration"
-    },
-    {
-      "module_name": "enum_database_tools",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Database Tools connections and private endpoints - connections hold DB usernames, connection strings, and Vault secret references (user_password_secret_id) usable to pivot into backend databases",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.database_tools.enumeration.enum_database_tools",
-      "service": "Database Tools"
-    },
-    {
-      "module_name": "enum_dbmulticloud",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate DB Multicloud identity connectors - cross-cloud AWS/GCP/Azure IAM+KMS trust links that can be pivoted to other clouds",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.dbmulticloud.enumeration.enum_dbmulticloud",
-      "service": "DB Multicloud"
-    },
-    {
-      "module_name": "enum_generative_ai_agent",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Generative AI Agents (agents, endpoints, knowledge bases, tools) - reveals sensitive RAG corpora, hijackable inference endpoints, and function-calling exec surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.generative_ai_agent.enumeration.enum_generative_ai_agent",
-      "service": "Generative AI Agents"
-    },
-    {
-      "module_name": "enum_governance_rules",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Governance Rules and their tenancy attachments - reveals org-wide policy/quota/tag rules pushed down onto child tenancies (privileged control structure worth mapping)",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.governance_rules.enumeration.enum_governance_rules",
-      "service": "Governance Rules"
-    },
-    {
-      "module_name": "enum_healthchecks",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Health Checks HTTP/ping monitors - reveals the exact public and internal endpoints, ports, paths, and headers the org probes (attack-surface recon)",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.healthchecks.enumeration.enum_healthchecks",
-      "service": "Health Checks"
-    },
-    {
-      "module_name": "enum_lockbox",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Lockbox managed-access break-glass resources - reveals which sensitive resources have Oracle/partner break-glass access, the approval templates gating it, and max access durations",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.lockbox.enumeration.enum_lockbox",
-      "service": "Lockbox"
-    },
-    {
-      "module_name": "enum_ocvp",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate VMware Solution SDDCs, datastores, and clusters - exposes self-managed vCenter/NSX/ESXi endpoints (FQDNs, software versions) that are a large lateral-movement surface",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.ocvp.enumeration.enum_ocvp",
-      "service": "VMware Solution"
-    },
-    {
-      "module_name": "enum_operator_access_control",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Operator Access Control resources - reveals Oracle break-glass policies, where they're applied, and active/pending operator sessions into Exadata/DBaaS",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.operator_access_control.enumeration.enum_operator_access_control",
-      "service": "Operator Access Control"
-    },
-    {
-      "module_name": "enum_tenant_manager",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate Tenant Manager organizations, domains, and cross-tenancy invitations - reveals linked tenancies and pending join invites for cross-tenancy trust-establishment footholds",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.tenant_manager.enumeration.enum_tenant_manager",
-      "service": "Tenant Manager"
-    },
-    {
-      "module_name": "enum_waas",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate WAAS (legacy WAF/edge) policies, certificates, custom protection rules and HTTP redirects - policy origins reveal backend server addresses that can be hit directly to bypass the WAF",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.waas.enumeration.enum_waas",
-      "service": "WAAS"
-    },
-    {
-      "module_name": "enum_wlms",
-      "module_category": "Enumeration",
-      "info_blurb": "Enumerate WebLogic Management domains and managed instances - WebLogic middleware exposes admin consoles historically prone to RCE",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.wlms.enumeration.enum_wlms",
-      "service": "WebLogic Management"
-    },
-    {
-      "module_name": "process_og_node_color_images",
-      "module_category": "Process",
-      "info_blurb": "Push OCI OpenGraph custom node color/image styling to BloodHound (standalone; re-style without regenerating the graph).",
-      "author": "OCInferno",
-      "location": "ocinferno.modules.opengraph.processing.process_og_node_color_images",
-      "service": "OpenGraph"
-    }
-  ]
+    "schema_version": 1,
+    "modules": [
+        {
+            "module_name": "enum_all",
+            "module_category": "Enumeration",
+            "info_blurb": "Run cross-service enumeration in dependency order",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.everything.enumeration.enum_all",
+            "service": "AllCoverage"
+        },
+        {
+            "module_name": "process_config_check",
+            "module_category": "Process",
+            "info_blurb": "Run saved-data configuration audits",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.everything.processing.process_config_check",
+            "service": "AllCoverage"
+        },
+        {
+            "module_name": "enum_apigateway",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate API Gateway resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.apigateway.enumeration.enum_apigateway",
+            "service": "ApiGateway"
+        },
+        {
+            "module_name": "enum_artifactregistry",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Artifact Registry resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.artifactregistry.enumeration.enum_artifactregistry",
+            "service": "ArtifactRegistry"
+        },
+        {
+            "module_name": "enum_blockchain",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Blockchain resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.blockchain.enumeration.enum_blockchain",
+            "service": "Blockchain"
+        },
+        {
+            "module_name": "enum_cloudguard",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Cloud Guard resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.cloudguard.enumeration.enum_cloudguard",
+            "service": "CloudGuard"
+        },
+        {
+            "module_name": "enum_container_instances",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Container Instances",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.containerinstances.enumeration.enum_container_instances",
+            "service": "ContainerInstances"
+        },
+        {
+            "module_name": "enum_containerregistry",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Container Registry resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.containerregistry.enumeration.enum_containerregistry",
+            "service": "ContainerRegistry"
+        },
+        {
+            "module_name": "enum_core_block_storage",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Core Block Storage resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.core.enumeration.enum_core_block_storage",
+            "service": "Core"
+        },
+        {
+            "module_name": "enum_core_compute",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Core Compute resources (instances/images/compute management + instance-agent plugins)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.core.enumeration.enum_core_compute",
+            "service": "Core"
+        },
+        {
+            "module_name": "enum_core_network",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Core Networking resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.core.enumeration.enum_core_network",
+            "service": "Core"
+        },
+        {
+            "module_name": "enum_databases",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Database resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.databases.enumeration.enum_databases",
+            "service": "Databases"
+        },
+        {
+            "module_name": "enum_dataflow",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Data Flow resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.dataflow.enumeration.enum_dataflow",
+            "service": "DataFlow"
+        },
+        {
+            "module_name": "enum_datascience",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Data Science resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.datascience.enumeration.enum_datascience",
+            "service": "DataScience"
+        },
+        {
+            "module_name": "enum_desktops",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Desktops resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.desktops.enumeration.enum_desktops",
+            "service": "Desktops"
+        },
+        {
+            "module_name": "enum_devops",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate DevOps resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.devops.enumeration.enum_devops",
+            "service": "DevOps"
+        },
+        {
+            "module_name": "enum_dns",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate DNS resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.dns.enumeration.enum_dns",
+            "service": "DNS"
+        },
+        {
+            "module_name": "enum_email",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Email Delivery resources (senders, domains, DKIM/SPF, submit endpoints)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.email.enumeration.enum_email",
+            "service": "EmailDelivery"
+        },
+        {
+            "module_name": "enum_filestorage",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate File Storage resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.filestorage.enumeration.enum_filestorage",
+            "service": "FileStorage"
+        },
+        {
+            "module_name": "enum_functions",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Functions resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.functions.enumeration.enum_functions",
+            "service": "Functions"
+        },
+        {
+            "module_name": "enum_comp",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI compartments",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.enumeration.enum_comp",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "enum_identity",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Identity (IAM + IDD) resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.enumeration.enum_identity",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_add_user_api_key",
+            "module_category": "Exploit",
+            "info_blurb": "Add an API signing key to a target user (classic IAM or identity domain) -> creds as that user",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_add_user_api_key",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_create_user",
+            "module_category": "Exploit",
+            "info_blurb": "Create a new IAM user (classic or identity domain), optionally minting an API key + assuming it",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_create_user",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_create_group",
+            "module_category": "Exploit",
+            "info_blurb": "Create a new IAM group (classic or identity domain)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_create_group",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_update_user",
+            "module_category": "Exploit",
+            "info_blurb": "Edit a user's email/description (classic or identity domain) -> redirect a later password reset",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_update_user",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_reset_password",
+            "module_category": "Exploit",
+            "info_blurb": "Reset a user's password (classic returns it; IDD returns a one-time password or emails a reset link)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_reset_password",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_add_self_to_group",
+            "module_category": "Exploit",
+            "info_blurb": "Add a user (default self) to a group to inherit its permissions (classic or identity domain)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_add_self_to_group",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "exploit_write_policy",
+            "module_category": "Exploit",
+            "info_blurb": "Create/append an IAM policy granting broad access (any-user, self via condition, group, or dynamic-group)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.identityclient.exploit.exploit_write_policy",
+            "service": "IdentityClient"
+        },
+        {
+            "module_name": "enum_iot",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate IoT resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.iot.enumeration.enum_iot",
+            "service": "IoT"
+        },
+        {
+            "module_name": "enum_kubernetes",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Kubernetes resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.kubernetes.enumeration.enum_kubernetes",
+            "service": "Kubernetes"
+        },
+        {
+            "module_name": "enum_logs",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Logging log groups and logs",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.logging.enumeration.enum_logs",
+            "service": "Logging"
+        },
+        {
+            "module_name": "enum_managedkafka",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Managed Kafka resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.managedkafka.enumeration.enum_managedkafka",
+            "service": "ManagedKafka"
+        },
+        {
+            "module_name": "enum_networkfirewall",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Network Firewall resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.networkfirewall.enumeration.enum_networkfirewall",
+            "service": "NetworkFirewall"
+        },
+        {
+            "module_name": "enum_notifications",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Notifications resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.notifications.enumeration.enum_notifications",
+            "service": "Notifications"
+        },
+        {
+            "module_name": "enum_objectstorage",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Object Storage resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.objectstorage.enumeration.enum_objectstorage",
+            "service": "ObjectStorage"
+        },
+        {
+            "module_name": "process_oracle_cloud_hound_data",
+            "module_category": "Process",
+            "info_blurb": "Build OpenGraph nodes/edges and export OCI CloudHound JSON",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data",
+            "service": "OpenGraph"
+        },
+        {
+            "module_name": "enum_resourcemanager",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Resource Manager resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.resourcemanager.enumeration.enum_resourcemanager",
+            "service": "ResourceManager"
+        },
+        {
+            "module_name": "enum_resource_schedules",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Resource Scheduler schedules",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.resourcescheduler.enumeration.enum_resource_schedules",
+            "service": "ResourceScheduler"
+        },
+        {
+            "module_name": "enum_tagging",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Tagging resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.tagging.enumeration.enum_tagging",
+            "service": "Tagging"
+        },
+        {
+            "module_name": "enum_vault",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Vault resources",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.vault.enumeration.enum_vault",
+            "service": "Vault"
+        },
+        {
+            "module_name": "enum_bastion",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Bastion jump hosts + active sessions (private-host access paths)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.bastion.enumeration.enum_bastion",
+            "service": "Bastion"
+        },
+        {
+            "module_name": "enum_os_management_hub",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OS Management Hub managed instances, groups + scheduled jobs (command-exec-at-scale surface)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub",
+            "service": "OS Management Hub"
+        },
+        {
+            "module_name": "enum_service_connector",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Service Connector Hub connectors (source->task->target data pipelines / exfil + data topology)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.service_connector.enumeration.enum_service_connector",
+            "service": "Service Connector Hub"
+        },
+        {
+            "module_name": "enum_resource_search",
+            "module_category": "Enumeration",
+            "info_blurb": "Tenancy-wide resource inventory via OCI Search (asset inventory; feeds OpenGraph --from-inventory)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.resource_search.enumeration.enum_resource_search",
+            "service": "Resource Search"
+        },
+        {
+            "module_name": "enum_loadbalancer",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI classic L7 Load Balancers (LBaaS) including listeners, backend sets, certificates, NSGs, subnets and ingress IPs",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.loadbalancer.enumeration.enum_loadbalancer",
+            "service": "LoadBalancer"
+        },
+        {
+            "module_name": "enum_network_load_balancers",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Network Load Balancers (L3/L4 NLBs)",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.networkloadbalancer.enumeration.enum_network_load_balancers",
+            "service": "NetworkLoadBalancer"
+        },
+        {
+            "module_name": "enum_mysql",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate MySQL HeatWave DB systems in a compartment",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.mysql.enumeration.enum_mysql",
+            "service": "MySQL"
+        },
+        {
+            "module_name": "enum_postgresql",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate PostgreSQL DB systems in a compartment",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.postgresql.enumeration.enum_postgresql",
+            "service": "PostgreSQL"
+        },
+        {
+            "module_name": "enum_nosql",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate NoSQL Database tables (incl. DDL schema) in a compartment",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.nosql.enumeration.enum_nosql",
+            "service": "NoSQL"
+        },
+        {
+            "module_name": "enum_events",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Events service rules (event-pattern conditions and action targets that fire Functions/Streams/Notifications - a persistence surface).",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.events.enumeration.enum_events",
+            "service": "Events"
+        },
+        {
+            "module_name": "enum_certificates",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Certificates Management resources: certificates, certificate authorities, and CA bundles.",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.certificates.enumeration.enum_certificates",
+            "service": "Certificates"
+        },
+        {
+            "module_name": "enum_audit",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Audit events over a time window (default last 24h; --hours/--start-time/--end-time), flattened to per-event rows.",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.audit.enumeration.enum_audit",
+            "service": "Audit"
+        },
+        {
+            "module_name": "enum_goldengate",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI GoldenGate deployments and connections (connections carry DB credentials / vault + key secret references).",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.goldengate.enumeration.enum_goldengate",
+            "service": "GoldenGate"
+        },
+        {
+            "module_name": "enum_dataintegration",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Data Integration workspaces (VCN/subnet, private-network and DNS endpoint details).",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.dataintegration.enumeration.enum_dataintegration",
+            "service": "DataIntegration"
+        },
+        {
+            "module_name": "enum_integration",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Integration Cloud (OIC) integration instances (URLs, message packs, shape, network endpoints).",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.integration.enumeration.enum_integration",
+            "service": "IntegrationCloud"
+        },
+        {
+            "module_name": "enum_monitoring",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Monitoring alarms (metric queries, notification destinations, severity) - maps blue-team detection coverage per compartment",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.monitoring.enumeration.enum_monitoring",
+            "service": "Monitoring"
+        },
+        {
+            "module_name": "enum_streaming",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Streaming streams and stream pools (data-plane messages endpoints, Kafka settings, encryption keys) - exfil/interception surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.streaming.enumeration.enum_streaming",
+            "service": "Streaming"
+        },
+        {
+            "module_name": "enum_queue",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Queue queues (data-plane messages endpoints, retention/visibility, DLQ, encryption keys) - read/inject message surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.queue.enumeration.enum_queue",
+            "service": "Queue"
+        },
+        {
+            "module_name": "enum_redis",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OCI Cache (Redis) clusters (endpoints/FQDNs, node sizing, subnet, cluster mode). Caches frequently hold session tokens, credentials, and PII - a high-value data-exfiltration surface.",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.redis.enumeration.enum_redis",
+            "service": "Redis"
+        },
+        {
+            "module_name": "enum_opensearch",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate OpenSearch clusters (OpenSearch/Dashboard FQDNs and private IPs, security mode, subnet/VCN, node/storage sizing). Clusters aggregate logs and application data and often have weak internal auth.",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.opensearch.enumeration.enum_opensearch",
+            "service": "OpenSearch"
+        },
+        {
+            "module_name": "enum_waf",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate WAF web application firewalls and firewall policies (backend/LB bindings, actions, access-control and rate-limiting rules). Policy rules reveal bypass conditions of value to blue and red teams.",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.waf.enumeration.enum_waf",
+            "service": "WAF"
+        },
+        {
+            "module_name": "get_network_resources",
+            "module_category": "Process",
+            "info_blurb": "Aggregate all network identifiers (IPs, CIDRs, URLs, FQDNs, subnet/VCN refs) from every saved resource into one inventory",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.everything.processing.get_network_resources",
+            "service": "AllCoverage"
+        },
+        {
+            "module_name": "process_core_network",
+            "module_category": "Process",
+            "info_blurb": "Correlate saved core-network resources: backfill attached_subnet_ids onto security lists and route tables (cross-compartment denormalization)",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.everything.processing.process_core_network",
+            "service": "AllCoverage"
+        },
+        {
+            "module_name": "enum_analytics",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Analytics Cloud instances - exposes analytics service URLs, network endpoint exposure (public vs private), and KMS key usage",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.analytics.enumeration.enum_analytics",
+            "service": "Analytics Cloud"
+        },
+        {
+            "module_name": "enum_bds",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Big Data Service (BDS) instances - managed Hadoop/Spark clusters run jobs as the cluster identity, so a compromised cluster is code-exec-as-cluster-identity",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.bds.enumeration.enum_bds",
+            "service": "Big Data"
+        },
+        {
+            "module_name": "enum_data_catalog",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Data Catalog catalogs, private endpoints, and metastores - maps where sensitive data lives plus the network endpoints and object-storage table locations backing it",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.data_catalog.enumeration.enum_data_catalog",
+            "service": "Data Catalog"
+        },
+        {
+            "module_name": "enum_data_safe",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Data Safe target databases, security/user assessments, and sensitive data models - reveals where sensitive data lives, which databases are monitored, and risky DB users",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.data_safe.enumeration.enum_data_safe",
+            "service": "Data Safe"
+        },
+        {
+            "module_name": "enum_management_agent",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Management Agents and install keys - install keys are a lateral-movement primitive that let an attacker enroll new agents to run commands on hosts",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.management_agent.enumeration.enum_management_agent",
+            "service": "Management Agent"
+        },
+        {
+            "module_name": "enum_vulnerability_scanning",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Vulnerability Scanning scan targets and detected vulnerabilities - reveals exploitable CVEs and exactly which hosts/container images are affected",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.vulnerability_scanning.enumeration.enum_vulnerability_scanning",
+            "service": "Vulnerability Scanning"
+        },
+        {
+            "module_name": "enum_ai_language",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate AI Language projects, custom models, and inference endpoints - custom models expose training-data lineage and endpoints are hijackable inference surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.ai_language.enumeration.enum_ai_language",
+            "service": "AI Language"
+        },
+        {
+            "module_name": "enum_database_management",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Database Management resources (named credentials, managed databases, cloud DB systems, private endpoints) - named credentials are stored DB credential references and DB systems expose the database attack surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.database_management.enumeration.enum_database_management",
+            "service": "Database Management"
+        },
+        {
+            "module_name": "enum_delegate_access_control",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Delegate Access Control resources - reveals which Oracle/3rd-party operators can break-glass into your resources and any pending/active delegated access requests",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.delegate_access_control.enumeration.enum_delegate_access_control",
+            "service": "Delegate Access Control"
+        },
+        {
+            "module_name": "enum_fusion_apps",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Fusion Applications environments and families - exposes public SaaS ERP/HCM/SCM endpoints, DNS prefixes, and break-glass/lockbox access controls",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.fusion_apps.enumeration.enum_fusion_apps",
+            "service": "Fusion Applications"
+        },
+        {
+            "module_name": "enum_generative_ai",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Generative AI projects, endpoints, dedicated AI clusters, and API keys - dedicated endpoints/clusters are hijackable inference surface and API keys expose the credential surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.generative_ai.enumeration.enum_generative_ai",
+            "service": "Generative AI"
+        },
+        {
+            "module_name": "enum_oda",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Digital Assistant (ODA) instances - exposes web-app/connector endpoints and identity-domain bindings that front conversational AI channels",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.oda.enumeration.enum_oda",
+            "service": "Digital Assistant"
+        },
+        {
+            "module_name": "enum_visual_builder",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Visual Builder instances - low-code app-hosting VMs exposing instance URLs and public/private network endpoints",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.visual_builder.enumeration.enum_visual_builder",
+            "service": "Visual Builder"
+        },
+        {
+            "module_name": "enum_regions",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate + persist the tenancy's SUBSCRIBED regions (list_region_subscriptions) - drives multi-region enum_all --find-regions/--regions",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.identityclient.enumeration.enum_regions",
+            "service": "Identity"
+        },
+        {
+            "module_name": "enum_apiaccesscontrol",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Privileged API Access Control resources - reveals which sensitive API operations are gated, who can invoke them, and pending privilege-elevation requests ripe for abuse",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.apiaccesscontrol.enumeration.enum_apiaccesscontrol",
+            "service": "Privileged API Access Control"
+        },
+        {
+            "module_name": "enum_autoscaling",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate auto-scaling configurations - reveal instance-pool launch templates that embed cloud-init/user-data secrets and enable stealthy compute-spawn persistence",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.autoscaling.enumeration.enum_autoscaling",
+            "service": "Autoscaling"
+        },
+        {
+            "module_name": "enum_cloud_bridge",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Cloud Bridge inventories, asset-sources, and agents - maps discovered on-prem/other-cloud assets and the discovery agents that can pivot into them",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.cloud_bridge.enumeration.enum_cloud_bridge",
+            "service": "Cloud Bridge"
+        },
+        {
+            "module_name": "enum_cloud_migrations",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Cloud Migrations migrations - exposes migration projects and their replication schedules, revealing source/target workload inventory and migration configuration",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.cloud_migrations.enumeration.enum_cloud_migrations",
+            "service": "Cloud Migrations"
+        },
+        {
+            "module_name": "enum_database_migration",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Database Migration connections and migrations - exposes source/target DB credential references (Vault/KMS OCIDs) and migration topology",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.database_migration.enumeration.enum_database_migration",
+            "service": "Database Migration"
+        },
+        {
+            "module_name": "enum_database_tools",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Database Tools connections and private endpoints - connections hold DB usernames, connection strings, and Vault secret references (user_password_secret_id) usable to pivot into backend databases",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.database_tools.enumeration.enum_database_tools",
+            "service": "Database Tools"
+        },
+        {
+            "module_name": "enum_dbmulticloud",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate DB Multicloud identity connectors - cross-cloud AWS/GCP/Azure IAM+KMS trust links that can be pivoted to other clouds",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.dbmulticloud.enumeration.enum_dbmulticloud",
+            "service": "DB Multicloud"
+        },
+        {
+            "module_name": "enum_generative_ai_agent",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Generative AI Agents (agents, endpoints, knowledge bases, tools) - reveals sensitive RAG corpora, hijackable inference endpoints, and function-calling exec surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.generative_ai_agent.enumeration.enum_generative_ai_agent",
+            "service": "Generative AI Agents"
+        },
+        {
+            "module_name": "enum_governance_rules",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Governance Rules and their tenancy attachments - reveals org-wide policy/quota/tag rules pushed down onto child tenancies (privileged control structure worth mapping)",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.governance_rules.enumeration.enum_governance_rules",
+            "service": "Governance Rules"
+        },
+        {
+            "module_name": "enum_healthchecks",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Health Checks HTTP/ping monitors - reveals the exact public and internal endpoints, ports, paths, and headers the org probes (attack-surface recon)",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.healthchecks.enumeration.enum_healthchecks",
+            "service": "Health Checks"
+        },
+        {
+            "module_name": "enum_lockbox",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Lockbox managed-access break-glass resources - reveals which sensitive resources have Oracle/partner break-glass access, the approval templates gating it, and max access durations",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.lockbox.enumeration.enum_lockbox",
+            "service": "Lockbox"
+        },
+        {
+            "module_name": "enum_ocvp",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate VMware Solution SDDCs, datastores, and clusters - exposes self-managed vCenter/NSX/ESXi endpoints (FQDNs, software versions) that are a large lateral-movement surface",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.ocvp.enumeration.enum_ocvp",
+            "service": "VMware Solution"
+        },
+        {
+            "module_name": "enum_operator_access_control",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Operator Access Control resources - reveals Oracle break-glass policies, where they're applied, and active/pending operator sessions into Exadata/DBaaS",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.operator_access_control.enumeration.enum_operator_access_control",
+            "service": "Operator Access Control"
+        },
+        {
+            "module_name": "enum_tenant_manager",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate Tenant Manager organizations, domains, and cross-tenancy invitations - reveals linked tenancies and pending join invites for cross-tenancy trust-establishment footholds",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.tenant_manager.enumeration.enum_tenant_manager",
+            "service": "Tenant Manager"
+        },
+        {
+            "module_name": "enum_waas",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate WAAS (legacy WAF/edge) policies, certificates, custom protection rules and HTTP redirects - policy origins reveal backend server addresses that can be hit directly to bypass the WAF",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.waas.enumeration.enum_waas",
+            "service": "WAAS"
+        },
+        {
+            "module_name": "enum_wlms",
+            "module_category": "Enumeration",
+            "info_blurb": "Enumerate WebLogic Management domains and managed instances - WebLogic middleware exposes admin consoles historically prone to RCE",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.wlms.enumeration.enum_wlms",
+            "service": "WebLogic Management"
+        },
+        {
+            "module_name": "process_og_node_color_images",
+            "module_category": "Process",
+            "info_blurb": "Push OCI OpenGraph custom node color/image styling to BloodHound (standalone; re-style without regenerating the graph).",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.opengraph.processing.process_og_node_color_images",
+            "service": "OpenGraph"
+        },
+        {
+            "module_name": "exploit_functions_rpst",
+            "module_category": "Exploit",
+            "info_blurb": "Update an OCI Function's image to extract its resource principal session token (RPST)",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.functions.exploit.exploit_functions_rpst",
+            "service": "Functions"
+        },
+        {
+            "module_name": "exploit_dataflow_runs_rpst",
+            "module_category": "Exploit",
+            "info_blurb": "Create a DataFlow run with a pentesting script to extract the resource principal RPST",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.dataflow.exploit.exploit_dataflow_runs_rpst",
+            "service": "DataFlow"
+        },
+        {
+            "module_name": "exploit_datascience_jobs_rpst",
+            "module_category": "Exploit",
+            "info_blurb": "Create a Data Science Job run with a pentesting artifact to extract the RPST",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.datascience.exploit.exploit_datascience_jobs_rpst",
+            "service": "DataScience"
+        },
+        {
+            "module_name": "exploit_containerinstances_rpst",
+            "module_category": "Exploit",
+            "info_blurb": "Launch a Container Instance with a pentesting image to extract the resource principal RPST",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.containerinstances.exploit.exploit_containerinstances_rpst",
+            "service": "ContainerInstances"
+        },
+        {
+            "module_name": "exploit_devops_pipelines_rpst",
+            "module_category": "Exploit",
+            "info_blurb": "Inject a pentesting stage into a DevOps Build Pipeline to extract the resource principal RPST",
+            "author": "Scott (@WebbinRoot)",
+            "location": "ocinferno.modules.devops.exploit.exploit_devops_pipelines_rpst",
+            "service": "DevOps"
+        },
+        {
+            "module_name": "exploit_devops_repositories_download",
+            "module_category": "Exploit",
+            "info_blurb": "Clone DevOps code repositories by creating a temporary auth token (token is deleted after cloning)",
+            "author": "OCInferno",
+            "location": "ocinferno.modules.devops.exploit.exploit_devops_repositories_download",
+            "service": "DevOps"
+        }
+    ]
 }

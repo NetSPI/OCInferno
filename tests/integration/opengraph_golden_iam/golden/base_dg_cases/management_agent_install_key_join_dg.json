@@ -162,20 +162,6 @@
         }
       },
       {
-        "id": "instances@ocid1.compartment.oc1..app",
-        "kinds": [
-          "OCIResource",
-          "OCIResourceGroup"
-        ],
-        "properties": {
-          "compartment_id": "ocid1.compartment.oc1..app",
-          "is_known_family": false,
-          "location": "ocid1.compartment.oc1..app",
-          "name": "instances@app-team",
-          "tenant_id": "ocid1.tenancy.oc1..goldtenant"
-        }
-      },
-      {
         "id": "new-compute-instance@ocid1.compartment.oc1..app",
         "kinds": [
           "OCIResource",

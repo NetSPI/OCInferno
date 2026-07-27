@@ -55,6 +55,7 @@ def _parse_args(user_args):
 
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
+    debug = bool(getattr(session, "debug", False))
 
     component_order = [key for key, _suffix, _help in COMPONENTS]
     selected = resolve_selected_components(args, component_order)
@@ -107,7 +108,7 @@ def run_module(user_args, session):
                             try:
                                 got.append(_res.get(resource_id=pid) or {})
                             except Exception as err:
-                                UtilityTools.dlog(True, "get policy failed", policy_id=pid, err=f"{type(err).__name__}: {err}")
+                                UtilityTools.dlog(debug, "get policy failed", policy_id=pid, err=f"{type(err).__name__}: {err}")
                         rows = [r for r in got if r]
                     else:
                         rows = _res.list(compartment_id=cid or "") or []

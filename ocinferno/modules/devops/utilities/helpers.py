@@ -32,7 +32,7 @@ class DevOpsRepositoriesResource(OciListResource):
     LIST_METHOD = "list_repositories"
     GET_METHOD = "get_repository"
     GET_ID_PARAM = "repository_id"
-    COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
+    COLUMNS = ["id", "name", "http_url", "compartment_id", "lifecycle_state", "time_created"]
 
 
 class DevOpsBuildPipelinesResource(OciListResource):

@@ -33,6 +33,7 @@ CACHE_TABLES = {
     "namespaces": ("object_storage_namespaces", "compartment_id"),
     "buckets": ("object_storage_buckets", "compartment_id"),
     "objects": ("object_storage_bucket_objects", "compartment_id"),
+    "pars": ("object_storage_preauthenticated_requests", "compartment_id"),
 }
 
 

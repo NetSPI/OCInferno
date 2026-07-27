@@ -120,6 +120,13 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    # Process module: reads saved subnet/security-list/route-table rows and writes
+    # cross-compartment denormalized attached_subnet_ids back onto the target tables.
+    "process_core_network": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     # Process module: run_audit(session, ...) sweeps every saved service table across
     # the whole workspace in one pass -- no compartment_id involved at all. Without
     # this entry it fell back to the PER_TARGET default, which triggers the
@@ -160,7 +167,6 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
-    # Exploit: edit/reset a single user; no per-compartment loop.
     "exploit_update_user": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
@@ -177,6 +183,11 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         accepts_cid_flags=False,
     ),
     "exploit_write_policy": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_devops_repositories_download": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
@@ -721,11 +732,15 @@ def interact_with_module(session, module_path: str, module_args: Sequence[str]) 
         except Exception:
             pass
 
+    _orig_debug = getattr(session, "debug", False)
+    _orig_run_debug = getattr(session, "individual_run_debug", False)
+    _orig_proxy = getattr(session, "individual_run_proxy", None)
+
     try:
         runner = _parse_runner_args(module_args)
         passthrough_args = list(runner.passthrough)
 
-        # Apply runner-level flags globally
+        # Apply runner-level flags globally; restored in finally
         if runner.debug:
             _safe_setattr(session, "debug", True)
             _safe_setattr(session, "individual_run_debug", True)
@@ -838,3 +853,12 @@ def interact_with_module(session, module_path: str, module_args: Sequence[str]) 
         )
         print(traceback.format_exc())
         return -1
+    finally:
+        _safe_setattr(session, "debug", _orig_debug)
+        _safe_setattr(session, "individual_run_debug", _orig_run_debug)
+        _safe_setattr(session, "individual_run_proxy", _orig_proxy)
+        if hasattr(UtilityTools, "set_debug"):
+            try:
+                UtilityTools.set_debug(_orig_debug)
+            except Exception:
+                pass

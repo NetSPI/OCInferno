@@ -137,8 +137,10 @@ def export_save_path(
         safe_path_component(service_name),
         comp,
     ]
-    if subdirs:
-        parts.extend(safe_path_component(s) for s in subdirs)
+    for raw_part in (subdirs or []):
+        cleaned = safe_path_component(raw_part)
+        if cleaned:
+            parts.append(cleaned)
 
     out = Path(*parts) / compact_filename_component(filename)
     if mkdir:

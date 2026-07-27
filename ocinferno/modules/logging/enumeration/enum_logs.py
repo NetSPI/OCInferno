@@ -25,7 +25,7 @@ def _parse_args(user_args):
 
 def run_module(user_args, session) -> Dict[str, Any]:
     args = _parse_args(user_args)
-    debug = bool(getattr(args, "debug", False))
+    debug = bool(getattr(session, "debug", False))
 
     if not getattr(session, "compartment_id", None):
         raise ValueError(
@@ -43,13 +43,13 @@ def run_module(user_args, session) -> Dict[str, Any]:
         skip = component_soft_skip_or_error(e, component="log_groups", module_name="enum_logs")
         if skip.get("skipped"):
             return {"ok": True, "log_groups": 0, "logs": 0, "saved": False}
-        UtilityTools.dlog(True, "list_log_groups failed",
+        UtilityTools.dlog(debug, "list_log_groups failed",
                           status=getattr(e, "status", None),
                           code=getattr(e, "code", None),
                           msg=str(e))
         return {"ok": False, "log_groups": 0, "logs": 0, "saved": False}
     except Exception as e:
-        UtilityTools.dlog(True, "list_log_groups failed", err=f"{type(e).__name__}: {e}")
+        UtilityTools.dlog(debug, "list_log_groups failed", err=f"{type(e).__name__}: {e}")
         return {"ok": False, "log_groups": 0, "logs": 0, "saved": False}
 
     if not groups:

@@ -6,7 +6,7 @@ import os
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -169,14 +169,6 @@ class DataController:
             self.conn.close()
         except Exception:
             pass
-        try:
-            self.service_cursor.close()
-        except Exception:
-            pass
-        try:
-            self.service_conn.close()
-        except Exception:
-            pass
 
     def commit(self, db: Optional[str] = None) -> None:
         """Commit pending writes.
@@ -188,7 +180,7 @@ class DataController:
         target = (db or "").strip().lower()
         if target in ("", "metadata"):
             self.conn.commit()
-        if target in ("", "service"):
+        elif target == "service":
             self.service_conn.commit()
 
     def rollback(self, db: Optional[str] = None) -> None:
@@ -196,7 +188,7 @@ class DataController:
         target = (db or "").strip().lower()
         if target in ("", "metadata"):
             self.conn.rollback()
-        if target in ("", "service"):
+        elif target == "service":
             self.service_conn.rollback()
 
     def __enter__(self) -> "DataController":
@@ -322,7 +314,7 @@ class DataController:
             "permissions_json": "{}",
             "apis_success_json": "{}",
             "apis_failed_json": "{}",
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         }
         self.save_dict_row(
             db="metadata",
@@ -444,7 +436,7 @@ class DataController:
 
         This avoids endless duplication when your modules retry / re-enumerate.
         """
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
         self.ensure_user_permissions_row(workspace_id, credname)
         row = self.fetch_user_permissions(workspace_id, credname) or {}
@@ -688,7 +680,7 @@ class DataController:
         }
 
     def plan_service_wipe(self, workspace_id: int, *, all_workspaces: bool = False) -> Dict[str, Any]:
-        cursor = self.service_cursor
+        _, cursor = self._get_conn_cursor("service")
         target_ws = int(workspace_id)
 
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
@@ -1295,8 +1287,7 @@ class DataController:
 
         try:
             cursor.executemany(sql, values_list)
-            if not conn.in_transaction:
-                conn.commit()
+            conn.commit()
             return len(rows)
         except Exception as e:
             print(f"[X] Bulk save failed into '{table_name}': {e}")

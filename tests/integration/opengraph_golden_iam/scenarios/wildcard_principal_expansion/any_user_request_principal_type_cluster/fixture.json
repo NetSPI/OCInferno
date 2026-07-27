@@ -1,0 +1,107 @@
+{
+  "description": "request.principal.type='cluster' should narrow any-user down to ONLY OKE cluster resource principals in scope -- a co-located compute instance (which would normally also be an any-user member) must NOT get the edge, proving this is a real narrowing filter and not just an additive expansion. Live-validated 2026-07: this is the OKE control-plane's own principal type (used for e.g. auto-provisioning load balancers/NSGs on the user's behalf), distinct from 'instance' (worker nodes) and 'workload' (OKE Workload Identity pods).",
+  "workspace": {
+    "workspace_id": 10102,
+    "workspace_name": "opengraph-golden",
+    "tenancy_ocid": "ocid1.tenancy.oc1..goldtenant",
+    "compartment_ocid": "ocid1.compartment.oc1..root"
+  },
+  "module_args": [
+    "--reset",
+    "--cond-eval"
+  ],
+  "inputs": {
+    "seed_tables": {
+      "resource_compartments": [
+        {
+          "compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "parent_compartment_id": "",
+          "name": "tenant",
+          "display_name": "Tenant",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..root",
+          "parent_compartment_id": "ocid1.tenancy.oc1..goldtenant",
+          "name": "root-team",
+          "display_name": "RootTeam",
+          "lifecycle_state": "ACTIVE"
+        },
+        {
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "parent_compartment_id": "ocid1.compartment.oc1..root",
+          "name": "app-team",
+          "display_name": "AppTeam",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "identity_policies": [
+        {
+          "id": "ocid1.policy.oc1..any_user_request_principal_type_cluster",
+          "name": "AnyUserRequestPrincipalTypeCluster",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "containerengine_clusters": [
+        {
+          "id": "ocid1.cluster.oc1..prodoke01",
+          "name": "prodoke01",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "ACTIVE"
+        }
+      ],
+      "compute_instances": [
+        {
+          "id": "ocid1.instance.oc1..webserver01",
+          "display_name": "webserver01",
+          "compartment_id": "ocid1.compartment.oc1..app",
+          "lifecycle_state": "RUNNING"
+        }
+      ]
+    },
+    "parser_stubs": {
+      "policy_statements": [
+        {
+          "kind": "allow",
+          "subject": {
+            "type": "any-user",
+            "values": []
+          },
+          "actions": {
+            "type": "verbs",
+            "values": [
+              "manage"
+            ]
+          },
+          "resources": {
+            "type": "all-resources",
+            "values": []
+          },
+          "location": {
+            "type": "compartment_id",
+            "values": [
+              "ocid1.compartment.oc1..app"
+            ]
+          },
+          "conditions": {
+            "mode": "all",
+            "clauses": [
+              {
+                "lhs": {
+                  "type": "attribute",
+                  "value": "request.principal.type"
+                },
+                "op": "eq",
+                "rhs": {
+                  "type": "string",
+                  "value": "cluster"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

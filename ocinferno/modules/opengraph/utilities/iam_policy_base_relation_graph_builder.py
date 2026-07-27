@@ -447,8 +447,8 @@ def _build_option_runtime(
     """Build normalized runtime state for one conditional option branch."""
     subjects = option.delta_candidate_subjects or state.base_candidate_subjects
     loc_pairs = option.delta_loc_pairs_all or state.base_loc_pairs_all
-    verbs = option.delta_trimmed_verbs or state.base_direct_verbs_l
-    perms = option.delta_trimmed_perms or state.base_effective_perms
+    verbs = option.delta_trimmed_verbs if option.delta_trimmed_verbs is not None else state.base_direct_verbs_l
+    perms = option.delta_trimmed_perms if option.delta_trimmed_perms is not None else state.base_effective_perms
     rows_by_table = option.delta_matched_rows_by_table or {}
     statement_edge_meta, _ = _build_statement_edge_meta(
         state=state,
@@ -723,14 +723,6 @@ def st_location(st):
     return st.get("location") or {}
 
 
-def _family_keys_l(ctx):
-    return _family_keys_l_shared(ctx)
-
-
-def _family_members_l(ctx, fam):
-    return _family_members_l_shared(ctx, fam)
-
-
 # -----------------------------------------------------------------------------
 # edge naming
 # -----------------------------------------------------------------------------
@@ -741,15 +733,15 @@ def _resource_match(ctx, rule_res_l, stmt_res_l):
     if rule_res_l == stmt_res_l:
         return True
 
-    fam_keys = _family_keys_l(ctx)
+    fam_keys = _family_keys_l_shared(ctx)
 
     # If statement says "instance-family", treat it as matching "instances", etc.
     if stmt_res_l in fam_keys:
-        return rule_res_l in set(_family_members_l(ctx, stmt_res_l))
+        return rule_res_l in set(_family_members_l_shared(ctx, stmt_res_l))
 
     # If allow-rule says "instance-family" and stmt says "instances", match too.
     if rule_res_l in fam_keys:
-        return stmt_res_l in set(_family_members_l(ctx, rule_res_l))
+        return stmt_res_l in set(_family_members_l_shared(ctx, rule_res_l))
 
     return False
 
@@ -1795,10 +1787,7 @@ def _write_statement_policy_edge(
         on_conflict="update",
         dedupe=True,
     )
-    if not wrote:
-        return False
-    existing_edges.add((src_id, edge_kind, dst_id))
-    return True
+    return bool(wrote)
 
 
 def _write_subject_statement_edges(
@@ -2308,9 +2297,7 @@ def build_iam_policy_base_relation_edges_offline(*, session, ctx, debug=True, au
                 )
 
             else:
-                
                 stats["skipped_other_kinds"] += 1
-                continue
 
     # -------------------------------------------------------------------------
     # Phase 4: Finalize stats, record metrics, commit, and emit summary log

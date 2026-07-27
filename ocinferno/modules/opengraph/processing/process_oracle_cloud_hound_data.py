@@ -27,7 +27,9 @@ from ocinferno.modules.opengraph.utilities.dynamic_group_membership_graph_builde
 from ocinferno.modules.opengraph.utilities.group_membership_graph_builder import build_group_membership_edges_offline
 from ocinferno.modules.opengraph.utilities.iam_policy_advanced_relation_graph_builder import build_iam_policy_advanced_relation_edges_offline
 from ocinferno.modules.opengraph.utilities.iam_policy_base_relation_graph_builder import build_iam_policy_base_relation_edges_offline
-from ocinferno.modules.opengraph.utilities.identity_domain_graph_builder import build_identity_domain_graph_offline
+from ocinferno.modules.opengraph.utilities.identity_domain_graph_builder import (
+    build_identity_domain_graph_offline,
+)
 from ocinferno.modules.opengraph.utilities.management_agent_install_key_graph_builder import build_management_agent_install_key_dg_edges_offline
 from ocinferno.modules.opengraph.utilities.allowlist_bundle_graph_builder import build_allowlist_bundle_edges_offline
 from ocinferno.modules.opengraph.utilities.resource_scope_graph_builder import build_resource_scope_expansion_edges_offline
@@ -199,7 +201,7 @@ def _standardize(value, *, flatten=False):
             if isinstance(item, str):
                 item = item.strip()
                 if not item:
-                    return None
+                    continue
             if isinstance(item, (bool, int, float, str)):
                 normalized.append(item)
                 continue
@@ -270,7 +272,8 @@ def _node_to_opengraph(r):
 #   }
 def _edge_to_opengraph(r):
     edge_props = json.loads((r.get("edge_properties") or "").strip() or "{}")
-    category, inner = edge_props["edge_category"], edge_props["edge_inner_properties"]
+    category = edge_props.get("edge_category", "PERMISSION")
+    inner = edge_props.get("edge_inner_properties") or {}
 
     props = {"edge_category": category}
     for raw_key in sorted(inner.keys(), key=lambda x: str(x)):
@@ -492,6 +495,72 @@ def _prune_orphan_policy_statement_nodes(node_rows, edge_rows, *, enabled: bool,
     return kept, pruned
 
 
+def _prune_rpst_dead_end_nodes(node_rows, edge_rows, *, enabled: bool, debug: bool = False):
+    """
+    RPST dead-end hygiene:
+      - Finds all resource nodes that are the DESTINATION of a GENERATE_RPST edge.
+      - Among those, removes any node that has NO outgoing edges (its stolen RPST
+        would grant access to nothing — the exfil path is a dead end).
+      - Also removes the corresponding GENERATE_RPST edges pointing to pruned nodes
+        so the exported graph stays internally consistent.
+      - Disabled by --include-all so the raw graph can be inspected.
+    """
+    if not enabled:
+        return (node_rows or []), (edge_rows or []), 0
+
+    rpst_targets = {
+        str(e.get("destination_id") or "").strip()
+        for e in (edge_rows or [])
+        if isinstance(e, dict)
+        and str(e.get("edge_type") or "").strip() == "GENERATE_RPST"
+        and str(e.get("destination_id") or "").strip()
+    }
+
+    if not rpst_targets:
+        return (node_rows or []), (edge_rows or []), 0
+
+    nodes_with_outgoing = {
+        str(e.get("source_id") or "").strip()
+        for e in (edge_rows or [])
+        if isinstance(e, dict) and str(e.get("source_id") or "").strip()
+    }
+
+    dead_ends = rpst_targets - nodes_with_outgoing
+    if not dead_ends:
+        return (node_rows or []), (edge_rows or []), 0
+
+    kept_nodes = [
+        n for n in (node_rows or [])
+        if not (
+            isinstance(n, dict)
+            and str(n.get("node_id") or "").strip() in dead_ends
+        )
+    ]
+    kept_edges = [
+        e for e in (edge_rows or [])
+        if not (
+            isinstance(e, dict)
+            and str(e.get("edge_type") or "").strip() == "GENERATE_RPST"
+            and str(e.get("destination_id") or "").strip() in dead_ends
+        )
+    ]
+    pruned = len(node_rows or []) - len(kept_nodes)
+
+    _dlog(
+        debug,
+        "export: RPST dead-end prune complete",
+        enabled=enabled,
+        pruned=pruned,
+        rpst_targets=len(rpst_targets),
+        dead_ends=len(dead_ends),
+        before_nodes=len(node_rows or []),
+        after_nodes=len(kept_nodes),
+        before_edges=len(edge_rows or []),
+        after_edges=len(kept_edges),
+    )
+    return kept_nodes, kept_edges, pruned
+
+
 # --------------------------------------------------------------------------------------
 # CLI / runner
 # --------------------------------------------------------------------------------------
@@ -667,8 +736,6 @@ def _ingest_inventory_file(session, path, debug=False):
     resource-inventory export file (from `enum_resource_search --out`). Fully offline
     (no live API); does not touch the golden-tested builders -- purely adds nodes so a
     BloodHound graph can be seeded from an asset-inventory file."""
-    from ocinferno.modules.opengraph.utilities.helpers.constants import NODE_TYPE_OCI_GENERIC_RESOURCE
-
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
     except Exception as e:
@@ -746,6 +813,14 @@ def run_module(user_args, session):
         debug=debug,
         incident_node_ids=incident_node_ids,
     )
+    # Remove RPST-target nodes whose stolen RPST would grant no access (no outgoing edges).
+    # Runs before manage-collapse so the full edge set is visible for the outgoing-edge check.
+    node_rows, edge_rows, pruned_rpst_dead_ends = _prune_rpst_dead_end_nodes(
+        node_rows,
+        edge_rows,
+        enabled=not bool(args.include_all),
+        debug=debug,
+    )
     edge_rows, manage_collapse_stats = _collapse_manage_shadowed_permission_edges(
         edge_rows,
         enabled=True,
@@ -790,6 +865,7 @@ def run_module(user_args, session):
             "builder_stats": builder_stats,
             "pruned_orphan_idd_app_nodes": int(pruned_orphan_idd_apps),
             "pruned_orphan_policy_statement_nodes": int(pruned_orphan_policy_statements),
+            "pruned_rpst_dead_end_nodes": int(pruned_rpst_dead_ends),
             "manage_collapse_stats": dict(manage_collapse_stats or {}),
             "edge_command_stats": dict(edge_command_stats or {}),
             "node_count": len(node_rows),

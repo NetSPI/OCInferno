@@ -224,6 +224,10 @@ DOWNLOAD_TOKEN_MODULE_ARGS: Dict[str, Dict[str, List[str]]] = {
     "datascience_artifacts": {
         MOD_DATASCIENCE: ["--models", "--jobs", "--download"],
     },
+    # DevOps code repository git clone - content
+    "devops_repos": {
+        MOD_DEVOPS: ["--repositories", "--download"],
+    },
 }
 
 
@@ -292,7 +296,7 @@ DOWNLOAD_TOKEN_CATEGORIES: Dict[str, Set[str]] = {
     "content": {
         "buckets", "objects", "blobs", "object_storage", "vault_secrets", "artifacts",
         "sdks", "orm_variables", "orm_templates", "iot_models", "iot_instances",
-        "certificate_bundles", "dataflow_scripts", "datascience_artifacts",
+        "certificate_bundles", "dataflow_scripts", "datascience_artifacts", "devops_repos",
     },
 }
 
@@ -834,6 +838,19 @@ def _print_module_tokens() -> None:
     print("    Example:  modules run enum_all --modules storage,identity kubernetes")
 
 
+# Services excluded from enum_all's default "run everything" sweep -- still fully
+# runnable via `enum_all --modules <token>` or the standalone module directly, just not
+# part of the automatic default. Audit is the one entry so far: unlike every other
+# service here (a snapshot of current resource state), it's a time-windowed event log
+# that keeps growing the longer a tenancy has been active, isn't consumed by ANY
+# downstream feature (no config_audit.py check, no OpenGraph edge, not even meaningfully
+# by get_network_resources), and its row volume dwarfs every other service in practice
+# (tens of thousands of rows vs single/double digits elsewhere in the same scan) -- the
+# single biggest contributor to real-world DB-size problems (Excel row-limit crashes,
+# slow summary sweeps) reported against large tenancies.
+_DEFAULT_EXCLUDED_SERVICES = frozenset({"audit"})
+
+
 def _resolve_service_run_flags(args: argparse.Namespace, *, any_once_flags: bool, should_enum_comp: bool = False, debug: bool = False) -> Dict[str, bool]:
     all_services = [str(spec["service"]) for spec in SERVICE_GROUP_SPECS]
     all_service_set = set(all_services)
@@ -865,7 +882,7 @@ def _resolve_service_run_flags(args: argparse.Namespace, *, any_once_flags: bool
     elif exclude_services:
         selected = set(all_service_set)
     else:
-        selected = set() if only_once_only_flags_requested else set(all_service_set)
+        selected = set() if only_once_only_flags_requested else (set(all_service_set) - _DEFAULT_EXCLUDED_SERVICES)
 
     selected -= exclude_services
 
