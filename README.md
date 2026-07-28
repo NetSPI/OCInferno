@@ -1,5 +1,9 @@
 # OCInferno
 
+> **Full documentation** — module reference, exploit guides, OpenGraph attack paths, and
+> walkthrough examples are in the **[OCInferno Wiki](https://github.com/NetSPI/OCInferno/wiki)**.
+> This README covers installation and quick-start only.
+
 [![CI](https://img.shields.io/github/actions/workflow/status/NetSPI/OCInferno/ci.yml?branch=main&label=ci)](https://github.com/NetSPI/OCInferno/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ocinferno)](https://pypi.org/project/ocinferno/)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)

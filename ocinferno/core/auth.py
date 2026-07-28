@@ -504,7 +504,7 @@ class AuthMixin:
                 "fingerprint": fingerprint,
                 "tenancy": tenancy,
                 "region": region,
-                "key_content": key_content,   # <-- matches Oracle example
+                "key_content": key_content,
             }
 
             # Optional: validate here if you want early fail (not required)
@@ -514,7 +514,24 @@ class AuthMixin:
                 print(f"[X] Loaded profile config failed validation: {e}")
                 return -1
 
-            self.credentials = {"config": cfg, "signer": None}
+            # Pre-build signer from key_content so PUT/POST operations sign correctly.
+            # Passing private_key_file_location='' is required by OCI SDK even when
+            # private_key_content is supplied; SDK loads key_content when key_file is empty.
+            # If the key is invalid (e.g. during tests) we fall back to signer=None so
+            # callers can still store/validate other fields without a hard failure.
+            built_signer = None
+            try:
+                built_signer = oci.Signer(
+                    tenancy=tenancy,
+                    user=user,
+                    fingerprint=fingerprint,
+                    private_key_file_location="",
+                    private_key_content=key_content,
+                )
+            except Exception as e:
+                print(f"[X] Failed to build signer from stored key_content: {e}")
+
+            self.credentials = {"config": cfg, "signer": built_signer}
             self.credentials_type = "Profile"
 
         self.credname = cred

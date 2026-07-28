@@ -74,6 +74,14 @@
       "service": "ContainerRegistry"
     },
     {
+      "module_name": "exploit_ocir_image_manipulate",
+      "module_category": "Exploit",
+      "info_blurb": "Upload, retag, or delete OCIR container images via OCI API signing (no auth-token or docker login required)",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.containerregistry.exploit.exploit_ocir_image_manipulate",
+      "service": "ContainerRegistry"
+    },
+    {
       "module_name": "enum_core_block_storage",
       "module_category": "Enumeration",
       "info_blurb": "Enumerate OCI Core Block Storage resources",
@@ -191,6 +199,14 @@
       "info_blurb": "Add an API signing key to a target user (classic IAM or identity domain) -> creds as that user",
       "author": "Scott (@WebbinRoot)",
       "location": "ocinferno.modules.identityclient.exploit.exploit_add_user_api_key",
+      "service": "IdentityClient"
+    },
+    {
+      "module_name": "exploit_add_user_auth_token",
+      "module_category": "Exploit",
+      "info_blurb": "Create an auth token for a target user (classic IAM) -> OCIR docker login / DevOps clone / Swift API",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.identityclient.exploit.exploit_add_user_auth_token",
       "service": "IdentityClient"
     },
     {

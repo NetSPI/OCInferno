@@ -155,6 +155,12 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    # Exploit: create one auth token for a target user; no per-compartment loop.
+    "exploit_add_user_auth_token": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     # Exploit: create one user (tenancy/domain global); no per-compartment loop.
     "exploit_create_user": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
@@ -188,6 +194,16 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         accepts_cid_flags=False,
     ),
     "exploit_devops_repositories_download": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_functions_rpst": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_ocir_image_manipulate": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
