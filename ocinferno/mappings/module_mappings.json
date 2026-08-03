@@ -242,6 +242,14 @@
       "service": "IdentityClient"
     },
     {
+      "module_name": "exploit_remove_authentication_factors",
+      "module_category": "Exploit",
+      "info_blurb": "Remove MFA / authentication factors from a user so they can re-enroll (classic TOTP or IDD factors)",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.identityclient.exploit.exploit_remove_authentication_factors",
+      "service": "IdentityClient"
+    },
+    {
       "module_name": "exploit_add_self_to_group",
       "module_category": "Exploit",
       "info_blurb": "Add a user (default self) to a group to inherit its permissions (classic or identity domain)",

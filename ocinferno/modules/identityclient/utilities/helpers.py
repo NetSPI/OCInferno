@@ -70,6 +70,7 @@ IDD_USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
 IDD_GROUP_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:Group"
 PATCHOP_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
 PW_RESETTER_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:UserPasswordResetter"
+AUTH_FACTORS_REMOVER_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:AuthenticationFactorsRemover"
 
 # =============================================================================
 # Common dataclasses
@@ -3056,6 +3057,54 @@ class User(_DualPathClientMixin):
             "one_time_password": data.get("one_time_password"),
             "notified": not bool(bypass_notification),
         }
+
+    # -------------------------------------------------------------------
+    # MFA / Authentication factors
+    # -------------------------------------------------------------------
+    def remove_mfa_classic(self, session) -> Dict[str, Any]:
+        """Classic IAM: delete all enrolled TOTP devices for this user.
+
+        Both activated and unactivated devices are removed. After this call
+        the user has no MFA factors and can re-enroll from scratch.
+        Returns the count of devices deleted and their OCIDs.
+        """
+        client = self._classic_client(session)
+        resp = oci.pagination.list_call_get_all_results(
+            client.list_mfa_totp_devices, user_id=self.ocid
+        )
+        devices = oci.util.to_dict(resp.data) or []
+        deleted = []
+        for d in devices:
+            did = d.get("id") or d.get("device_id")
+            if not did:
+                continue
+            client.delete_mfa_totp_device(user_id=self.ocid, mfa_totp_device_id=did)
+            deleted.append(did)
+        return {"mode": "classic", "user_ocid": self.ocid, "deleted_count": len(deleted), "deleted_ids": deleted}
+
+    def remove_mfa_idd(self, session, *, factor_type: str = "MFA") -> Dict[str, Any]:
+        """IDD: remove authentication factors via AuthenticationFactorsRemover.
+
+        factor_type controls what is cleared:
+          "MFA"             — enrolled MFA factors only (TOTP, push, FIDO2, etc.)
+          "KMSI"            — Keep Me Signed In sessions
+          "ACCOUNTRECOVERY" — account-recovery factors
+          "ALL"             — all of the above in one call
+        Requires domain-admin privilege (same as UserPasswordResetter).
+        """
+        sid = self._resolve_scim_id(session)
+        client = self._idd_client(session, self.domain_url)
+        user_ref = oci.identity_domains.models.AuthenticationFactorsRemoverUser(
+            value=sid, ocid=self.ocid or None,
+        )
+        body = oci.identity_domains.models.AuthenticationFactorsRemover(
+            schemas=[AUTH_FACTORS_REMOVER_SCHEMA],
+            user=user_ref,
+            type=factor_type,
+        )
+        resp = client.create_authentication_factors_remover(authentication_factors_remover=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"mode": "idd", "user_ocid": self.ocid, "scim_id": sid, "factor_type": factor_type, "raw": data}
 
     # -------------------------------------------------------------------
     # Email

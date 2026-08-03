@@ -183,6 +183,11 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    "exploit_remove_authentication_factors": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     "exploit_add_self_to_group": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
