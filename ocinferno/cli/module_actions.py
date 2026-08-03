@@ -14,6 +14,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Sequence, List, Dict, Any, Set
 
+try:
+    from requests.exceptions import ConnectTimeout as _ConnectTimeout, ReadTimeout as _ReadTimeout
+    _TIMEOUT_EXC: tuple = (_ConnectTimeout, _ReadTimeout)
+except ImportError:
+    _TIMEOUT_EXC = ()
+
 from ocinferno.core.contracts import AuthError
 from ocinferno.core.contracts import ErrorCode
 from ocinferno.core.contracts import OperationResult
@@ -619,6 +625,8 @@ def _execute_module_for_target(session, module, *, mod_short: str, target_cid: O
             _invoke_run_module(module, passthrough_args, session)
         return OperationResult.success("module_run_ok", module=mod_short, compartment_id=target_cid or "")
     except Exception as e:
+        if _TIMEOUT_EXC and isinstance(e, _TIMEOUT_EXC):
+            UtilityTools._log_action("module", f"TIMEOUT {mod_short} for {label}" if target_cid else f"TIMEOUT {mod_short}", "N/A")
         return OperationResult.from_exception(
             e,
             fallback_code=ErrorCode.MODULE_EXECUTION_FAILED,

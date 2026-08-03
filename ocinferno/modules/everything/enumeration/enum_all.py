@@ -9,6 +9,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+try:
+    from requests.exceptions import ConnectTimeout, ReadTimeout as _RequestsTimeout
+    _TIMEOUT_EXC: tuple = (ConnectTimeout, _RequestsTimeout)
+except ImportError:
+    _TIMEOUT_EXC = ()
+
 from ocinferno.modules.everything.utilities.enum_all_summary import (
     print_compartment_tree as _print_compartment_tree_impl,
     resource_type_area as _resource_type_area,
@@ -1291,6 +1297,9 @@ def _run_execution_plan_parallel(
             # Record the failure (with a one-line summary) but don't sink the batch;
             # the unit stays non-"done" so --resume re-runs it. KeyboardInterrupt is a
             # BaseException, so one Ctrl+C still propagates and stops the pool.
+            is_timeout = _TIMEOUT_EXC and isinstance(err, _TIMEOUT_EXC)
+            if is_timeout:
+                UtilityTools._log_action("module", f"TIMEOUT enum_all {module_name} @ {where}", "N/A")
             _ledger_mark(session, run_id, region, cid, module_name, "failed", error=_component_error_summary(err))
         finally:
             UtilityTools._log_action("module", f"END enum_all {module_name} @ {where}", "N/A")
