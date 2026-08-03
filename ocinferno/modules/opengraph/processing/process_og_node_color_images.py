@@ -48,6 +48,14 @@ def _parse_args(user_args):
         "--insecure", action="store_true",
         help="Disable TLS verification (only for a local self-signed BloodHound).",
     )
+    p.add_argument(
+        "--reset", action="store_true",
+        help="Delete all currently-registered custom node kinds first, then re-push everything.",
+    )
+    p.add_argument(
+        "--clear", action="store_true",
+        help="Delete all currently-registered custom node kinds and exit (no re-push).",
+    )
     return p.parse_args(list(user_args or []))
 
 
@@ -73,6 +81,12 @@ def run_module(user_args, session):
     token_id = str(args.custom_nodes_token_id or "").strip()
     token_key = str(args.custom_nodes_token_key or "").strip()
 
+    # Auto-infer signature mode when id+key are supplied but no bearer token and
+    # --auth-mode wasn't explicitly set to bearer. Avoids requiring the user to
+    # always add --auth-mode signature when they already passed the key pair.
+    if mode == "bearer" and not token and token_id and token_key:
+        mode = "signature"
+
     if bool(args.prompt_token):
         if mode == "bearer" and not token:
             token = _prompt(session, "BloodHound bearer token: ")
@@ -88,5 +102,7 @@ def run_module(user_args, session):
         custom_nodes_token_id=token_id,
         custom_nodes_token_key=token_key,
         verify=not bool(args.insecure),
+        reset=bool(args.reset),
+        clear=bool(args.clear),
     )
     return 1 if bool(result.get("ok")) else -1

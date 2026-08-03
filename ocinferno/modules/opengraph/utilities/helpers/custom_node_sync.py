@@ -118,7 +118,9 @@ CUSTOM_NODE_PAYLOAD = {
 
         # Database / Network / Security Services
         "OCIMySqlDbSystem": {"icon": {"type": "font-awesome", "name": "database", "color": "#FBC02D"}},
+        "OCIMySQLDbSystem": {"icon": {"type": "font-awesome", "name": "database", "color": "#FBC02D"}},
         "OCIOracleDbSystem": {"icon": {"type": "font-awesome", "name": "database", "color": "#D32F2F"}},
+        "OCIAutonomousDatabase": {"icon": {"type": "font-awesome", "name": "database", "color": "#1565C0"}},
         "OCIPostgreSqlDbSystem": {"icon": {"type": "font-awesome", "name": "database", "color": "#1976D2"}},
         "OCINetworkFirewall": {"icon": {"type": "font-awesome", "name": "shield-halved", "color": "#5E35B1"}},
         "OCINetworkFirewallPolicy": {"icon": {"type": "font-awesome", "name": "shield", "color": "#5E35B1"}},
@@ -127,6 +129,36 @@ CUSTOM_NODE_PAYLOAD = {
         "OCICacheCluster": {"icon": {"type": "font-awesome", "name": "database", "color": "#8BC34A"}},
         "OCICacheConfigSet": {"icon": {"type": "font-awesome", "name": "sliders-h", "color": "#8BC34A"}},
         "OCICacheUser": {"icon": {"type": "font-awesome", "name": "user-cog", "color": "#8BC34A"}},
+
+        # Bastion
+        "OCIBastion": {"icon": {"type": "font-awesome", "name": "terminal", "color": "#FF8F00"}},
+        "OCIBastionSession": {"icon": {"type": "font-awesome", "name": "terminal", "color": "#F57C00"}},
+        "OCIBastionWorkRequest": {"icon": {"type": "font-awesome", "name": "clock-rotate-left", "color": "#F57C00"}},
+
+        # Data Science / Data Flow / Data Integration
+        "OCIDataScienceNotebookSession": {"icon": {"type": "font-awesome", "name": "book-open", "color": "#7E57C2"}},
+        "OCIDataScienceJobRun": {"icon": {"type": "font-awesome", "name": "vials", "color": "#7E57C2"}},
+        "OCIDataScienceModelDeployment": {"icon": {"type": "font-awesome", "name": "brain", "color": "#7E57C2"}},
+        "OCIDataSciencePipelineRun": {"icon": {"type": "font-awesome", "name": "diagram-project", "color": "#9575CD"}},
+        "OCIDataFlowApplication": {"icon": {"type": "font-awesome", "name": "diagram-project", "color": "#5C6BC0"}},
+        "OCIDataIntegrationWorkspace": {"icon": {"type": "font-awesome", "name": "sitemap", "color": "#5C6BC0"}},
+        "OCIBigDataInstance": {"icon": {"type": "font-awesome", "name": "chart-pie", "color": "#5C6BC0"}},
+
+        # Desktop as a Service
+        "OCIDesktop": {"icon": {"type": "font-awesome", "name": "desktop", "color": "#00897B"}},
+        "OCIDesktopPool": {"icon": {"type": "font-awesome", "name": "layer-group", "color": "#00897B"}},
+        "OCIDesktopPoolDesktop": {"icon": {"type": "font-awesome", "name": "desktop", "color": "#00695C"}},
+        "OCIDesktopPoolVolume": {"icon": {"type": "font-awesome", "name": "hard-drive", "color": "#00695C"}},
+        "OCIDesktopWorkRequest": {"icon": {"type": "font-awesome", "name": "clock-rotate-left", "color": "#00695C"}},
+
+        # Integration / GoldenGate
+        "OCIIntegrationInstance": {"icon": {"type": "font-awesome", "name": "arrows-left-right", "color": "#00ACC1"}},
+        "OCIGoldenGateDeployment": {"icon": {"type": "font-awesome", "name": "right-left", "color": "#F9A825"}},
+
+        # Generic / catch-all (asset inventory nodes, unknown types)
+        "OCIGenericResource": {"icon": {"type": "font-awesome", "name": "cube", "color": "#78909C"}},
+        "OCIResource": {"icon": {"type": "font-awesome", "name": "box", "color": "#90A4AE"}},
+        "OCIPrincipal": {"icon": {"type": "font-awesome", "name": "user", "color": "#90A4AE"}},
 
         # Resource Manager / Governance
         "OCIResourceManagerStack": {"icon": {"type": "font-awesome", "name": "layer-group", "color": "#00838F"}},
@@ -177,6 +209,31 @@ def _auth_headers(*, mode: str, token: str, token_id: str, token_key: str, metho
     return _bhe_signature_headers(token_id=token_id, token_key=token_key, method=method, url=url, body=body)
 
 
+def _extract_existing_custom_types(response_text: str) -> dict:
+    """Parse GET /api/v2/custom-nodes response into {kindName: config} dict."""
+    try:
+        payload = json.loads(str(response_text or "").strip())
+    except Exception:
+        return {}
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return {}
+    existing = {}
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        kind_name = str(item.get("kindName") or "").strip()
+        if not kind_name:
+            continue
+        existing[kind_name] = item.get("config") or {}
+    return existing
+
+
+def _json_equivalent(left: dict, right: dict) -> bool:
+    return (json.dumps(left or {}, sort_keys=True, separators=(",", ":"))
+            == json.dumps(right or {}, sort_keys=True, separators=(",", ":")))
+
+
 def push_custom_node_attributes(
     *,
     custom_nodes_url: str,
@@ -185,13 +242,24 @@ def push_custom_node_attributes(
     custom_nodes_token_id: str = "",
     custom_nodes_token_key: str = "",
     verify: bool = True,
+    reset: bool = False,
+    clear: bool = False,
 ):
-    """PUT (falling back to POST) the custom-node style payload to BloodHound.
+    """Sync the OCI custom-node style payload to BloodHound.
 
-    ``auth_mode`` is ``bearer`` (JWT via ``custom_nodes_token``) or ``signature`` (BloodHound
-    API key via ``custom_nodes_token_id`` + ``custom_nodes_token_key``, HMAC-signed).
-    ``verify`` controls TLS verification (default True; pass False only for a local
-    self-signed BloodHound). Never raises -- returns a small status dict."""
+    Algorithm (mirrors GCPwn):
+      1. GET the collection URL to see what's already registered.
+      2. If ``reset`` or ``clear``: DELETE every currently-registered kind
+         individually via DELETE /api/v2/custom-nodes/{kind}.
+      3. If not ``clear``: for each kind in CUSTOM_NODE_PAYLOAD —
+           • not yet registered → POST to collection URL
+           • already registered, config differs → PUT to collection/{kind}
+           • already registered, config same → skip (unchanged)
+
+    ``auth_mode`` is ``bearer`` (JWT) or ``signature`` (BloodHound API key HMAC).
+    ``verify`` controls TLS verification (False for self-signed BloodHound).
+    Never raises — returns a small status dict.
+    """
     mode = str(auth_mode or "bearer").strip().lower()
     token = (custom_nodes_token or "").strip()
     token_id = (custom_nodes_token_id or "").strip()
@@ -212,20 +280,71 @@ def push_custom_node_attributes(
         print("[*] Skipping custom-nodes push: requests is not installed.")
         return {"ok": False, "reason": "requests_missing"}
 
-    body = json.dumps(CUSTOM_NODE_PAYLOAD, separators=(",", ":")).encode("utf-8")
+    collection_url = str(custom_nodes_url or "").rstrip("/")
 
-    def _send(method: str):
-        headers = _auth_headers(mode=mode, token=token, token_id=token_id, token_key=token_key,
-                                method=method, url=custom_nodes_url, body=body)
-        fn = requests.put if method == "PUT" else requests.post
-        return fn(custom_nodes_url, headers=headers, data=body, verify=verify, timeout=10)
+    def _req(method: str, url: str, body: bytes = b""):
+        hdrs = _auth_headers(mode=mode, token=token, token_id=token_id, token_key=token_key,
+                             method=method, url=url, body=body)
+        kwargs = {"headers": hdrs, "verify": verify, "timeout": 10}
+        if body:
+            kwargs["data"] = body
+        return requests.request(method, url, **kwargs)
 
     try:
-        resp = _send("PUT")
-        if resp.status_code in (404, 405):
-            resp = _send("POST")
-        print("custom-nodes complete", resp.status_code, resp.text[:400])
-        return {"ok": resp.status_code < 400, "status_code": int(resp.status_code), "auth_mode": mode}
+        # Step 1: fetch existing kinds.
+        get_resp = _req("GET", collection_url)
+        if get_resp.status_code in (401, 403):
+            print(f"[X] custom-nodes: auth failed during GET ({get_resp.status_code}).")
+            return {"ok": False, "reason": "auth_error", "status_code": get_resp.status_code}
+        existing = _extract_existing_custom_types(get_resp.text) if get_resp.ok else {}
+
+        # Step 2: delete all existing kinds when --reset or --clear.
+        if (reset or clear) and existing:
+            deleted = 0
+            for kind_name in list(existing):
+                del_resp = _req("DELETE", f"{collection_url}/{kind_name}")
+                if del_resp.ok:
+                    deleted += 1
+                else:
+                    print(f"[*] custom-nodes: DELETE {kind_name} failed ({del_resp.status_code}).")
+            print(f"[*] custom-nodes: cleared {deleted}/{len(existing)} existing kind(s).")
+            existing = {}
+
+        if clear:
+            print("[*] custom-nodes: --clear complete (no re-push).")
+            return {"ok": True, "cleared": True, "auth_mode": mode}
+
+        # Step 3: create or update each kind in our payload.
+        custom_types = dict(CUSTOM_NODE_PAYLOAD.get("custom_types", {}))
+        created = updated = unchanged = 0
+
+        for kind_name, kind_config in custom_types.items():
+            if kind_name not in existing:
+                create_body = json.dumps(
+                    {"custom_types": {kind_name: kind_config}}, separators=(",", ":")
+                ).encode("utf-8")
+                cr = _req("POST", collection_url, create_body)
+                if cr.ok:
+                    created += 1
+                else:
+                    print(f"[X] custom-nodes: POST {kind_name} failed ({cr.status_code} {cr.text[:200]}).")
+                    return {"ok": False, "reason": "create_failed", "kind": kind_name,
+                            "status_code": cr.status_code}
+            elif _json_equivalent(existing[kind_name], kind_config):
+                unchanged += 1
+            else:
+                update_body = json.dumps({"config": kind_config}, separators=(",", ":")).encode("utf-8")
+                ur = _req("PUT", f"{collection_url}/{kind_name}", update_body)
+                if ur.ok:
+                    updated += 1
+                else:
+                    print(f"[X] custom-nodes: PUT {kind_name} failed ({ur.status_code} {ur.text[:200]}).")
+                    return {"ok": False, "reason": "update_failed", "kind": kind_name,
+                            "status_code": ur.status_code}
+
+        print(f"[*] custom-nodes sync complete: created={created}, updated={updated}, unchanged={unchanged}")
+        return {"ok": True, "created": created, "updated": updated, "unchanged": unchanged, "auth_mode": mode}
+
     except Exception as e:
-        print("custom-nodes request failed", f"{type(e).__name__}: {e}")
+        print(f"[X] custom-nodes request failed: {type(e).__name__}: {e}")
         return {"ok": False, "reason": "request_failed", "error": f"{type(e).__name__}: {e}"}
