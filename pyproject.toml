@@ -29,11 +29,11 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
-  "ruff==0.15.22",
+  "ruff==0.16.1",
   "mypy==2.3.0"
 ]
 excel = [
-  "pandas==3.0.1",
+  "pandas==3.0.5",
   "xlsxwriter==3.2.9"
 ]
 # Prettier boxed tables. Optional: without it, output falls back to a plain ASCII table.
