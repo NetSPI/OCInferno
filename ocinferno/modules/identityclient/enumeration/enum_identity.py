@@ -100,10 +100,9 @@ def run_module(user_args, session):
         "idd_mfa_settings": IdentityIddMfaSettingsResource(session=session),
     }
 
-    # When --domain-urls and --get are both present, resolve + save each domain URL once
-    # here so all components can find the domain in the DB cache rather than each making
-    # their own SCIM round-trip.
-    if args.domain_urls and "--get" in list(user_args):
+    # Save each manually-supplied domain URL once so all IDD sub-components can read
+    # from the DB cache rather than each receiving a bare stub dict.
+    if args.domain_urls:
         _suite = resource_map["principals"]
         compartment_id = getattr(session, "selected_compartment_id", "") or ""
         for _url in args.domain_urls:
