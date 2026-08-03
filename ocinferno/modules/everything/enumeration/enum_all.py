@@ -436,6 +436,15 @@ def _parse_args(user_args) -> argparse.Namespace:
         ),
     )
     p.add_argument("--get", action="store_true", help="Pass --get to submodules (where supported).")
+    p.add_argument(
+        "--domain-urls", dest="domain_urls", nargs="+", default=[],
+        help=(
+            "One or more Identity Domain endpoints to pass to enum_identity.\n"
+            "Useful when no domains are cached yet (combine with --get to resolve\n"
+            "and save domain metadata before the identity enumeration runs).\n"
+            "Example:  --domain-urls https://idcs-XXXX.identity.oraclecloud.com:443"
+        ),
+    )
 
     # ---- Parallelism + resume ----
     p.add_argument(
@@ -587,7 +596,7 @@ def _module_supported_flags(module_name: str) -> Set[str]:
         return set()
 
     flags = set()
-    for flag in ("--get", "--download"):
+    for flag in ("--get", "--download", "--domain-urls"):
         if flag in text:
             flags.add(flag)
 
@@ -758,6 +767,10 @@ def _module_args_with_download_plan(
         out.append("--get")
     if download_all and (("--download" in supported) or accepts_unknown):
         out.append("--download")
+    domain_urls = [u for u in (getattr(args, "domain_urls", None) or []) if u]
+    if domain_urls and "--domain-urls" in supported:
+        out.append("--domain-urls")
+        out.extend(domain_urls)
     extras = (module_download_extras or {}).get(module_name, [])
     for a in extras:
         if a not in out:

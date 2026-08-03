@@ -48,14 +48,14 @@ TABLE_IDD_APPS = "identity_domain_apps"
 TABLE_IDD_APP_ROLES = "identity_domain_app_roles"
 TABLE_IDD_GRANTS = "identity_domain_grants"
 
-# Identity Domain "settings/posture" artifacts (for enum_identity --domains)
+# Identity Domain "settings/posture" artifacts (for enum_identity --list-domains)
 TABLE_IDD_PASSWORD_POLICIES = "identity_domain_password_policies"
 TABLE_IDD_LOCKOUT_POLICIES = "identity_domain_lockout_policies"
 TABLE_IDD_IDENTITY_PROVIDERS = "identity_domain_identity_providers"
 TABLE_IDD_SIGN_ON_POLICIES = "identity_domain_sign_on_policies"
 TABLE_IDD_MFA_SETTINGS = "identity_domain_authentication_factor_settings"  # AuthenticationFactorSetting
 
-# Identity Domain "credential-ish" artifacts (for enum_identity --domains)
+# Identity Domain "credential-ish" artifacts (for enum_identity --list-domains)
 TABLE_IDD_USER_DB_CREDENTIALS = "identity_domain_user_db_credentials"
 TABLE_IDD_USER_SMTP_CREDENTIALS = "identity_domain_user_smtp_credentials"
 TABLE_IDD_USER_API_KEYS = "identity_domain_user_api_keys"
@@ -66,6 +66,7 @@ TABLE_POLICY_PARSED = "identity_policy_statements"
 
 # SCIM schema URNs used by the User/Group write paths below.
 IDD_API_KEY_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:apikey"
+IDD_AUTH_TOKEN_SCHEMA = "urn:ietf:params:scim:schemas:oracle:idcs:authtoken"
 IDD_USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
 IDD_GROUP_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:Group"
 PATCHOP_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
@@ -939,6 +940,47 @@ class IdentityResourceSuite(ResourceBase):
             domains = [d for d in domains if domain_matches(d, domain_filter)]
         return (compartment_id or "", domains, source)
 
+    def _try_save_manual_domain(self, domain_url: str, compartment_id: str) -> dict[str, Any]:
+        """Given a manually-provided domain URL, resolve its OCID via a lightweight SCIM call
+        and save a domain record to identity_domains for future cache hits.
+        Returns the (possibly partial) domain dict. Silently ignores all errors."""
+        domain: dict[str, Any] = {
+            "id": "", "url": domain_url, "display_name": domain_url,
+            "compartment_id": compartment_id, "home_region": "", "lifecycle_state": "ACTIVE",
+        }
+        try:
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=domain_url)
+            rows = ops.list_authentication_factor_settings() or []
+            domain_ocid = _s(rows[0].get("domain_ocid")) if rows else ""
+            if not domain_ocid:
+                return domain
+            domain["id"] = domain_ocid
+
+            # Try full get_domain for display_name/home_region
+            try:
+                creds = getattr(self.session, "credentials", None) or {}
+                oci_config = creds.get("config") or {}
+                signer = creds.get("signer")
+                classic_client = (
+                    oci.identity.IdentityClient({}, signer=signer)
+                    if signer else oci.identity.IdentityClient(oci_config)
+                )
+                dom_data = oci.util.to_dict(classic_client.get_domain(domain_ocid).data) or {}
+                domain.update({
+                    "display_name": _s(dom_data.get("display_name")) or domain_url,
+                    "home_region": _s(dom_data.get("home_region")),
+                    "compartment_id": _s(dom_data.get("compartment_id")) or compartment_id,
+                })
+            except Exception:
+                pass  # Keep partial; display_name=url is acceptable
+
+            classic_ops = IdentityResourceClient(session=self.session)
+            classic_ops.save_domains(domains=[domain])
+            print(f"{UtilityTools.BRIGHT_CYAN}[*] Saved domain {domain.get('display_name')} to DB cache.{UtilityTools.RESET}")
+        except Exception as e:
+            UtilityTools.dlog(self.debug, "_try_save_manual_domain failed", url=domain_url, err=f"{type(e).__name__}: {e}")
+        return domain
+
     def _active_user_ocid(self) -> str:
         creds = getattr(self.session, "credentials", None)
         if isinstance(creds, dict):
@@ -1396,11 +1438,11 @@ class IdentityResourceSuite(ResourceBase):
         lane.add_argument("--classic", "--classic-only", dest="classic_only", action="store_true", help="Enumerate classic principals only.")
         parser.add_argument("--domain-filter", help="Filter identity domains by substring (id/display_name/url).")
         parser.add_argument(
-            "--domains",
-            action="extend",
+            "--domain-urls",
+            dest="domain_urls",
             nargs="+",
-            type=lambda s: [x.strip() for x in str(s).split(",") if x.strip()],
-            help="Comma-separated list of Identity Domain service endpoints.",
+            default=[],
+            help="One or more Identity Domain service endpoints (used when no domains are cached).",
         )
         parser.add_argument("--users", action="store_true", help="Enumerate users (default if no selectors).")
         parser.add_argument("--groups", action="store_true", help="Enumerate groups (default if no selectors).")
@@ -1431,9 +1473,18 @@ class IdentityResourceSuite(ResourceBase):
         classic_ops = IdentityResourceClient(session=self.session)
         idd_seen: set[str] = set()
 
-        # Resolve identity domain endpoints from args or DB.
-        domain_endpoints: list[str] = args.domains or []
+        # Resolve identity domain endpoints from --domain-urls args or DB.
+        domain_endpoints: list[str] = [_s(u) for u in (args.domain_urls or []) if _s(u)]
         domains: list[dict[str, Any]] = []
+        if do_idd and domain_endpoints:
+            # Manually-provided URLs: build minimal domain dicts.
+            # If --get was passed, run_module already resolved+saved via _try_save_manual_domain;
+            # try to pick up the saved records from DB, fall back to bare stubs.
+            domains = self._load_identity_domains_from_db(self.session, compartment_id=compartment_id or None)
+            domains = [d for d in domains if _s(d.get("url")) in domain_endpoints]
+            if not domains:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id} for u in domain_endpoints]
+            self._print_section("Identity Domains (manual --domain-urls)", domains, ["id", "display_name", "url", "home_region"])
         if do_idd and not domain_endpoints:
             _comp, domains, domain_source = self._load_domains_from_cache(
                 all_saved_domains=False,
@@ -1722,6 +1773,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by substring (id/name/url/display_name).")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--get", action="store_true", help="Reserved.")
         args = self._parse_known(parser, user_args)
 
@@ -1732,13 +1784,18 @@ class IdentityResourceSuite(ResourceBase):
 
         _comp_id, domains, domain_source = self._load_domains_from_cache(all_saved_domains=False, domain_filter=args.domain or "")
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then re-run: modules run enum_identity --idd-apps (optional)"
-            )
-            return {"ok": False, "apps": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then re-run: modules run enum_identity --idd-apps (optional)"
+                )
+                return {"ok": False, "apps": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
         UtilityTools.print_limited_table(
@@ -1798,6 +1855,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by id/name/url substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_app_roles().")
         parser.add_argument("--limit", type=int, default=200, help="Max rows to print per domain.")
         parser.add_argument("--sort", default="displayName", help="Sort key.")
@@ -1816,13 +1874,18 @@ class IdentityResourceSuite(ResourceBase):
             domain_filter=args.domain or "",
         )
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then rerun this module."
-            )
-            return {"ok": False, "app_roles": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then rerun this module."
+                )
+                return {"ok": False, "app_roles": 0}
 
         if not scope_all:
             domains = [d for d in domains if _s(d.get("compartment_id")) == compartment_id]
@@ -1904,6 +1967,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_api_keys().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
         args = self._parse_known(parser, user_args)
@@ -1918,13 +1982,18 @@ class IdentityResourceSuite(ResourceBase):
             domain_filter=args.domain or "",
         )
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then re-run: modules run enum_identity --idd-api-keys (optional)"
-            )
-            return {"ok": False, "api_keys": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then re-run: modules run enum_identity --idd-api-keys (optional)"
+                )
+                return {"ok": False, "api_keys": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
         UtilityTools.print_limited_table(
@@ -2001,6 +2070,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_auth_tokens().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
@@ -2016,13 +2086,18 @@ class IdentityResourceSuite(ResourceBase):
             domain_filter=args.domain or "",
         )
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then re-run: modules run enum_identity --idd-auth-tokens (optional)"
-            )
-            return {"ok": False, "auth_tokens": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then re-run: modules run enum_identity --idd-auth-tokens (optional)"
+                )
+                return {"ok": False, "auth_tokens": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
         UtilityTools.print_limited_table(
@@ -2137,6 +2212,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_grants().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
         args = self._parse_known(parser, user_args)
@@ -2151,13 +2227,18 @@ class IdentityResourceSuite(ResourceBase):
             domain_filter=args.domain or "",
         )
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then re-run: modules run enum_identity --idd-grants (optional)"
-            )
-            return {"ok": False, "grants": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then re-run: modules run enum_identity --idd-grants (optional)"
+                )
+                return {"ok": False, "grants": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
         UtilityTools.print_limited_table(
@@ -2227,6 +2308,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_password_policies().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
         args = self._parse_known(parser, user_args)
@@ -2244,13 +2326,18 @@ class IdentityResourceSuite(ResourceBase):
             domain_filter=args.domain or "",
         )
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then re-run: modules run enum_identity --idd-password-policies (optional)"
-            )
-            return {"ok": False, "password_policies": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then re-run: modules run enum_identity --idd-password-policies (optional)"
+                )
+                return {"ok": False, "password_policies": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
         UtilityTools.print_limited_table(
@@ -2328,6 +2415,7 @@ class IdentityResourceSuite(ResourceBase):
             allow_abbrev=False,
         )
         parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
         args = self._parse_known(parser, user_args)
 
@@ -2344,13 +2432,18 @@ class IdentityResourceSuite(ResourceBase):
             domain_filter=args.domain or "",
         )
         if not domains:
-            print(
-                f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
-                f"(run 'modules run enum_identity --domains' first).{UtilityTools.RESET}\n"
-                "Run: modules run enum_identity --domains\n"
-                "Then re-run: modules run enum_identity --idd-mfa-settings (optional)"
-            )
-            return {"ok": False, "mfa_settings": 0}
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}\n"
+                    "Run: modules run enum_identity --list-domains\n"
+                    "Then re-run: modules run enum_identity --idd-mfa-settings (optional)"
+                )
+                return {"ok": False, "mfa_settings": 0}
 
         print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
         UtilityTools.print_limited_table(
@@ -2816,7 +2909,7 @@ class User(_DualPathClientMixin):
     @classmethod
     def resolve(cls, session, *, user_ocid: str = "", user_name: str = "", self_user: bool = False,
                 idd: bool = False, classic: bool = False, domain_url: str = "",
-                no_prompt: bool = False) -> Optional["User"]:
+                no_prompt: bool = False, with_self_option: bool = False) -> Optional["User"]:
         """Resolve a target user the same way everywhere: ``--self``, an explicit
         ``--user-ocid``, ``--user-name`` (match against the workspace DB), or -- with no
         flags -- an interactive pick-from-DB-or-manual prompt.
@@ -2873,8 +2966,62 @@ class User(_DualPathClientMixin):
             print(f"{UtilityTools.RED}[X] --yes/--no-prompt requires --user-ocid, --user-name, or --self.{UtilityTools.RESET}")
             return None
 
+        usable = [u for u in users if isinstance(u, User)]
+
+        if with_self_option:
+            # Enhanced menu: [1] DB, [2] Manual OCID, [3] Yourself.
+            print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Select target user:{UtilityTools.RESET}")
+            print(f"  [1] Choose from {len(usable)} saved user{'s' if len(usable) != 1 else ''} in the workspace DB")
+            print("  [2] Enter a user OCID manually")
+            print("  [3] Yourself (current active credential's user)")
+            choice = _s(input("Select 1-3 (ENTER to cancel): "))
+            if not choice:
+                print("[*] Cancelled.")
+                return None
+            if choice == "3":
+                self_user = True
+                ocid = _s(extract_active_cred_user_ocid(session))
+                if not ocid:
+                    print(f"{UtilityTools.RED}[X] Could not determine the active credential's user OCID.{UtilityTools.RESET}")
+                    return None
+                for u in usable:
+                    if u.ocid == ocid:
+                        return u
+                resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                                     no_prompt=no_prompt, context="active user")
+                if resolved_idd is None:
+                    return None
+                return cls._manual(ocid, idd=resolved_idd, domain_url=domain_url)
+            if choice == "1":
+                if not usable:
+                    print(f"{UtilityTools.YELLOW}[!] No saved users in the workspace DB. Run enum_identity first, or enter a user OCID.{UtilityTools.RESET}")
+                    return None
+                picked = paged_search_select(
+                    [u.to_dict() for u in usable], title="Target User (workspace DB)",
+                    label_fn=lambda d: cls.from_dict(d).label(),
+                )
+                if picked is None:
+                    return None
+                return cls.from_dict(picked)
+            if choice == "2":
+                while True:
+                    val = _s(input("Enter target user OCID: "))
+                    if not val:
+                        print("[*] Cancelled.")
+                        return None
+                    if val.startswith("ocid1.user"):
+                        break
+                    print(f"{UtilityTools.RED}[X] Must start with ocid1.user, try again.{UtilityTools.RESET}")
+                resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                                     no_prompt=no_prompt, context="target user")
+                if resolved_idd is None:
+                    return None
+                return cls._manual(val, idd=resolved_idd, domain_url=domain_url)
+            print(f"{UtilityTools.RED}[X] Enter 1, 2, or 3.{UtilityTools.RESET}")
+            return None
+
         sel = select_from_db_or_manual(
-            rows=[u.to_dict() for u in users], entity="target user",
+            rows=[u.to_dict() for u in usable], entity="target user",
             label_fn=lambda d: cls.from_dict(d).label(),
             manual_prompt="Enter target user OCID",
             manual_validate=lambda v: v.startswith("ocid1.user"),
@@ -2949,6 +3096,65 @@ class User(_DualPathClientMixin):
         return ApiKey(mode="idd", user_ocid=self.ocid, fingerprint=_s(data.get("fingerprint")),
                       key_id=_s(data.get("ocid") or data.get("id")))
 
+    def create_api_key_idd_self(self, session, *, public_pem: str, description: str = "") -> ApiKey:
+        """Add an API key to the currently-authenticated IDD user via the self-service Me endpoint.
+
+        The admin endpoint (/admin/v1/ApiKeys) rejects self-targeting for User Administrators;
+        the Me endpoint (/v1/Me/ApiKeys) is the correct path for adding a key to yourself.
+        """
+        if not self.domain_url:
+            raise ValueError("identity-domain self-service requires the domain URL.")
+        client = self._idd_client(session, self.domain_url)
+        body = oci.identity_domains.models.MyApiKey(
+            schemas=[IDD_API_KEY_SCHEMA],
+            key=public_pem,
+            description=description or None,
+        )
+        resp = client.create_my_api_key(my_api_key=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return ApiKey(mode="idd-self", user_ocid=self.ocid, fingerprint=_s(data.get("fingerprint")),
+                      key_id=_s(data.get("ocid") or data.get("id")))
+
+    # -------------------------------------------------------------------
+    # Auth tokens
+    # -------------------------------------------------------------------
+
+    def create_auth_token_oci(self, session, *, description: str = "") -> Dict[str, str]:
+        """Create an auth token for this user via the classic IAM endpoint."""
+        client = self._classic_client(session)
+        details = oci.identity.models.CreateAuthTokenDetails(description=description or "ocinferno-pentest")
+        resp = client.create_auth_token(details, user_id=self.ocid)
+        data = oci.util.to_dict(resp.data) if resp.data else {}
+        return {"token": _s(data.get("token")), "id": _s(data.get("id")), "mode": "classic"}
+
+    def create_auth_token_idd(self, session, *, description: str = "") -> Dict[str, str]:
+        """Create an auth token for this IDD user via the SCIM admin endpoint."""
+        if not self.domain_url:
+            raise ValueError("identity-domain auth token requires the domain URL.")
+        client = self._idd_client(session, self.domain_url)
+        user_ref = oci.identity_domains.models.AuthTokenUser(ocid=self.ocid or None, value=self.scim_id or None)
+        body = oci.identity_domains.models.AuthToken(
+            schemas=[IDD_AUTH_TOKEN_SCHEMA], description=description or "ocinferno-pentest", user=user_ref,
+        )
+        resp = client.create_auth_token(auth_token=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"token": _s(data.get("token")), "id": _s(data.get("ocid") or data.get("id")), "mode": "idd"}
+
+    def create_auth_token_idd_self(self, session, *, description: str = "") -> Dict[str, str]:
+        """Create an auth token for the currently-authenticated IDD user via the Me endpoint.
+
+        The admin endpoint rejects self-targeting for User Administrators; use Me endpoint.
+        """
+        if not self.domain_url:
+            raise ValueError("identity-domain self-service requires the domain URL.")
+        client = self._idd_client(session, self.domain_url)
+        body = oci.identity_domains.models.MyAuthToken(
+            schemas=[IDD_AUTH_TOKEN_SCHEMA], description=description or "ocinferno-pentest",
+        )
+        resp = client.create_my_auth_token(my_auth_token=body)
+        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        return {"token": _s(data.get("token")), "id": _s(data.get("ocid") or data.get("id")), "mode": "idd-self"}
+
     def create_api_key(self, session, *, public_pem: str, description: str = "", force_idd: bool = False) -> ApiKey:
         """Add an API key, choosing the write path that actually works.
 
@@ -2969,8 +3175,10 @@ class User(_DualPathClientMixin):
             return self.create_api_key_oci(session, public_pem=public_pem)
         except Exception as classic_err:
             status = getattr(classic_err, "status", None)
-            if status in (401, 403) and self.domain_url:
-                print(f"{UtilityTools.YELLOW}[!] Classic api-key path denied ({status}); "
+            # IDD users return 404 (not found) on the classic endpoint when credentials
+            # are an API key (vs Cloud Shell delegation, where classic works for both).
+            if status in (401, 403, 404) and self.domain_url:
+                print(f"{UtilityTools.YELLOW}[!] Classic api-key path returned {status}; "
                       f"falling back to the identity-domain (SCIM) path...{UtilityTools.RESET}")
                 key = self.create_api_key_idd(session, public_pem=public_pem, description=description)
                 key.fell_back_from_classic = True
