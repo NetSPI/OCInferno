@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 import oci
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.net_util import DnsTimeoutError
 from ocinferno.core.utils.module_helpers import cached_table_count, fill_missing_fields, save_rows
 
 
@@ -107,14 +108,21 @@ def _init_client(client_cls, *args, session, service_name: str, region: Optional
     cfg = dict(creds.get("config") or {})
     if effective_region:
         cfg["region"] = effective_region
-    # Default connect/read timeouts to prevent indefinite hangs on unsupported regions.
-    cfg.setdefault("timeout", (10, 60))
 
     signer = creds.get("signer")
     if signer is None:
         client = client_cls(cfg, *args, **kwargs)
     else:
         client = client_cls(cfg, *args, signer=signer, **kwargs)
+
+    # Override the OCI SDK timeout unconditionally. The SDK default is (10, 60)
+    # but we set it explicitly so future SDK version changes can't silently
+    # increase it. base_client.timeout is what call_api passes to requests;
+    # the 'timeout' config-dict key is ignored by the SDK.
+    try:
+        client.base_client.timeout = (10, 60)
+    except Exception:
+        pass
 
     # An explicit region also re-pins the client endpoint.
     if region:
@@ -338,6 +346,12 @@ def parse_wrapper_args(
         "--wide", action="store_true",
         help="Print ALL columns in stdout tables (default shows a concise subset; full data is always saved).",
     )
+    parser.add_argument(
+        "--regions", dest="regions", nargs="+", default=None, metavar="REGION",
+        help="Override the OCI region(s) for this module run (e.g. us-ashburn-1 ca-toronto-1). "
+             "When multiple regions are provided the module runs once per region. "
+             "Defaults to the workspace's configured default region.",
+    )
 
     if callable(add_extra_args):
         add_extra_args(parser)
@@ -540,6 +554,14 @@ def run_standard_enum_component(
             "download": do_download,
             "downloaded": downloaded,
         }
+    except DnsTimeoutError as err:
+        # DNS timed out: the service endpoint doesn't exist in this region.
+        # Treat as a soft-skip (ok=True) so enum_all / run_components don't flag
+        # this as a hard failure — it's expected for services not present in a region.
+        print(
+            f"{UtilityTools.YELLOW}[-] {label}: skipped ({err}).{UtilityTools.RESET}"
+        )
+        return {"ok": True, component_key: 0, "enriched": 0, "saved": False, "get": bool(do_get), "skipped": True}
     except Exception as err:
         status = getattr(err, "status", None)
         if soft_skip_statuses and status in soft_skip_statuses:

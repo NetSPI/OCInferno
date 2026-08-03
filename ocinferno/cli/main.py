@@ -4,6 +4,15 @@ import sys
 from importlib import resources
 from typing import List, Tuple, Optional
 
+# Patch socket.getaddrinfo BEFORE any OCI SDK imports so DNS resolution for
+# non-existent regional endpoints times out quickly (10 s) instead of blocking
+# for 30-90 s (glibc retries search-domain variants against every nameserver).
+# The DnsTimeoutError raised here is NOT an OSError subclass, which prevents the
+# OCI pagination DEFAULT_RETRY_STRATEGY from treating it as a retriable
+# ConnectionError (else it would retry 8× for a 80+ s total hang).
+from ocinferno.core.net_util import install_dns_timeout
+install_dns_timeout()
+
 from ocinferno.cli.workspace_instructions import workspace_instructions
 from ocinferno.core.db import DataController
 from ocinferno.core.console import UtilityTools

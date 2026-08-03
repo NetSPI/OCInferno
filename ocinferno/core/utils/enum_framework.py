@@ -214,50 +214,58 @@ def run_components(
 
     cache_tables = {c.key: (c.cache_table, c.compartment_field) for c in components if c.cache_table}
 
+    # --regions: explicit region list; if absent, use a single-item list with None
+    # so the inner loop runs once with the session's default region.
+    region_list: Sequence[Optional[str]] = getattr(args, "regions", None) or [None]
+
     results = []
-    for c in components:
-        if not selected.get(c.key, False):
-            continue
-        resource = c.resource_cls(session=session, **c.resource_kwargs)
+    for region_override in region_list:
+        for c in components:
+            if not selected.get(c.key, False):
+                continue
+            resource_kwargs = dict(c.resource_kwargs)
+            if region_override and "region" not in resource_kwargs:
+                resource_kwargs["region"] = region_override
+            resource = c.resource_cls(session=session, **resource_kwargs)
 
-        if c.list_fn is not None:
-            list_rows = c.list_fn(session, args, resource)
-        else:
-            list_rows = lambda cid, _r=resource: _r.list(compartment_id=cid)
-
-        get_row = None
-        if c.supports_get:
-            if c.get_row_fn is not None:
-                get_row = c.get_row_fn(session, args, resource)
+            if c.list_fn is not None:
+                list_rows = c.list_fn(session, args, resource)
             else:
-                get_row = lambda row, _r=resource: _r.get(resource_id=row.get("id"))
+                list_rows = lambda cid, _r=resource: _r.list(compartment_id=cid)
 
-        download_rows_fn = c.download_fn(session, args, resource) if c.download_fn is not None else None
+            get_row = None
+            if c.supports_get:
+                if c.get_row_fn is not None:
+                    get_row = c.get_row_fn(session, args, resource)
+                else:
+                    get_row = lambda row, _r=resource: _r.get(resource_id=row.get("id"))
 
-        # Storage always uses the full COLUMNS (via resource.save); stdout shows a
-        # concise subset unless --wide. Precedence: Component.print_columns override
-        # -> resource.DISPLAY_COLUMNS -> auto-derived concise subset.
-        full_columns = getattr(resource, "COLUMNS", [])
-        if getattr(args, "wide", False):
-            print_columns = list(c.print_columns) if c.print_columns else list(full_columns)
-        elif c.print_columns:
-            print_columns = list(c.print_columns)
-        else:
-            print_columns = list(getattr(resource, "DISPLAY_COLUMNS", []) or concise_display_columns(full_columns))
+            download_rows_fn = c.download_fn(session, args, resource) if c.download_fn is not None else None
 
-        results.append(run_standard_enum_component(
-            user_args=args,
-            session=session,
-            component_key=c.key,
-            list_rows=list_rows,
-            get_row=get_row,
-            save_rows_fn=resource.save,
-            print_columns=print_columns,
-            module_name=module_name,
-            soft_skip_statuses=SOFT_SKIP_STATUSES if c.soft_skip else (),
-            require_compartment=c.require_compartment,
-            download_rows_fn=download_rows_fn,
-        ))
+            # Storage always uses the full COLUMNS (via resource.save); stdout shows a
+            # concise subset unless --wide. Precedence: Component.print_columns override
+            # -> resource.DISPLAY_COLUMNS -> auto-derived concise subset.
+            full_columns = getattr(resource, "COLUMNS", [])
+            if getattr(args, "wide", False):
+                print_columns = list(c.print_columns) if c.print_columns else list(full_columns)
+            elif c.print_columns:
+                print_columns = list(c.print_columns)
+            else:
+                print_columns = list(getattr(resource, "DISPLAY_COLUMNS", []) or concise_display_columns(full_columns))
+
+            results.append(run_standard_enum_component(
+                user_args=args,
+                session=session,
+                component_key=c.key,
+                list_rows=list_rows,
+                get_row=get_row,
+                save_rows_fn=resource.save,
+                print_columns=print_columns,
+                module_name=module_name,
+                soft_skip_statuses=SOFT_SKIP_STATUSES if c.soft_skip else (),
+                require_compartment=c.require_compartment,
+                download_rows_fn=download_rows_fn,
+            ))
 
     append_cached_component_counts(
         results=results,
