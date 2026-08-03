@@ -72,6 +72,10 @@ def _parse_args(user_args):
             "--domain-urls", dest="domain_urls", nargs="+", default=[],
             help="(all IDD components) One or more Identity Domain endpoints; used when no domains are cached.",
         )
+        parser.add_argument(
+            "--save-domains", dest="save_domains", action="store_true",
+            help="(all IDD components) Persist --domain-urls to the workspace DB so future runs find them automatically.",
+        )
 
     return parse_wrapper_args(
         user_args=user_args,
@@ -100,9 +104,8 @@ def run_module(user_args, session):
         "idd_mfa_settings": IdentityIddMfaSettingsResource(session=session),
     }
 
-    # Save each manually-supplied domain URL once so all IDD sub-components can read
-    # from the DB cache rather than each receiving a bare stub dict.
-    if args.domain_urls:
+    # Persist manually-supplied domain URLs to the DB so future runs find them automatically.
+    if args.domain_urls and args.save_domains:
         _suite = resource_map["principals"]
         compartment_id = getattr(session, "selected_compartment_id", "") or ""
         for _url in args.domain_urls:
