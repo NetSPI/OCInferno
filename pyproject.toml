@@ -80,12 +80,3 @@ select = ["E9", "F"]
 # core package, where type hints are richest and the logic is most critical.
 # Goal: drive `ocinferno/core` to zero errors, then flip CI to blocking and
 # widen the scope to cli and modules.
-[tool.mypy]
-python_version = "3.11"
-files = ["ocinferno/core"]
-ignore_missing_imports = true
-warn_unused_ignores = false
-check_untyped_defs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-warn_redundant_casts = true
