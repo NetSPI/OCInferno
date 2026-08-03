@@ -107,6 +107,8 @@ def _init_client(client_cls, *args, session, service_name: str, region: Optional
     cfg = dict(creds.get("config") or {})
     if effective_region:
         cfg["region"] = effective_region
+    # Default connect/read timeouts to prevent indefinite hangs on unsupported regions.
+    cfg.setdefault("timeout", (10, 60))
 
     signer = creds.get("signer")
     if signer is None:
