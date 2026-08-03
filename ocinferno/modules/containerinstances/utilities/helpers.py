@@ -14,7 +14,12 @@ class ContainerInstancesResource(OciListResource):
     LIST_METHOD = "list_container_instances"
     GET_METHOD = "get_container_instance"
     GET_ID_PARAM = "container_instance_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        "compartment_id", "freeform_tags",
+        "vnics", "volumes", "dns_config", "image_pull_secrets",
+        "shape", "shape_config", "graceful_shutdown_timeout_in_seconds",
+    ]
 
     def download_container_configs(self, *, resource_id: str, out_path) -> bool:
         """Export the developer-supplied container config for one container instance.
@@ -27,13 +32,23 @@ class ContainerInstancesResource(OciListResource):
         """
         if not resource_id:
             return False
-        inst = self.client.get_container_instance(container_instance_id=resource_id).data
+        try:
+            inst = self.client.get_container_instance(container_instance_id=resource_id).data
+        except oci.exceptions.ServiceError as e:
+            if e.status in (403, 404):
+                return False
+            raise
         configs = []
         for ref in (getattr(inst, "containers", None) or []):
             container_id = getattr(ref, "container_id", None)
             if not container_id:
                 continue
-            container = self.client.get_container(container_id=container_id).data
+            try:
+                container = self.client.get_container(container_id=container_id).data
+            except oci.exceptions.ServiceError as e:
+                if e.status in (403, 404):
+                    continue
+                raise
             configs.append({
                 "id": getattr(container, "id", container_id),
                 "display_name": getattr(container, "display_name", None),

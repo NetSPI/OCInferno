@@ -319,8 +319,6 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
                 attempt = 1
                 while True:
                     t0 = time.time()
-                    if owner:
-                        owner._wait_for_http_rate_limit()
                     try:
                         resp = original_call_api(base_client_self, *args, **kwargs)
                         status_code = int(getattr(resp, "status", 0) or 0)

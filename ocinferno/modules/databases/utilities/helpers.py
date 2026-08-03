@@ -75,7 +75,12 @@ class DatabasesCacheUsersResource(ResourceBase):
         try:
             resp = fn(oci_cache_user_id=resource_id)
         except TypeError:
-            resp = fn(user_id=resource_id)
+            try:
+                resp = fn(user_id=resource_id)
+            except (TypeError, oci.exceptions.ServiceError):
+                return {}
+        except oci.exceptions.ServiceError:
+            return {}
         return oci.util.to_dict(resp.data) or {}
 
     # No binary download endpoint for cache-user rows.

@@ -39,7 +39,14 @@ class DataFlowApplicationsResource(OciListResource):
     LIST_METHOD = "list_applications"
     GET_METHOD = "get_application"
     GET_ID_PARAM = "application_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        "compartment_id", "time_updated",
+        "file_uri", "archive_uri", "class_name", "language",
+        "driver_shape", "executor_shape", "num_executors",
+        "logs_bucket_uri", "warehouse_bucket_uri", "private_endpoint_id",
+        "arguments", "parameters", "configuration",
+    ]
 
     def download_script(self, *, resource_id: str, out_path_dir: str) -> int:
         """Export an application's developer-supplied Spark/PySpark script + archive.
@@ -91,7 +98,16 @@ class DataFlowRunsResource(OciListResource):
     LIST_METHOD = "list_runs"
     GET_METHOD = "get_run"
     GET_ID_PARAM = "run_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        "compartment_id", "time_updated",
+        "application_id", "file_uri", "class_name", "language",
+        "driver_shape", "executor_shape", "num_executors",
+        "logs_bucket_uri", "warehouse_bucket_uri", "private_endpoint_id",
+        "run_duration_in_milliseconds", "data_read_in_bytes", "data_written_in_bytes",
+        "owner_principal_id", "private_endpoint_subnet_id",
+        "arguments", "parameters", "configuration",
+    ]
 
 
 class DataFlowPoolsResource(OciListResource):
@@ -131,4 +147,5 @@ class DataFlowWorkRequestsResource(OciListResource):
     LIST_METHOD = "list_work_requests"
     GET_METHOD = "get_work_request"
     GET_ID_PARAM = "work_request_id"
-    COLUMNS = ["id", "operation_type", "status", "time_accepted", "time_finished"]
+    # WorkRequestSummary uses 'operation', not 'operation_type'.
+    COLUMNS = ["id", "operation", "status", "time_accepted", "time_finished"]

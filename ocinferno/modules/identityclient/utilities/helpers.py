@@ -343,9 +343,21 @@ class IdentityDomainResourceClient:
             "displayName,userName,emails,id,ocid,schemas,meta,"
             "domainOcid,compartmentOcid,tenancyOcid,matchingRule,groups"
         )
-        rows = self.identity_domain_client.list_users(attributes=attrs)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_users(
+                attributes=attrs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     def save_idd_users(self, idd_users: list[dict[str, Any]]) -> None:
         self.session.save_resources(idd_users or [], TABLE_IDD_USERS)
@@ -355,9 +367,21 @@ class IdentityDomainResourceClient:
             "displayName,description,id,ocid,schemas,meta,"
             "domainOcid,compartmentOcid,tenancyOcid,matchingRule,users"
         )
-        rows = self.identity_domain_client.list_groups(attributes=attrs)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_groups(
+                attributes=attrs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     def save_idd_groups(self, groups: list[dict[str, Any]]) -> None:
         self.session.save_resources(groups or [], TABLE_IDD_GROUPS)
@@ -367,9 +391,21 @@ class IdentityDomainResourceClient:
             "displayName,description,id,ocid,schemas,meta,"
             "domainOcid,compartmentOcid,tenancyOcid,matchingRule"
         )
-        rows = self.identity_domain_client.list_dynamic_resource_groups(attributes=attrs)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_dynamic_resource_groups(
+                attributes=attrs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     def save_idd_dynamic_groups(self, dynamic_groups: list[dict[str, Any]]) -> None:
         self.session.save_resources(dynamic_groups or [], TABLE_IDD_DYNAMIC_GROUPS)
@@ -394,13 +430,23 @@ class IdentityDomainResourceClient:
     # Apps (SCIM Apps)
     # -------------------------------------------------------------------------
     def list_apps(self, attributes: str | None = None) -> list[dict[str, Any]]:
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         attrs = (attributes or "").strip()
         if attrs:
             kwargs["attributes"] = attrs
-        rows = self.identity_domain_client.list_apps(**kwargs)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_apps(**kwargs, count=page_size, start_index=start)
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     def save_idd_apps(self, *, apps: list[dict[str, Any]], compartment_id: str) -> None:
         self.session.save_resources(apps or [], TABLE_IDD_APPS)
@@ -409,14 +455,38 @@ class IdentityDomainResourceClient:
     # App Roles / Grants (SCIM)
     # -------------------------------------------------------------------------
     def list_app_roles(self, *, attributes: str) -> list[dict[str, Any]]:
-        rows = self.identity_domain_client.list_app_roles(attributes=attributes)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_app_roles(
+                attributes=attributes, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     def list_grants(self, *, attributes: str) -> list[dict[str, Any]]:
-        rows = self.identity_domain_client.list_grants(attributes=attributes)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_grants(
+                attributes=attributes, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     # -------------------------------------------------------------------------
     # Password Policies (SCIM)
@@ -424,11 +494,26 @@ class IdentityDomainResourceClient:
     def list_password_policies(self, *, attributes: str | None = None) -> list[dict[str, Any]]:
         """
         Returns SCIM PasswordPolicy resources.
-        We use list_call_get_all_results for safety; if attributes is unsupported by SDK, caller can retry with None.
+        If attributes is unsupported by SDK, caller can retry with None.
         """
-        rows = self.identity_domain_client.list_password_policies(attributes=attributes)
-        data = oci.util.to_dict(rows.data)
-        return data.get("resources", []) or []
+        kwargs: dict[str, Any] = {}
+        if attributes is not None:
+            kwargs["attributes"] = attributes
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_password_policies(
+                **kwargs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
 
     def save_idd_password_policies(self, *, password_policies: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
         """
@@ -1506,7 +1591,16 @@ class IdentityResourceSuite(ResourceBase):
                         user_id = _s(user.get("id"))
                         if not user_id:
                             continue
-                        rows = classic_ops.list_memberships(compartment_id=compartment_id, user_id=user_id) or []
+                        try:
+                            rows = classic_ops.list_memberships(compartment_id=compartment_id, user_id=user_id) or []
+                        except oci.exceptions.ServiceError as mem_err:
+                            UtilityTools.dlog(
+                                self.debug,
+                                "enum_principals: list_memberships failed for one user (non-fatal)",
+                                user_id=user_id,
+                                err=f"{type(mem_err).__name__}: {mem_err}",
+                            )
+                            continue
                         for row in rows:
                             if not isinstance(row, dict):
                                 continue
@@ -2559,7 +2653,7 @@ class _DualPathClientMixin:
             raise ValueError("identity-domain operation requires the domain URL.")
         return _init_client(
             oci.identity_domains.IdentityDomainsClient,
-            session=session, service_name="identity", service_endpoint=domain_url,
+            session=session, service_name="identity_domains", service_endpoint=domain_url,
         )
 
 

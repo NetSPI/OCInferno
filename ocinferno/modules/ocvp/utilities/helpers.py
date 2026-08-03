@@ -25,6 +25,13 @@ class OcvpSddcsResource(OciListResource):
         "vmware_software_version",
         "clusters_count",
         "is_single_host_sddc",
+        "ssh_authorized_keys",
+        "vcenter_username",
+        "nsx_manager_username",
+        "esxi_software_version",
+        "nsx_manager_private_ip_id",
+        "vcenter_private_ip_id",
+        "hcx_private_ip_id",
     ]
 
 
@@ -68,4 +75,9 @@ class OcvpClustersResource(OciListResource):
         "initial_host_shape_name",
         "is_shielded_instance_enabled",
         "vsphere_type",
+        "network_configuration",
+        "ssh_authorized_keys",
+        "workload_network_cidr",
+        "esxi_software_version",
+        "initial_commitment",
     ]

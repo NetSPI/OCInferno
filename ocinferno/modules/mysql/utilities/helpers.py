@@ -22,6 +22,7 @@ class MysqlDbSystemsResource(OciListResource):
         "mysql_version",
         "is_highly_available",
         "endpoints",
+        # These fields are only available with --get (absent from DbSystemSummary):
         "subnet_id",
         "ip_address",
         "port",

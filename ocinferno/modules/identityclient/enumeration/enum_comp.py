@@ -188,7 +188,11 @@ def run_module(user_args, session):
         # Resource loop: discovered compartments from list APIs (with optional recursive walk).
         # Recursive mode
         if args.recursive and root_is_tenancy:
-            rows = ops.list_compartments(compartment_id=root, lifecycle_state=lifecycle, subtree=True) or []
+            try:
+                rows = ops.list_compartments(compartment_id=root, lifecycle_state=lifecycle, subtree=True) or []
+            except Exception as e:
+                UtilityTools.dlog(debug, "enum_comp: subtree list failed", root=root, err=str(e))
+                rows = []
             for r in rows:
                 _add_row(r)
                 rid = r.get("id") if isinstance(r, dict) else None
@@ -223,7 +227,11 @@ def run_module(user_args, session):
                         q.append(new_id)
         else:
             # Single list from root
-            rows = ops.list_compartments(compartment_id=root, lifecycle_state=lifecycle, subtree=False) or []
+            try:
+                rows = ops.list_compartments(compartment_id=root, lifecycle_state=lifecycle, subtree=False) or []
+            except Exception as e:
+                UtilityTools.dlog(debug, "enum_comp: single list failed", root=root, err=str(e))
+                rows = []
             for r in rows:
                 _add_row(r)
                 rid = r.get("id") if isinstance(r, dict) else None

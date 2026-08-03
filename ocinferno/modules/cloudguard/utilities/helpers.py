@@ -29,7 +29,8 @@ class CloudGuardRecommendationsResource(OciListResource):
     SERVICE_NAME = "CloudGuard"
     TABLE_NAME = "cloud_guard_recommendations"
     LIST_METHOD = "list_recommendations"
-    GET_METHOD = "get_recommendation"
+    # CloudGuardClient has no 'get_recommendation' method; --get is disabled via supports_get=False
+    # in the Component definition.  GET_METHOD left as the base-class default ("").
     GET_ID_PARAM = "recommendation_id"
 
 

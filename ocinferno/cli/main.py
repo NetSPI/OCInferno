@@ -346,7 +346,6 @@ def main() -> None:
         if not workspaces:
             print("[*] No workspaces detected. Please create your first workspace.")
             name, workspace_id = prompt_new_workspace(dc)
-            dc.close()
             workspace_instructions(
                 workspace_id,
                 name,

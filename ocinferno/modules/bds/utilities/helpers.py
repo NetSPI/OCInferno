@@ -26,4 +26,12 @@ class BdsInstancesResource(OciListResource):
         "is_cloud_sql_configured",
         "is_kafka_configured",
         "cluster_profile",
+        "network_config",
+        "kms_key_id",
+        "secret_id",
+        "bootstrap_script_url",
+        "cloud_sql_details",
+        "cluster_details",
+        "created_by",
+        "time_updated",
     ]

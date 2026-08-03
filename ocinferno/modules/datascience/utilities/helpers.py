@@ -49,7 +49,8 @@ class DataScienceModelVersionSetsResource(OciListResource):
     LIST_METHOD = "list_model_version_sets"
     GET_METHOD = "get_model_version_set"
     GET_ID_PARAM = "model_version_set_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    # ModelVersionSetSummary uses 'name', not 'display_name'.
+    COLUMNS = ["id", "name", "lifecycle_state", "time_created"]
 
 
 class DataScienceModelGroupsResource(OciListResource):
@@ -94,7 +95,8 @@ class DataScienceJobRunsResource(OciListResource):
     LIST_METHOD = "list_job_runs"
     GET_METHOD = "get_job_run"
     GET_ID_PARAM = "job_run_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    # JobRunSummary has no 'time_created'; use 'time_accepted' instead.
+    COLUMNS = ["id", "display_name", "lifecycle_state", "time_accepted"]
 
 
 class DataSciencePipelinesResource(OciListResource):
@@ -114,7 +116,8 @@ class DataSciencePipelineRunsResource(OciListResource):
     LIST_METHOD = "list_pipeline_runs"
     GET_METHOD = "get_pipeline_run"
     GET_ID_PARAM = "pipeline_run_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    # PipelineRunSummary has no 'time_created'; use 'time_accepted' instead.
+    COLUMNS = ["id", "display_name", "lifecycle_state", "time_accepted"]
 
 
 class DataScienceSchedulesResource(OciListResource):
@@ -154,4 +157,5 @@ class DataScienceMlApplicationsResource(OciListResource):
     LIST_METHOD = "list_ml_applications"
     GET_METHOD = "get_ml_application"
     GET_ID_PARAM = "ml_application_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    # MlApplicationSummary uses 'name', not 'display_name'.
+    COLUMNS = ["id", "name", "lifecycle_state", "time_created"]

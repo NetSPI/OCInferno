@@ -22,6 +22,7 @@ class PostgresqlDbSystemsResource(OciListResource):
         "db_version",
         "instance_count",
         "shape",
+        # These fields are only available with --get (absent from DbSystemSummary):
         "network_details",
         "admin_username",
         "storage_details",

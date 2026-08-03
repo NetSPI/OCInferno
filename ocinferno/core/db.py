@@ -651,14 +651,12 @@ class DataController:
                     break
                 for row in chunk:
                     total += 1
-                    row_dict = {c: self._sql_output_cell(row[c]) for c in columns}
-                    if len(rows) < max_rows:
-                        rows.append(row_dict)
-                    else:
-                        truncated = True
-                        break
-                if truncated:
-                    break
+                    if not truncated:
+                        row_dict = {c: self._sql_output_cell(row[c]) for c in columns}
+                        if len(rows) < max_rows:
+                            rows.append(row_dict)
+                        else:
+                            truncated = True
 
             return {
                 "query_type": "select",
@@ -1285,12 +1283,16 @@ class DataController:
         else:
             sql = f'INSERT OR REPLACE INTO "{table_name}" ({col_list}) VALUES ({placeholders})'
 
+        in_txn = conn.in_transaction
         try:
             cursor.executemany(sql, values_list)
-            conn.commit()
+            if not in_txn:
+                conn.commit()
             return len(rows)
         except Exception as e:
             print(f"[X] Bulk save failed into '{table_name}': {e}")
+            if in_txn:
+                raise
             try:
                 conn.rollback()
             except Exception:

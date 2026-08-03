@@ -36,6 +36,10 @@ class ResourceManagerStacksResource(ResourceBase):
         self.client = build_resource_manager_client(session=session, region=region)
 
     # List stacks in a compartment.
+    # list_stacks returns StackSummary which omits variables, config_source,
+    # custom_terraform_provider, stack_drift_status, time_drift_last_checked,
+    # and is_third_party_provider_experience_enabled.  Run enum_resourcemanager
+    # with --get to populate those fields.
     def list(self, *, compartment_id: str) -> List[Dict[str, Any]]:
         resp = oci.pagination.list_call_get_all_results(self.client.list_stacks, compartment_id=compartment_id)
         return oci.util.to_dict(resp.data) or []
@@ -70,6 +74,10 @@ class ResourceManagerJobsResource(ResourceBase):
         self.client = build_resource_manager_client(session=session, region=region)
 
     # List jobs in a compartment, optionally scoped to one stack.
+    # JobSummary omits variables, config_source, failure_details, cancellation_details,
+    # working_directory, is_provider_upgrade_required, and
+    # is_third_party_provider_experience_enabled.  Run with --get to populate them.
+    # Jobs are not auto-enriched here because a compartment can have thousands of them.
     def list(self, *, compartment_id: str, stack_id: str = "") -> List[Dict[str, Any]]:
         kwargs: Dict[str, Any] = {"compartment_id": compartment_id}
         if stack_id:

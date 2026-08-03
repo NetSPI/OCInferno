@@ -734,17 +734,19 @@ def export_sqlite_dbs_to_excel_blob(
                 for db in db_infos:
                     for table in db["tables"]:
                         table_name = str(table["name"])
-                        title = _excel_sheet_title(f'{db["name"]}_{table_name}', used_titles)
                         table_rows = list((db.get("rows_by_table") or {}).get(table_name) or [])
                         records = [_build_condensed_record(db, table_name, rd) for rd in table_rows]
                         exported_rows += len(records)
-                        pd.DataFrame(records, columns=condensed_header).to_excel(
-                            writer, sheet_name=title, index=False
-                        )
-                        _apply_xlsx_condensed_layout(
+                        _write_records_chunked(
+                            pd=pd,
                             writer=writer,
-                            sheet_name=title,
-                            data_row_count=len(records),
+                            records=records,
+                            columns=condensed_header,
+                            base_sheet_name=f'{db["name"]}_{table_name}',
+                            used_titles=used_titles,
+                            apply_layout=lambda title, count: _apply_xlsx_condensed_layout(
+                                writer=writer, sheet_name=title, data_row_count=count
+                            ),
                         )
                 if not used_titles:
                     sheet_name = "all_resources"
@@ -780,7 +782,6 @@ def export_sqlite_dbs_to_excel_blob(
                     for table in db["tables"]:
                         table_name = str(table["name"])
                         cols = list(table["columns"] or [])
-                        title = _excel_sheet_title(f'{db["name"]}_{table_name}', used_titles)
                         table_rows = list((db.get("rows_by_table") or {}).get(table_name) or [])
                         records: List[Dict[str, Any]] = []
                         for rd in table_rows:
@@ -789,8 +790,13 @@ def export_sqlite_dbs_to_excel_blob(
                                 row_obj[c] = _excel_safe_value(rd.get(c))
                             records.append(row_obj)
                         exported_rows += len(records)
-                        pd.DataFrame(records, columns=["Database", "resource"] + cols).to_excel(
-                            writer, sheet_name=title, index=False
+                        _write_records_chunked(
+                            pd=pd,
+                            writer=writer,
+                            records=records,
+                            columns=["Database", "resource"] + cols,
+                            base_sheet_name=f'{db["name"]}_{table_name}',
+                            used_titles=used_titles,
                         )
                 if not used_titles:
                     pd.DataFrame(columns=["Database", "resource"]).to_excel(

@@ -335,6 +335,8 @@ class CommandProcessor:
         return None
 
     def process_command(self, command: str):
+        if not command.strip():
+            return None
         try:
             args = self.parser.parse_args(shlex.split(command))
             cmd = args.subcommand
@@ -604,7 +606,7 @@ class CommandProcessor:
     def add_compartment(self, cid: str) -> None:
         if not cid:
             return
-        existing = [comp.get("compartment_id") for comp in self.session.global_compartment_list if isinstance(comp, dict)]
+        existing = [comp.get("compartment_id") or comp.get("id") for comp in self.session.global_compartment_list if isinstance(comp, dict)]
         if cid in existing:
             print(f"{UtilityTools.RED}{UtilityTools.BOLD}[X] {cid} already exists in the list.{UtilityTools.RESET}")
             return
@@ -614,7 +616,7 @@ class CommandProcessor:
     def set_current_compartment(self, cid: str) -> None:
         if not cid:
             return
-        existing = [comp.get("compartment_id") for comp in self.session.global_compartment_list if isinstance(comp, dict)]
+        existing = [comp.get("compartment_id") or comp.get("id") for comp in self.session.global_compartment_list if isinstance(comp, dict)]
         if cid not in existing:
             print(f"[!] {cid} not in known list. Adding...")
             self.session.add_cid(cid)

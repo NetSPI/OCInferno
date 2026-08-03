@@ -22,7 +22,7 @@ class NosqlTablesResource(OciListResource):
         "time_created",
         "compartment_id",
         "table_limits",
-        "ddl_statement",
+        # 'ddl_statement' is absent from TableSummary (only on the full Table model via --get).
         "is_multi_region",
         "is_auto_reclaimable",
     ]

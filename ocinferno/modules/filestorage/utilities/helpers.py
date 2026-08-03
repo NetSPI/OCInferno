@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import oci
 
+from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import dedupe_strs
 from ocinferno.core.utils.service_runtime import _init_client
 from ocinferno.core.utils.service_runtime import ResourceBase
@@ -74,9 +75,14 @@ class FileStorageFileSystemsResource(ResourceBase):
 
     # List file systems across ADs.
     def list(self, *, compartment_id: str, availability_domains: List[str], limit: int = 0, region: str = "") -> List[Dict[str, Any]]:
+        debug = bool(getattr(self.session, "debug", False))
         rows: List[Dict[str, Any]] = []
         for ad in availability_domains:
-            chunk = self._list_file_systems_in_ad(compartment_id=compartment_id, availability_domain=ad) or []
+            try:
+                chunk = self._list_file_systems_in_ad(compartment_id=compartment_id, availability_domain=ad) or []
+            except oci.exceptions.ServiceError as err:
+                UtilityTools.dlog(debug, "list_file_systems failed (skipping AD)", ad=ad, status=err.status, err=f"{type(err).__name__}: {err}")
+                continue
             for row in chunk:
                 if not isinstance(row, dict):
                     continue
@@ -114,9 +120,14 @@ class FileStorageMountTargetsResource(ResourceBase):
 
     # List mount targets across ADs.
     def list(self, *, compartment_id: str, availability_domains: List[str], limit: int = 0, region: str = "") -> List[Dict[str, Any]]:
+        debug = bool(getattr(self.session, "debug", False))
         rows: List[Dict[str, Any]] = []
         for ad in availability_domains:
-            chunk = self._list_mount_targets_in_ad(compartment_id=compartment_id, availability_domain=ad) or []
+            try:
+                chunk = self._list_mount_targets_in_ad(compartment_id=compartment_id, availability_domain=ad) or []
+            except oci.exceptions.ServiceError as err:
+                UtilityTools.dlog(debug, "list_mount_targets failed (skipping AD)", ad=ad, status=err.status, err=f"{type(err).__name__}: {err}")
+                continue
             for row in chunk:
                 if not isinstance(row, dict):
                     continue
@@ -154,9 +165,14 @@ class FileStorageExportSetsResource(ResourceBase):
 
     # List export sets across ADs.
     def list(self, *, compartment_id: str, availability_domains: List[str], limit: int = 0, region: str = "") -> List[Dict[str, Any]]:
+        debug = bool(getattr(self.session, "debug", False))
         rows: List[Dict[str, Any]] = []
         for ad in availability_domains:
-            chunk = self._list_export_sets_in_ad(compartment_id=compartment_id, availability_domain=ad) or []
+            try:
+                chunk = self._list_export_sets_in_ad(compartment_id=compartment_id, availability_domain=ad) or []
+            except oci.exceptions.ServiceError as err:
+                UtilityTools.dlog(debug, "list_export_sets failed (skipping AD)", ad=ad, status=err.status, err=f"{type(err).__name__}: {err}")
+                continue
             for row in chunk:
                 if not isinstance(row, dict):
                     continue
@@ -228,9 +244,14 @@ class FileStorageExportsResource(ResourceBase):
         limit: int = 0,
         region: str = "",
     ) -> List[Dict[str, Any]]:
+        debug = bool(getattr(self.session, "debug", False))
         rows: List[Dict[str, Any]] = []
         for export_set_id in export_set_ids:
-            resp = oci.pagination.list_call_get_all_results(self.fs_client.list_exports, export_set_id=export_set_id)
+            try:
+                resp = oci.pagination.list_call_get_all_results(self.fs_client.list_exports, export_set_id=export_set_id)
+            except oci.exceptions.ServiceError as err:
+                UtilityTools.dlog(debug, "list_exports failed (skipping export set)", export_set_id=export_set_id, status=err.status, err=f"{type(err).__name__}: {err}")
+                continue
             ex_rows = oci.util.to_dict(resp.data) or []
             ex_rows = ex_rows if isinstance(ex_rows, list) else [ex_rows]
             meta = export_set_meta.get(export_set_id) or {}
@@ -306,9 +327,14 @@ class FileStorageSnapshotsResource(ResourceBase):
         limit: int = 0,
         region: str = "",
     ) -> List[Dict[str, Any]]:
+        debug = bool(getattr(self.session, "debug", False))
         rows: List[Dict[str, Any]] = []
         for file_system_id in file_system_ids:
-            resp = oci.pagination.list_call_get_all_results(self.fs_client.list_snapshots, file_system_id=file_system_id)
+            try:
+                resp = oci.pagination.list_call_get_all_results(self.fs_client.list_snapshots, file_system_id=file_system_id)
+            except oci.exceptions.ServiceError as err:
+                UtilityTools.dlog(debug, "list_snapshots failed (skipping file system)", file_system_id=file_system_id, status=err.status, err=f"{type(err).__name__}: {err}")
+                continue
             snap_rows = oci.util.to_dict(resp.data) or []
             snap_rows = snap_rows if isinstance(snap_rows, list) else [snap_rows]
             meta = file_system_meta.get(file_system_id) or {}

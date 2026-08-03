@@ -2990,7 +2990,14 @@
                 "freeform_tags",
                 "id",
                 "lifecycle_state",
-                "time_created"
+                "time_created",
+                "vnics",
+                "volumes",
+                "dns_config",
+                "image_pull_secrets",
+                "shape",
+                "shape_config",
+                "graceful_shutdown_timeout_in_seconds"
             ],
             "primary_keys": [
                 "id"
@@ -3006,7 +3013,20 @@
                 "id",
                 "lifecycle_state",
                 "time_created",
-                "time_updated"
+                "time_updated",
+                "file_uri",
+                "archive_uri",
+                "class_name",
+                "language",
+                "driver_shape",
+                "executor_shape",
+                "num_executors",
+                "logs_bucket_uri",
+                "warehouse_bucket_uri",
+                "private_endpoint_id",
+                "arguments",
+                "parameters",
+                "configuration"
             ],
             "primary_keys": [
                 "id"
@@ -3021,7 +3041,26 @@
                 "freeform_tags",
                 "id",
                 "lifecycle_state",
-                "time_created"
+                "time_created",
+                "time_updated",
+                "application_id",
+                "file_uri",
+                "class_name",
+                "language",
+                "driver_shape",
+                "executor_shape",
+                "num_executors",
+                "logs_bucket_uri",
+                "warehouse_bucket_uri",
+                "private_endpoint_id",
+                "run_duration_in_milliseconds",
+                "data_read_in_bytes",
+                "data_written_in_bytes",
+                "owner_principal_id",
+                "private_endpoint_subnet_id",
+                "arguments",
+                "parameters",
+                "configuration"
             ],
             "primary_keys": [
                 "id"
@@ -3439,7 +3478,23 @@
                 "time_created",
                 "time_updated",
                 "freeform_tags",
-                "defined_tags"
+                "defined_tags",
+                "shape_name",
+                "image",
+                "network_configuration",
+                "nsg_ids",
+                "availability_domain",
+                "are_privileged_users",
+                "device_policy",
+                "availability_policy",
+                "boot_volume_size_in_gbs",
+                "is_storage_enabled",
+                "private_access_details",
+                "standby_size",
+                "storage_size_in_gbs",
+                "storage_backup_policy_id",
+                "time_start_scheduled",
+                "time_stop_scheduled"
             ],
             "primary_keys": [
                 "id"
@@ -3678,7 +3733,10 @@
                 "lifecycle_details",
                 "freeform_tags",
                 "defined_tags",
-                "system_tags"
+                "system_tags",
+                "source",
+                "target",
+                "tasks"
             ],
             "primary_keys": [
                 "id"
@@ -4357,7 +4415,15 @@
                 "subnet_id",
                 "fqdn",
                 "license_model",
-                "ogg_data"
+                "ogg_data",
+                "nsg_ids",
+                "ingress_ips",
+                "availability_domain",
+                "is_healthy",
+                "maintenance_window",
+                "maintenance_configuration",
+                "time_of_next_maintenance",
+                "next_maintenance_action_type"
             ],
             "primary_keys": [
                 "id"
@@ -4537,7 +4603,20 @@
                 "vcn_id",
                 "total_storage_gb",
                 "software_version",
-                "data_node_count"
+                "data_node_count",
+                "security_master_user_name",
+                "security_master_user_password_hash",
+                "fqdn",
+                "nsg_id",
+                "data_node_host_type",
+                "data_node_host_ocpu_count",
+                "data_node_host_memory_gb",
+                "data_node_storage_gb",
+                "master_node_count",
+                "master_node_host_type",
+                "coordinator_node_count",
+                "opendashboard_node_count",
+                "opendashboard_private_ip"
             ],
             "primary_keys": [
                 "id"
@@ -4630,7 +4709,15 @@
                 "is_secure",
                 "is_cloud_sql_configured",
                 "is_kafka_configured",
-                "cluster_profile"
+                "cluster_profile",
+                "network_config",
+                "kms_key_id",
+                "secret_id",
+                "bootstrap_script_url",
+                "cloud_sql_details",
+                "cluster_details",
+                "created_by",
+                "time_updated"
             ],
             "primary_keys": [
                 "id"
@@ -5655,7 +5742,14 @@
                 "hcx_fqdn",
                 "vmware_software_version",
                 "clusters_count",
-                "is_single_host_sddc"
+                "is_single_host_sddc",
+                "ssh_authorized_keys",
+                "vcenter_username",
+                "nsx_manager_username",
+                "esxi_software_version",
+                "nsx_manager_private_ip_id",
+                "vcenter_private_ip_id",
+                "hcx_private_ip_id"
             ],
             "primary_keys": [
                 "id"
@@ -5692,7 +5786,12 @@
                 "esxi_hosts_count",
                 "initial_host_shape_name",
                 "is_shielded_instance_enabled",
-                "vsphere_type"
+                "vsphere_type",
+                "network_configuration",
+                "ssh_authorized_keys",
+                "workload_network_cidr",
+                "esxi_software_version",
+                "initial_commitment"
             ],
             "primary_keys": [
                 "id"

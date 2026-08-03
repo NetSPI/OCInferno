@@ -56,17 +56,17 @@ class AuditEventsResource(ResourceBase):
             identity = data.get("identity") or {}
             request = data.get("request") or {}
             rows.append({
-                "event_id": data.get("eventId"),
-                "event_time": data.get("eventTime") or envelope.get("eventTime"),
-                "event_name": data.get("eventName"),
-                "event_type": envelope.get("eventType"),
-                "principal_name": identity.get("principalName"),
-                "principal_id": identity.get("principalId"),
-                "source_ip": identity.get("ipAddress"),
-                "user_agent": identity.get("userAgent"),
+                "event_id": envelope.get("event_id"),
+                "event_time": envelope.get("event_time"),
+                "event_name": data.get("event_name"),
+                "event_type": envelope.get("event_type"),
+                "principal_name": identity.get("principal_name"),
+                "principal_id": identity.get("principal_id"),
+                "source_ip": identity.get("ip_address"),
+                "user_agent": identity.get("user_agent"),
                 "request_action": request.get("action"),
-                "resource_name": data.get("resourceName"),
-                "compartment_id": data.get("compartmentId") or compartment_id,
+                "resource_name": data.get("resource_name"),
+                "compartment_id": data.get("compartment_id") or compartment_id,
             })
         return rows
 

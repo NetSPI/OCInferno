@@ -694,7 +694,10 @@ class VaultSecretsResource(ResourceBase):
             try:
                 fpath.write_text(raw.decode("utf-8"), encoding="utf-8", errors="ignore")
             except Exception:
-                fpath.write_bytes(raw)
+                try:
+                    fpath.write_bytes(raw)
+                except Exception as _we:
+                    UtilityTools.dlog(self.debug, "write_bytes fallback failed; skipping secret", secret_name=secret_name, err=f"{type(_we).__name__}: {_we}")
 
             out_meta.append(
                 {
@@ -762,7 +765,10 @@ class VaultSecretsResource(ResourceBase):
                 try:
                     fpath.write_text(raw.decode("utf-8"), encoding="utf-8", errors="ignore")
                 except Exception:
-                    fpath.write_bytes(raw)
+                    try:
+                        fpath.write_bytes(raw)
+                    except Exception as _we:
+                        UtilityTools.dlog(self.debug, "write_bytes fallback failed; skipping secret", secret_id=sid, err=f"{type(_we).__name__}: {_we}")
 
                 bdict = oci.util.to_dict(bundle) if bundle else {}
                 out_meta.append(
@@ -816,7 +822,10 @@ class VaultSecretsResource(ResourceBase):
                 try:
                     fpath.write_text(raw.decode("utf-8"), encoding="utf-8", errors="ignore")
                 except Exception:
-                    fpath.write_bytes(raw)
+                    try:
+                        fpath.write_bytes(raw)
+                    except Exception as _we:
+                        UtilityTools.dlog(self.debug, "write_bytes fallback failed; skipping secret", secret_id=sid, err=f"{type(_we).__name__}: {_we}")
 
                 bdict = oci.util.to_dict(bundle) if bundle else {}
                 out_meta.append(
@@ -855,7 +864,10 @@ class VaultSecretsResource(ResourceBase):
                 try:
                     fpath.write_text(raw.decode("utf-8"), encoding="utf-8", errors="ignore")
                 except Exception:
-                    fpath.write_bytes(raw)
+                    try:
+                        fpath.write_bytes(raw)
+                    except Exception as _we:
+                        UtilityTools.dlog(self.debug, "write_bytes fallback failed; skipping secret", secret_id=sid, version=vn, err=f"{type(_we).__name__}: {_we}")
 
                 bdict = oci.util.to_dict(bundle) if bundle else {}
                 out_meta.append(

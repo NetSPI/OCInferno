@@ -26,6 +26,14 @@ class GoldenGateDeploymentsResource(OciListResource):
         "fqdn",
         "license_model",
         "ogg_data",
+        "nsg_ids",
+        "ingress_ips",
+        "availability_domain",
+        "is_healthy",
+        "maintenance_window",
+        "maintenance_configuration",
+        "time_of_next_maintenance",
+        "next_maintenance_action_type",
     ]
 
 

@@ -146,8 +146,11 @@ def run_module(user_args, session):
                         rule_name = row.get("name")
                         if not policy_id or not rule_name:
                             continue
-                        meta = security_rules_resource.get(policy_id=policy_id, security_rule_name=rule_name) or {}
-                        fill_missing_fields(row, meta)
+                        try:
+                            meta = security_rules_resource.get(policy_id=policy_id, security_rule_name=rule_name) or {}
+                            fill_missing_fields(row, meta)
+                        except Exception as get_err:
+                            UtilityTools.dlog(debug, "get security_rule failed (skipping)", policy_id=policy_id, name=rule_name, err=f"{type(get_err).__name__}: {get_err}")
 
                 if rows:
                     UtilityTools.print_limited_table(rows, security_rules_resource.COLUMNS, title="Networkfirewall - Security Rules")

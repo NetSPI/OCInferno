@@ -79,13 +79,16 @@ def parallel_map(
     worker_count = min(parsed_threads, 32, len(entries))
 
     if worker_count <= 1:
-        output = []
+        output: List[Any] = []
         for idx, item in enumerate(entries, start=1):
             if cancel_requested():
                 break
             output.append(worker(item))
             if show_progress and _should_emit(idx):
                 print(f"[*] {label}: {idx}/{total} completed (last={_progress_token(item)})")
+        # Pad with None to match the parallel path's shape (same length as input).
+        while len(output) < len(entries):
+            output.append(None)
         return output
 
     results: List[Any] = [None] * len(entries)

@@ -13,6 +13,7 @@ from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import dedupe_strs
 from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
+    component_soft_skip_or_error,
     parse_wrapper_args,
     resolve_selected_components,
 )
@@ -77,20 +78,23 @@ def run_module(user_args, session):
     runtime_vault_ids: List[str] = dedupe_strs([v for v in (args.vault_id or []) if isinstance(v, str) and v])
 
     if selected.get("vaults", False):
-        vault_rows = [r for r in (vaults_resource.list() or []) if isinstance(r, dict)]
-        if vault_rows:
-            UtilityTools.print_limited_table(vault_rows, vaults_resource.COLUMNS, resource_type="Vaults")
-            vaults_resource.save(vault_rows)
-            runtime_vault_ids = dedupe_strs([r.get("id") for r in vault_rows if isinstance(r.get("id"), str)])
+        try:
+            vault_rows = [r for r in (vaults_resource.list() or []) if isinstance(r, dict)]
+            if vault_rows:
+                UtilityTools.print_limited_table(vault_rows, vaults_resource.COLUMNS, resource_type="Vaults")
+                vaults_resource.save(vault_rows)
+                runtime_vault_ids = dedupe_strs([r.get("id") for r in vault_rows if isinstance(r.get("id"), str)])
 
-        results.append(
-            {
-                "ok": True,
-                "component": "vaults",
-                "vaults": vault_rows,
-                "saved": True,
-            }
-        )
+            results.append(
+                {
+                    "ok": True,
+                    "component": "vaults",
+                    "vaults": vault_rows,
+                    "saved": True,
+                }
+            )
+        except Exception as err:
+            results.append(component_soft_skip_or_error(err, component="vaults", module_name="enum_vault"))
 
     if selected.get("keys", False):
         vault_ids = keys_resource.resolve_vault_ids(vault_ids=runtime_vault_ids or (args.vault_id or []), vault_endpoint=args.vault_endpoint)

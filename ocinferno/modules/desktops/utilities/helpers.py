@@ -27,7 +27,15 @@ class DesktopsPoolsResource(OciListResource):
     LIST_METHOD = "list_desktop_pools"
     GET_METHOD = "get_desktop_pool"
     GET_ID_PARAM = "desktop_pool_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        "compartment_id", "description", "time_updated",
+        "shape_name", "image", "network_configuration", "nsg_ids",
+        "availability_domain", "are_privileged_users", "device_policy",
+        "availability_policy", "boot_volume_size_in_gbs", "is_storage_enabled",
+        "private_access_details", "standby_size", "storage_size_in_gbs",
+        "storage_backup_policy_id", "time_start_scheduled", "time_stop_scheduled",
+    ]
 
 
 def resolve_desktop_pool_ids(session, args: Namespace, *, comp_id: str, debug: bool = False) -> List[str]:

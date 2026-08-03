@@ -17,4 +17,4 @@ class ServiceConnectorServiceConnectorsResource(OciListResource):
     LIST_METHOD = "list_service_connectors"
     GET_METHOD = "get_service_connector"
     GET_ID_PARAM = "service_connector_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "lifecycle_details", "time_created"]
+    COLUMNS = ["id", "display_name", "lifecycle_state", "lifecycle_details", "time_created", "source", "target", "tasks"]

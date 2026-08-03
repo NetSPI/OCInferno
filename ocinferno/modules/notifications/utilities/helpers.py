@@ -40,7 +40,7 @@ class NotificationTopicsResource(OciListResource):
     LIST_METHOD = "list_topics"
     GET_METHOD = "get_topic"
     GET_ID_PARAM = "topic_id"
-    COLUMNS = ["topic_id", "name", "lifecycle_state", "time_created"]
+    COLUMNS = ["topic_id", "name", "compartment_id", "lifecycle_state", "time_created"]
 
 class NotificationSubscriptionsResource(ResourceBase):
     TABLE_NAME = "notification_subscriptions"
