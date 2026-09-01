@@ -211,6 +211,44 @@ def ensure_new_compute_instance_candidate_node(
     )
 
 
+def ensure_new_rpst_resource_candidate_node(
+    ctx,
+    *,
+    principal_id: str,
+    loc: str,
+    slug: str,
+    node_type: str,
+    edge_create: str,
+    resource_type: str,
+    existing_nodes=None,
+    node_type_by_id=None,
+    node_compartment_by_id=None,
+):
+    """Ensure a synthetic candidate node for Gap-E services (create → join DG → RPST)."""
+    loc = _s(loc)
+    principal_id = _s(principal_id)
+    if not (loc and principal_id):
+        return ""
+    short = _short_hash(principal_id, 10)
+    node_id = f"NEW_{slug.upper()}_{short}@{loc}"
+    return ensure_scoped_node(
+        ctx,
+        node_id=node_id,
+        node_type=node_type,
+        node_display_name=f"NEW_{slug.upper()}_{short}@{_display_loc(ctx, loc)}",
+        loc=loc,
+        extra_properties={
+            "synthetic": True,
+            "derived_from": edge_create,
+            "principal_id": principal_id,
+            "resource_type": resource_type,
+        },
+        existing_nodes=existing_nodes,
+        node_type_by_id=node_type_by_id,
+        node_compartment_by_id=node_compartment_by_id,
+    )
+
+
 def ensure_principal_node(
     ctx,
     *,

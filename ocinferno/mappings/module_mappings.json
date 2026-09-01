@@ -250,11 +250,11 @@
       "service": "IdentityClient"
     },
     {
-      "module_name": "exploit_add_self_to_group",
+      "module_name": "exploit_add_user_to_group",
       "module_category": "Exploit",
-      "info_blurb": "Add a user (default self) to a group to inherit its permissions (classic or identity domain)",
+      "info_blurb": "Add a user to a group to inherit its permissions -- default target is yourself (classic or identity domain)",
       "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.identityclient.exploit.exploit_add_self_to_group",
+      "location": "ocinferno.modules.identityclient.exploit.exploit_add_user_to_group",
       "service": "IdentityClient"
     },
     {
@@ -794,14 +794,6 @@
       "service": "DataFlow"
     },
     {
-      "module_name": "exploit_datascience_jobs_rpst",
-      "module_category": "Exploit",
-      "info_blurb": "Create a Data Science Job run with a pentesting artifact to extract the RPST",
-      "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.datascience.exploit.exploit_datascience_jobs_rpst",
-      "service": "DataScience"
-    },
-    {
       "module_name": "exploit_containerinstances_rpst",
       "module_category": "Exploit",
       "info_blurb": "Launch a Container Instance with a pentesting image to extract the resource principal RPST",
@@ -810,12 +802,12 @@
       "service": "ContainerInstances"
     },
     {
-      "module_name": "exploit_devops_pipelines_rpst",
+      "module_name": "exploit_datascience_jobs_rpst",
       "module_category": "Exploit",
-      "info_blurb": "Inject a pentesting stage into a DevOps Build Pipeline to extract the resource principal RPST",
+      "info_blurb": "Create a Data Science Job run with a pentesting artifact to extract the RPST",
       "author": "Scott (@WebbinRoot)",
-      "location": "ocinferno.modules.devops.exploit.exploit_devops_pipelines_rpst",
-      "service": "DevOps"
+      "location": "ocinferno.modules.datascience.exploit.exploit_datascience_jobs_rpst",
+      "service": "DataScience"
     },
     {
       "module_name": "exploit_devops_repositories_download",
@@ -824,6 +816,22 @@
       "author": "OCInferno",
       "location": "ocinferno.modules.devops.exploit.exploit_devops_repositories_download",
       "service": "DevOps"
+    },
+    {
+      "module_name": "exploit_kubernetes_clusters_rpst",
+      "module_category": "Exploit",
+      "info_blurb": "Deploy a pod into an OKE cluster to extract the node instance-principal RPST via the OCI SDK",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.kubernetes.exploit.exploit_kubernetes_clusters_rpst",
+      "service": "Kubernetes"
+    },
+    {
+      "module_name": "exploit_datascience_pipelines_rpst",
+      "module_category": "Exploit",
+      "info_blurb": "Trigger Data Science Pipeline Run and advise on RPST extraction",
+      "author": "Scott (@WebbinRoot)",
+      "location": "ocinferno.modules.datascience.exploit.exploit_datascience_pipelines_rpst",
+      "service": "DataScience"
     }
   ]
 }

@@ -508,6 +508,16 @@ class VaultServiceAuditor(ServiceAuditor):
         except Exception as e:
             res.errors.append(f"keys: {type(e).__name__}: {e}")
 
+        try:
+            self._check_secret_no_expiry_rule(res)
+        except Exception as e:
+            res.errors.append(f"secret_expiry_rule: {type(e).__name__}: {e}")
+
+        try:
+            self._check_secret_rotation_not_enabled(res)
+        except Exception as e:
+            res.errors.append(f"secret_rotation: {type(e).__name__}: {e}")
+
         return res
 
     def _check_vaults_not_virtual_private(self, res: ServiceAuditResult) -> None:
@@ -582,6 +592,90 @@ class VaultServiceAuditor(ServiceAuditor):
                         ),
                     )
                 )
+
+    def _check_secret_no_expiry_rule(self, res: ServiceAuditResult) -> None:
+        """Flag secrets that have no SECRET_EXPIRY_RULE configured."""
+        rows = self.get_rows(self.T_SECRETS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            sid = _safe_str(r.get("id"))
+            if not cid or not sid:
+                continue
+            rules = _as_json_list(r.get("secret_rules"))
+            has_expiry = any(
+                _safe_str(rule.get("rule_type")).upper() == "SECRET_EXPIRY_RULE"
+                for rule in rules
+                if isinstance(rule, dict)
+            )
+            if has_expiry:
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=sid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_SECRETS,
+                    issue_code="VAULT_SECRET_NO_EXPIRY_RULE",
+                    title="Vault secret has no expiry rule configured",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        """
+                        No Secret Expiry Rule is configured for this secret. Without an expiry rule, a secret
+                        version has no enforced lifetime and can remain in use indefinitely. OCI recommends
+                        configuring expiry rules to bound the window of exposure if a secret is compromised.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_vault --secrets",
+                    notes=_wrap_paragraph(
+                        """
+                        Remediation: add a SECRET_EXPIRY_RULE to the secret via the OCI console
+                        (Vault → Secrets → Edit → Secret Rules) or Terraform
+                        `oci_vault_secret.secret_rules`. Reference:
+                        https://docs.oracle.com/en-us/iaas/Content/KeyManagement/Concepts/secretrules.htm
+                        """
+                    ),
+                )
+            )
+
+    def _check_secret_rotation_not_enabled(self, res: ServiceAuditResult) -> None:
+        """Flag secrets where scheduled rotation is not enabled."""
+        rows = self.get_rows(self.T_SECRETS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            sid = _safe_str(r.get("id"))
+            if not cid or not sid:
+                continue
+            rotation_cfg = as_json_dict(r.get("rotation_config"))
+            is_enabled = rotation_cfg.get("is_scheduled_rotation_enabled")
+            if is_enabled:
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=sid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_SECRETS,
+                    issue_code="VAULT_SECRET_ROTATION_NOT_ENABLED",
+                    title="Vault secret automatic rotation not scheduled",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        """
+                        The secret does not have scheduled automatic rotation enabled. Static secrets that
+                        are never automatically rotated present a persistent exposure if the secret value
+                        is compromised. OCI supports rotation schedules that trigger a new secret version
+                        on a configurable interval.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_vault --secrets",
+                    notes=_wrap_paragraph(
+                        """
+                        Remediation: enable rotation on the secret via the OCI console (Vault → Secrets →
+                        Enable Rotation) or Terraform `oci_vault_secret.rotation_config`. Reference:
+                        https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/create-secret.htm
+                        """
+                    ),
+                )
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -1121,6 +1215,18 @@ class KubernetesServiceAuditor(ServiceAuditor):
             self._check_manage_api_public_endpoint(res)
         except Exception as e:
             res.errors.append(f"{type(e).__name__}: {e}")
+        try:
+            self._check_cluster_image_policy_disabled(res)
+        except Exception as e:
+            res.errors.append(f"image_policy: {type(e).__name__}: {e}")
+        try:
+            self._check_node_pool_boot_volume_no_cmk(res)
+        except Exception as e:
+            res.errors.append(f"node_pool_cmk: {type(e).__name__}: {e}")
+        try:
+            self._check_node_pool_in_transit_encryption(res)
+        except Exception as e:
+            res.errors.append(f"node_pool_transit_enc: {type(e).__name__}: {e}")
         return res
 
     def _check_manage_api_public_endpoint(self, res: ServiceAuditResult) -> None:
@@ -1159,6 +1265,126 @@ class KubernetesServiceAuditor(ServiceAuditor):
                         ),
                     )
                 )
+
+    def _check_cluster_image_policy_disabled(self, res: ServiceAuditResult) -> None:
+        """Flag clusters where the image verification policy is disabled."""
+        rows = self.get_rows(self.TABLE_CLUSTERS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            cluster_id = _safe_str(r.get("id"))
+            if not cid or not cluster_id:
+                continue
+            img_pol = as_json_dict(r.get("image_policy_config"))
+            if img_pol.get("is_policy_enabled"):
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=cluster_id)
+            res.findings.append(
+                self.finding(
+                    table_name=self.TABLE_CLUSTERS,
+                    issue_code="OKE_CLUSTER_IMAGE_POLICY_DISABLED",
+                    title="OKE cluster image verification policy not enabled",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        """
+                        The cluster has no image verification policy enabled. Without this policy, workloads
+                        can pull unsigned container images from any registry. Enabling image verification
+                        restricts the cluster to images signed with keys listed in the policy, preventing
+                        supply-chain attacks using tampered or malicious images.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_kubernetes --clusters",
+                    notes=_wrap_paragraph(
+                        """
+                        Remediation: enable image signing via Container Registry (OCR image signing) and
+                        configure the cluster's image policy to require valid signatures. Reference:
+                        https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengenforcingsignedimagesfromocir.htm
+                        """
+                    ),
+                )
+            )
+
+    def _check_node_pool_boot_volume_no_cmk(self, res: ServiceAuditResult) -> None:
+        """Flag node pools whose boot volumes lack a customer-managed encryption key."""
+        rows = self.get_rows(self.TABLE_NODE_POOLS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            np_id = _safe_str(r.get("id"))
+            if not cid or not np_id:
+                continue
+            cfg = as_json_dict(r.get("node_config_details"))
+            if _safe_str(cfg.get("kms_key_id")):
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=np_id,
+                            cluster_id=_safe_str(r.get("cluster_id")) or None)
+            res.findings.append(
+                self.finding(
+                    table_name=self.TABLE_NODE_POOLS,
+                    issue_code="OKE_NODE_POOL_BOOT_VOLUME_NO_CMK",
+                    title="OKE node pool boot volumes not encrypted with customer-managed key",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        """
+                        Node pool boot volumes store the OS and container runtime and are encrypted with
+                        Oracle-managed keys by default. A customer-managed KMS key provides explicit
+                        control over key rotation, revocation, and audit for nodes handling sensitive
+                        workloads.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_kubernetes --node-pools",
+                    notes=_wrap_paragraph(
+                        """
+                        Remediation: specify kms_key_id in the node pool's node_config_details (Terraform:
+                        `oci_containerengine_node_pool.node_config_details.kms_key_id`). Reference:
+                        https://docs.oracle.com/en-us/iaas/tools/terraform-provider-oci/latest/docs/r/containerengine_node_pool.html
+                        """
+                    ),
+                )
+            )
+
+    def _check_node_pool_in_transit_encryption(self, res: ServiceAuditResult) -> None:
+        """Flag node pools without paravirtualized in-transit encryption."""
+        rows = self.get_rows(self.TABLE_NODE_POOLS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            np_id = _safe_str(r.get("id"))
+            if not cid or not np_id:
+                continue
+            cfg = as_json_dict(r.get("node_config_details"))
+            if cfg.get("is_pv_encryption_in_transit_enabled"):
+                continue
+            loc = _loc_base(compartment_id=cid, entity_id=np_id,
+                            cluster_id=_safe_str(r.get("cluster_id")) or None)
+            res.findings.append(
+                self.finding(
+                    table_name=self.TABLE_NODE_POOLS,
+                    issue_code="OKE_NODE_POOL_IN_TRANSIT_ENCRYPTION_DISABLED",
+                    title="OKE node pool paravirtualized in-transit encryption disabled",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        """
+                        Paravirtualized in-transit encryption is not enabled on this node pool. Without it,
+                        data moving between a node's compute instance and its attached block and boot volumes
+                        travels unencrypted over the internal storage fabric. Enabling this protects against
+                        data exposure at the storage transport layer.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_kubernetes --node-pools",
+                    notes=_wrap_paragraph(
+                        """
+                        Remediation: set is_pv_encryption_in_transit_enabled = true in the node pool
+                        configuration. This mirrors the COMPUTE_IN_TRANSIT_ENCRYPTION requirement for
+                        standalone compute instances. Reference:
+                        https://docs.oracle.com/en-us/iaas/tools/terraform-provider-oci/latest/docs/r/containerengine_node_pool.html
+                        """
+                    ),
+                )
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -2979,6 +3205,7 @@ class IdentityServiceAuditor(ServiceAuditor):
     service = "identity"
 
     T_API_KEYS = "identity_user_api_keys"
+    T_AUTH_TOKENS = "identity_auth_tokens"
     T_POLICIES = "identity_policies"
     T_MEMBERSHIPS = "identity_user_group_memberships"
 
@@ -2988,6 +3215,7 @@ class IdentityServiceAuditor(ServiceAuditor):
 
     _ADMIN_GROUP_NAME = "administrators"
     _API_KEY_MAX_AGE_DAYS = 90
+    _CRED_MAX_AGE_DAYS = 90
     _ADMIN_PROTECTING_RESOURCE_TYPES = ("users", "groups")
 
     def run_checks(self) -> ServiceAuditResult:
@@ -3016,6 +3244,10 @@ class IdentityServiceAuditor(ServiceAuditor):
             self._check_iam_admin_group_not_protected(res)
         except Exception as e:
             res.errors.append(f"policies_admin_group_protection: {type(e).__name__}: {e}")
+        try:
+            self._check_auth_token_stale(res)
+        except Exception as e:
+            res.errors.append(f"auth_token_stale: {type(e).__name__}: {e}")
         return res
 
     @staticmethod
@@ -3356,6 +3588,45 @@ class IdentityServiceAuditor(ServiceAuditor):
                     recommended_module="modules run enum_identity --principals",
                     notes=_wrap_paragraph(
                         "Remediation: rotate the API key (upload a new one, then delete the old one)."
+                    ),
+                )
+            )
+
+    def _check_auth_token_stale(self, res: ServiceAuditResult) -> None:
+        """Flag IAM classic auth tokens not rotated in 90+ days.
+
+        Source: CIS OCI Foundations Benchmark — rotate auth tokens every 90 days.
+        https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm
+        """
+        rows = self.get_rows(self.T_AUTH_TOKENS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            tid = _safe_str(r.get("token_id"))
+            uid = _safe_str(r.get("user_ocid"))
+            if not tid:
+                continue
+            age = _age_days(r.get("time_created"))
+            if age is None or age <= self._CRED_MAX_AGE_DAYS:
+                continue
+            loc = _loc_base(compartment_id="", entity_id=tid, user_id=uid or None)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_AUTH_TOKENS,
+                    issue_code="IDENTITY_AUTH_TOKEN_STALE",
+                    title="IAM auth token not rotated in over 90 days",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        f"""
+                        Auth token (token_id: {tid}) for user {uid or 'unknown'} was created {age:.0f} days
+                        ago and is still ACTIVE. Long-lived auth tokens increase the impact of credential
+                        compromise; the CIS OCI Foundations Benchmark recommends rotation every 90 days.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_identity --principals",
+                    notes=_wrap_paragraph(
+                        "Remediation: delete the stale auth token and generate a new one. "
+                        "Auth tokens are used with Swift API and third-party integrations."
                     ),
                 )
             )
@@ -4231,6 +4502,7 @@ class GoldenGateServiceAuditor(ServiceAuditor):
     service = "goldengate"
 
     T_CONNECTIONS = "goldengate_connections"
+    T_DEPLOYMENTS = "goldengate_deployments"
 
     def run_checks(self) -> ServiceAuditResult:
         res = ServiceAuditResult(service=self.service)
@@ -4238,6 +4510,10 @@ class GoldenGateServiceAuditor(ServiceAuditor):
             self._check_plaintext_credentials(res)
         except Exception as e:
             res.errors.append(f"connections: {type(e).__name__}: {e}")
+        try:
+            self._check_deployment_public_endpoint(res)
+        except Exception as e:
+            res.errors.append(f"deployment_public_endpoint: {type(e).__name__}: {e}")
         return res
 
     def _check_plaintext_credentials(self, res: ServiceAuditResult) -> None:
@@ -4276,6 +4552,49 @@ class GoldenGateServiceAuditor(ServiceAuditor):
                     ),
                 )
             )
+
+    def _check_deployment_public_endpoint(self, res: ServiceAuditResult) -> None:
+        """Flag GoldenGate deployments with a public endpoint.
+
+        Source: OCI GoldenGate Security documentation recommends private endpoints.
+        https://docs.oracle.com/en-us/iaas/Content/Security/Reference/goldengate_security.htm
+        """
+        rows = self.get_rows(self.T_DEPLOYMENTS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            did = _safe_str(r.get("id"))
+            if not cid or not did:
+                continue
+            if not _truthy_str(r.get("is_public")):
+                continue
+            name = _safe_str(r.get("display_name")) or did
+            loc = _loc_base(compartment_id=cid, entity_id=did)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_DEPLOYMENTS,
+                    issue_code="GOLDENGATE_DEPLOYMENT_PUBLIC_ENDPOINT",
+                    title=f"GoldenGate deployment '{name}' has a public endpoint",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        f"""
+                        GoldenGate deployment '{name}' is configured with a public endpoint (is_public=True).
+                        Public deployments expose the replication service directly to the internet, increasing
+                        the attack surface for credential brute-force or exploitation of vulnerabilities in the
+                        GoldenGate web console. OCI GoldenGate security guidance recommends deploying in a
+                        private subnet with no public IP.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_goldengate --deployments --get",
+                    notes=_wrap_paragraph(
+                        "Remediation: recreate the deployment in a private subnet and access it via a "
+                        "bastion, Private Link, or VPN. If a public endpoint is required, restrict access "
+                        "using Network Security Groups."
+                    ),
+                )
+            )
+
 
 # -----------------------------------------------------------------------------
 # DataIntegration service auditor (gap-fill)
@@ -8439,6 +8758,410 @@ class WlmsServiceAuditor(ServiceAuditor):
 
 
 # =============================================================================
+# LoadBalancer auditor
+# =============================================================================
+
+class LoadBalancerServiceAuditor(ServiceAuditor):
+    service = "load_balancer"
+
+    T_LBS = "load_balancers"
+
+    _WEAK_TLS_VERSIONS = {"TLSv1", "TLSv1.1", "TLSv1_0", "TLSv1_1"}
+
+    def run_checks(self) -> ServiceAuditResult:
+        res = ServiceAuditResult(service=self.service)
+        try:
+            self._check_listener_no_ssl(res)
+        except Exception as e:
+            res.errors.append(f"listener_no_ssl: {type(e).__name__}: {e}")
+        try:
+            self._check_listener_weak_tls(res)
+        except Exception as e:
+            res.errors.append(f"listener_weak_tls: {type(e).__name__}: {e}")
+        try:
+            self._check_backend_plaintext(res)
+        except Exception as e:
+            res.errors.append(f"backend_plaintext: {type(e).__name__}: {e}")
+        try:
+            self._check_public_no_nsg(res)
+        except Exception as e:
+            res.errors.append(f"public_no_nsg: {type(e).__name__}: {e}")
+        return res
+
+    def _check_listener_no_ssl(self, res: ServiceAuditResult) -> None:
+        """Flag load balancer listeners using plain HTTP (no TLS).
+
+        Source: OCI Load Balancer best practices — always terminate TLS at the listener.
+        https://docs.oracle.com/en-us/iaas/Content/Balance/Tasks/managinglisteners.htm
+        """
+        rows = self.get_rows(self.T_LBS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            lb_id = _safe_str(r.get("id"))
+            if not cid or not lb_id:
+                continue
+            listeners = as_json_dict(r.get("listeners")) or {}
+            for ln_name, ln in listeners.items():
+                if not isinstance(ln, dict):
+                    continue
+                if _safe_str(ln.get("protocol")).upper() != "HTTP":
+                    continue
+                loc = _loc_base(compartment_id=cid, entity_id=lb_id, listener_name=ln_name)
+                res.findings.append(
+                    self.finding(
+                        table_name=self.T_LBS,
+                        issue_code="LOAD_BALANCER_LISTENER_NO_SSL",
+                        title=f"Load balancer listener '{ln_name}' uses plain HTTP (no TLS)",
+                        severity="HIGH",
+                        description=_wrap_paragraph(
+                            f"""
+                            Listener '{ln_name}' on load balancer {lb_id} uses the HTTP protocol with no
+                            SSL configuration. Traffic between clients and the load balancer is unencrypted,
+                            exposing session tokens, credentials, and sensitive data to interception.
+                            """
+                        ),
+                        location=loc,
+                        row=r,
+                        recommended_module="modules run enum_load_balancer --load-balancers --get",
+                        notes=_wrap_paragraph(
+                            "Remediation: switch the listener protocol to HTTPS and attach a certificate. "
+                            "Upload the certificate to OCI Certificates service and reference it in the listener."
+                        ),
+                    )
+                )
+
+    def _check_listener_weak_tls(self, res: ServiceAuditResult) -> None:
+        """Flag listeners accepting TLSv1 or TLSv1.1 (deprecated protocols).
+
+        Source: OCI security guidance and PCI DSS require TLS 1.2+ minimum.
+        https://docs.oracle.com/en-us/iaas/Content/Balance/Tasks/managinglisteners.htm
+        """
+        rows = self.get_rows(self.T_LBS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            lb_id = _safe_str(r.get("id"))
+            if not cid or not lb_id:
+                continue
+            listeners = as_json_dict(r.get("listeners")) or {}
+            for ln_name, ln in listeners.items():
+                if not isinstance(ln, dict):
+                    continue
+                ssl_cfg = ln.get("ssl_configuration")
+                if not isinstance(ssl_cfg, dict):
+                    continue
+                protocols = ssl_cfg.get("protocols") or []
+                if isinstance(protocols, str):
+                    try:
+                        protocols = __import__("json").loads(protocols)
+                    except Exception:
+                        protocols = []
+                weak = {p for p in protocols if _safe_str(p) in self._WEAK_TLS_VERSIONS}
+                if not weak:
+                    continue
+                loc = _loc_base(compartment_id=cid, entity_id=lb_id, listener_name=ln_name)
+                res.findings.append(
+                    self.finding(
+                        table_name=self.T_LBS,
+                        issue_code="LOAD_BALANCER_LISTENER_WEAK_TLS",
+                        title=f"Load balancer listener '{ln_name}' accepts deprecated TLS versions: {sorted(weak)}",
+                        severity="MEDIUM",
+                        description=_wrap_paragraph(
+                            f"""
+                            Listener '{ln_name}' on load balancer {lb_id} accepts deprecated TLS version(s):
+                            {sorted(weak)}. TLSv1.0 and TLSv1.1 have known cryptographic weaknesses (BEAST,
+                            POODLE) and are deprecated by RFC 8996. Clients using these versions are exposed
+                            to downgrade attacks.
+                            """
+                        ),
+                        location=loc,
+                        row=r,
+                        recommended_module="modules run enum_load_balancer --load-balancers --get",
+                        notes=_wrap_paragraph(
+                            "Remediation: update the listener SSL configuration to restrict protocols to "
+                            "['TLSv1.2', 'TLSv1.3'] and use a cipher suite that excludes deprecated algorithms."
+                        ),
+                    )
+                )
+
+    def _check_backend_plaintext(self, res: ServiceAuditResult) -> None:
+        """Flag backend sets without SSL when the associated listener uses HTTPS.
+
+        Source: OCI Load Balancer security best practices — encrypt backend traffic.
+        https://docs.oracle.com/en-us/iaas/Content/Balance/Tasks/managingbackendsets.htm
+        """
+        rows = self.get_rows(self.T_LBS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            lb_id = _safe_str(r.get("id"))
+            if not cid or not lb_id:
+                continue
+            listeners = as_json_dict(r.get("listeners")) or {}
+            backend_sets = as_json_dict(r.get("backend_sets")) or {}
+            ssl_listener_backend_sets: set[str] = set()
+            for ln in listeners.values():
+                if not isinstance(ln, dict):
+                    continue
+                if _safe_str(ln.get("protocol")).upper() == "HTTPS" and isinstance(ln.get("ssl_configuration"), dict):
+                    bsn = _safe_str(ln.get("default_backend_set_name"))
+                    if bsn:
+                        ssl_listener_backend_sets.add(bsn)
+            for bs_name, bs in backend_sets.items():
+                if not isinstance(bs, dict):
+                    continue
+                if bs_name not in ssl_listener_backend_sets:
+                    continue
+                if isinstance(bs.get("ssl_configuration"), dict):
+                    continue
+                loc = _loc_base(compartment_id=cid, entity_id=lb_id, backend_set_name=bs_name)
+                res.findings.append(
+                    self.finding(
+                        table_name=self.T_LBS,
+                        issue_code="LOAD_BALANCER_BACKEND_PLAINTEXT",
+                        title=f"Load balancer backend set '{bs_name}' uses plaintext despite HTTPS listener",
+                        severity="MEDIUM",
+                        description=_wrap_paragraph(
+                            f"""
+                            Backend set '{bs_name}' on load balancer {lb_id} is served by an HTTPS listener
+                            but has no SSL configuration of its own, meaning traffic between the load balancer
+                            and backend servers is unencrypted. An attacker with visibility into the backend
+                            network can intercept unencrypted traffic.
+                            """
+                        ),
+                        location=loc,
+                        row=r,
+                        recommended_module="modules run enum_load_balancer --load-balancers --get",
+                        notes=_wrap_paragraph(
+                            "Remediation: configure an ssl_configuration on the backend set, or use an "
+                            "end-to-end SSL policy. If backends serve HTTP only, consider network isolation."
+                        ),
+                    )
+                )
+
+    def _check_public_no_nsg(self, res: ServiceAuditResult) -> None:
+        """Flag public load balancers with no Network Security Group.
+
+        Source: OCI Security documentation — restrict load balancer ingress with NSGs.
+        https://docs.oracle.com/en-us/iaas/Content/Balance/Concepts/balanceoverview.htm
+        """
+        rows = self.get_rows(self.T_LBS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            lb_id = _safe_str(r.get("id"))
+            if not cid or not lb_id:
+                continue
+            if _truthy_str(r.get("is_private")):
+                continue
+            nsg_ids = _as_json_list(r.get("network_security_group_ids"))
+            if nsg_ids:
+                continue
+            name = _safe_str(r.get("display_name")) or lb_id
+            loc = _loc_base(compartment_id=cid, entity_id=lb_id)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_LBS,
+                    issue_code="LOAD_BALANCER_PUBLIC_NO_NSG",
+                    title=f"Public load balancer '{name}' has no Network Security Group",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        f"""
+                        Load balancer '{name}' ({lb_id}) is public (is_private=False) but has no Network
+                        Security Group attached. Without an NSG, ingress to the load balancer is controlled
+                        only by subnet-level security lists, which are less granular and harder to scope.
+                        Attaching NSGs allows fine-grained, auditable rules specific to this load balancer.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_load_balancer --load-balancers --get",
+                    notes=_wrap_paragraph(
+                        "Remediation: attach one or more NSGs to the load balancer that restrict inbound "
+                        "traffic to known source IP ranges or security group IDs."
+                    ),
+                )
+            )
+
+
+# =============================================================================
+# ContainerInstances auditor
+# =============================================================================
+
+class ContainerInstancesServiceAuditor(ServiceAuditor):
+    service = "container_instances"
+
+    T_INSTANCES = "container_instances"
+
+    def run_checks(self) -> ServiceAuditResult:
+        res = ServiceAuditResult(service=self.service)
+        try:
+            self._check_public_ip(res)
+        except Exception as e:
+            res.errors.append(f"public_ip: {type(e).__name__}: {e}")
+        return res
+
+    def _check_public_ip(self, res: ServiceAuditResult) -> None:
+        """Flag container instances with a public IP assigned.
+
+        Source: OCI Container Instances security guidance — use private IPs with bastion/private access.
+        https://docs.oracle.com/en-us/iaas/Content/container-instances/overview.htm
+        """
+        rows = self.get_rows(self.T_INSTANCES, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            iid = _safe_str(r.get("id"))
+            if not cid or not iid:
+                continue
+            vnics = _as_json_list(r.get("vnics"))
+            has_public_ip = any(
+                _truthy_str(v.get("is_public_ip_assigned"))
+                for v in vnics
+                if isinstance(v, dict)
+            )
+            if not has_public_ip:
+                continue
+            name = _safe_str(r.get("display_name")) or iid
+            loc = _loc_base(compartment_id=cid, entity_id=iid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_INSTANCES,
+                    issue_code="CONTAINER_INSTANCE_PUBLIC_IP",
+                    title=f"Container instance '{name}' has a public IP assigned",
+                    severity="HIGH",
+                    description=_wrap_paragraph(
+                        f"""
+                        Container instance '{name}' ({iid}) has at least one VNIC with a public IP address
+                        assigned. This directly exposes any service running inside the container to the
+                        internet. Container workloads should run in private subnets behind a load balancer
+                        or NAT gateway.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_container_instances --container-instances --get",
+                    notes=_wrap_paragraph(
+                        "Remediation: redeploy the container instance in a private subnet. Use a load "
+                        "balancer for ingress and a NAT gateway for egress."
+                    ),
+                )
+            )
+
+
+# =============================================================================
+# DataFlow auditor
+# =============================================================================
+
+class DataFlowServiceAuditor(ServiceAuditor):
+    service = "data_flow"
+
+    T_APPS = "dataflow_applications"
+
+    def run_checks(self) -> ServiceAuditResult:
+        res = ServiceAuditResult(service=self.service)
+        try:
+            self._check_application_no_logging(res)
+        except Exception as e:
+            res.errors.append(f"application_no_logging: {type(e).__name__}: {e}")
+        return res
+
+    def _check_application_no_logging(self, res: ServiceAuditResult) -> None:
+        """Flag Data Flow applications with no log bucket configured.
+
+        Source: OCI Data Flow best practices — enable logging for audit and forensics.
+        https://docs.oracle.com/en-us/iaas/Content/data-flow/using/dfs_getting_started.htm
+        """
+        rows = self.get_rows(self.T_APPS, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            aid = _safe_str(r.get("id"))
+            if not cid or not aid:
+                continue
+            if _safe_str(r.get("logs_bucket_uri")).strip():
+                continue
+            name = _safe_str(r.get("display_name")) or aid
+            loc = _loc_base(compartment_id=cid, entity_id=aid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_APPS,
+                    issue_code="DATA_FLOW_APPLICATION_NO_LOGGING",
+                    title=f"Data Flow application '{name}' has no log bucket configured",
+                    severity="MEDIUM",
+                    description=_wrap_paragraph(
+                        f"""
+                        Data Flow application '{name}' ({aid}) does not have a logs_bucket_uri configured.
+                        Without a log destination, Spark driver and executor logs are not retained after
+                        the run completes, making it impossible to audit execution, debug failures, or
+                        detect anomalous data access.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_data_flow --applications --get",
+                    notes=_wrap_paragraph(
+                        "Remediation: set logs_bucket_uri to an Object Storage bucket in the application "
+                        "configuration. Ensure the Data Flow service principal has WRITE permissions on that bucket."
+                    ),
+                )
+            )
+
+
+# =============================================================================
+# NoSQL auditor
+# =============================================================================
+
+class NoSQLServiceAuditor(ServiceAuditor):
+    service = "nosql"
+
+    T_TABLES = "nosql_tables"
+
+    def run_checks(self) -> ServiceAuditResult:
+        res = ServiceAuditResult(service=self.service)
+        try:
+            self._check_table_auto_reclaimable(res)
+        except Exception as e:
+            res.errors.append(f"table_auto_reclaimable: {type(e).__name__}: {e}")
+        return res
+
+    def _check_table_auto_reclaimable(self, res: ServiceAuditResult) -> None:
+        """Flag NoSQL tables marked auto-reclaimable (deleted when compartment is deleted).
+
+        Source: OCI NoSQL documentation — auto-reclaimable tables are automatically deleted with compartment.
+        https://docs.oracle.com/en-us/iaas/nosql-database/doc/managing-tables.html
+        """
+        rows = self.get_rows(self.T_TABLES, where_conditions={"lifecycle_state": "ACTIVE"})
+        for r in rows:
+            cid = _safe_str(r.get("compartment_id"))
+            tid = _safe_str(r.get("id"))
+            if not cid or not tid:
+                continue
+            if not _truthy_str(r.get("is_auto_reclaimable")):
+                continue
+            name = _safe_str(r.get("name")) or tid
+            loc = _loc_base(compartment_id=cid, entity_id=tid)
+            res.findings.append(
+                self.finding(
+                    table_name=self.T_TABLES,
+                    issue_code="NOSQL_TABLE_AUTO_RECLAIMABLE",
+                    title=f"NoSQL table '{name}' is auto-reclaimable",
+                    severity="LOW",
+                    description=_wrap_paragraph(
+                        f"""
+                        NoSQL table '{name}' ({tid}) has is_auto_reclaimable=True. Auto-reclaimable tables
+                        are automatically deleted when their containing compartment is deleted. If an attacker
+                        or accidental operation deletes the compartment, the table and its data are permanently
+                        lost without a separate backup.
+                        """
+                    ),
+                    location=loc,
+                    row=r,
+                    recommended_module="modules run enum_nosql --tables --get",
+                    notes=_wrap_paragraph(
+                        "Remediation: review whether auto-reclaimable is intentional. If the table holds "
+                        "important data, disable auto-reclaimable and set up table-level backups."
+                    ),
+                )
+            )
+
+
+# =============================================================================
 # Runner
 # =============================================================================
 
@@ -8486,7 +9209,9 @@ DEFAULT_SERVICE_AUDITORS: List[type[ServiceAuditor]] = [
     CloudGuardServiceAuditor,
     ComputeServiceAuditor,
     ComputeInstanceAgentServiceAuditor,
+    ContainerInstancesServiceAuditor,
     ContainerRegistryServiceAuditor,
+    DataFlowServiceAuditor,
     DataScienceServiceAuditor,
     DatabaseServiceAuditor,
     DevOpsServiceAuditor,
@@ -8496,6 +9221,7 @@ DEFAULT_SERVICE_AUDITORS: List[type[ServiceAuditor]] = [
     FunctionsServiceAuditor,
     GoldenGateServiceAuditor,
     IdentityServiceAuditor,
+    LoadBalancerServiceAuditor,
     IdentityDomainsServiceAuditor,
     IoTServiceAuditor,
     KubernetesServiceAuditor,
@@ -8504,6 +9230,7 @@ DEFAULT_SERVICE_AUDITORS: List[type[ServiceAuditor]] = [
     NetworkFirewallServiceAuditor,
     NetworkLoadBalancerServiceAuditor,
     NetworkingServiceAuditor,
+    NoSQLServiceAuditor,
     NotificationsServiceAuditor,
     ObjectStorageServiceAuditor,
     ResourceManagerServiceAuditor,

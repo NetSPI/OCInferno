@@ -77,6 +77,30 @@ ADVANCED_RELATION_EDGE_TYPES = {
     "OCI_READ_RUN_OUTPUT",
     EDGE_INTERNAL_USER_UPDATE,
     EDGE_INTERNAL_GROUP_UPDATE,
+    # Gap-E: per-service "create new resource → join DG → RPST" edge types.
+    "OCI_CREATE_FN_FUNCTION",
+    "OCI_CREATE_CONTAINER_INSTANCE",
+    "OCI_CREATE_OKE_CLUSTER",
+    "OCI_CREATE_BDS_INSTANCE",
+    "OCI_CREATE_DIS_WORKSPACE",
+    "OCI_CREATE_AUTONOMOUS_DATABASE",
+    "OCI_CREATE_MYSQL_INSTANCE",
+    "OCI_CREATE_OIC_INSTANCE",
+    "OCI_CREATE_GG_DEPLOYMENT",
+    "OCI_CREATE_API_GATEWAY",
+    "OCI_CREATE_RESOURCE_SCHEDULE",
+    "OCI_CREATE_DS_NOTEBOOK_SESSION",
+    "OCI_CREATE_DS_MODEL_DEPLOYMENT",
+    # New Gap-E services (2025-2026 research pass):
+    "OCI_CREATE_GENAI_AGENT",
+    "OCI_CREATE_GENAI_INGESTION_JOB",
+    "OCI_CREATE_CERTIFICATE_AUTHORITY",
+    "OCI_CREATE_ODA_INSTANCE",
+    "OCI_CREATE_DATA_CATALOG",
+    "OCI_CREATE_DB_TOOLS_CONNECTION",
+    "OCI_CREATE_DR_PROTECTION_GROUP",
+    "OCI_CREATE_ANALYTICS_INSTANCE",
+    "OCI_CREATE_RESOURCE_ANALYTICS",
 }
 
 # table_name -> {resource_tokens}
@@ -839,10 +863,22 @@ def _match_allow_rule(ctx, rule, res_tokens, direct_verbs_l, effective_perms, su
 
     min_verbs = set(_rule_get(rule, "min_verbs", None) or [])
     any_verbs = set(_rule_get(rule, "any_verbs", None) or [])
-    if min_verbs and not all(_satisfies_verb_threshold(v) for v in min_verbs):
-        return False
-    if any_verbs and not any(_satisfies_verb_threshold(v) for v in any_verbs):
-        return False
+    min_perms = set(_rule_get(rule, "min_permissions", None) or [])
+    any_perms = set(_rule_get(rule, "any_permissions", None) or [])
+
+    # A permission-only statement (actions.type == "permissions") has no verb.
+    # In that case, any_verbs / min_verbs cannot be satisfied — but if the rule
+    # also has any_permissions / min_permissions, those are the appropriate gate
+    # for this statement type.  Skip verb checks when:
+    #   - the statement carries no verbs at all, AND
+    #   - the rule offers a permission-side check that can independently pass.
+    is_perm_only_stmt = statement_max_rank is None and not statement_verbs
+
+    if not is_perm_only_stmt or not (any_perms or min_perms):
+        if min_verbs and not all(_satisfies_verb_threshold(v) for v in min_verbs):
+            return False
+        if any_verbs and not any(_satisfies_verb_threshold(v) for v in any_verbs):
+            return False
 
     # ------------------------------------------------------------------
     # 4) Permission constraints
@@ -854,8 +890,6 @@ def _match_allow_rule(ctx, rule, res_tokens, direct_verbs_l, effective_perms, su
     #   any_permissions={"INSTANCE_AGENT_COMMAND_EXECUTION_READ"}
     #   effective_perms={"INSTANCE_READ"} -> fail
     #   effective_perms={"INSTANCE_READ","INSTANCE_AGENT_COMMAND_EXECUTION_READ"} -> pass
-    min_perms = set(_rule_get(rule, "min_permissions", None) or [])
-    any_perms = set(_rule_get(rule, "any_permissions", None) or [])
     if min_perms and not min_perms.issubset(effective_perms):
         return False
     if any_perms and not (any_perms & set(effective_perms or ())):

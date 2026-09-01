@@ -2199,6 +2199,122 @@
       ],
       "resource_type": "serviceconnector",
       "service": "sch"
+    },
+    "UploadApiKey": {
+      "permissions": [
+        "USER_UPDATE",
+        "USER_APIKEY_ADD"
+      ],
+      "service": "identity",
+      "note": "Create/upload an API key for a classic IAM user (IdentityClient.upload_api_key)"
+    },
+    "AddUserToGroup": {
+      "permissions": [
+        "GROUP_UPDATE",
+        "USER_UPDATE"
+      ],
+      "service": "identity",
+      "note": "Add a user to a group membership (IdentityClient.add_user_to_group)"
+    },
+    "RemoveUserFromGroup": {
+      "permissions": [
+        "GROUP_UPDATE",
+        "USER_UPDATE"
+      ],
+      "service": "identity",
+      "note": "Remove a user from a group membership (IdentityClient.remove_user_from_group)"
+    },
+    "CreatePolicy": {
+      "permissions": [
+        "POLICY_CREATE"
+      ],
+      "service": "identity",
+      "note": "Create a classic IAM policy (IdentityClient.create_policy)"
+    },
+    "UpdatePolicy": {
+      "permissions": [
+        "POLICY_UPDATE"
+      ],
+      "service": "identity",
+      "note": "Update a classic IAM policy (IdentityClient.update_policy)"
+    },
+    "DeletePolicy": {
+      "permissions": [
+        "POLICY_DELETE"
+      ],
+      "service": "identity",
+      "note": "Delete a classic IAM policy (IdentityClient.delete_policy)"
+    },
+    "UpdateUser": {
+      "permissions": [
+        "USER_UPDATE"
+      ],
+      "service": "identity",
+      "note": "Update a classic IAM user's attributes (IdentityClient.update_user)"
+    },
+    "CreateOrResetUiPassword": {
+      "permissions": [
+        "USER_UPDATE",
+        "USER_UIPASS_RESET"
+      ],
+      "service": "identity",
+      "note": "Create or reset the console password for a classic IAM user"
+    },
+    "DeleteMfaTotpDevice": {
+      "permissions": [
+        "USER_TOTPDEVICE_REMOVE"
+      ],
+      "service": "identity",
+      "note": "Delete a TOTP MFA device from a classic IAM user"
+    },
+    "CreateApiKey": {
+      "permissions": [
+        "IDD_API_KEY_CREATE"
+      ],
+      "service": "identitydomains",
+      "note": "Create an API key for an IDD user (IdentityDomainsClient.create_api_key; proves User Administrator role or higher)"
+    },
+    "CreateMyApiKey": {
+      "permissions": [
+        "IDD_API_KEY_SELF_CREATE"
+      ],
+      "service": "identitydomains",
+      "note": "Create own API key via IDD Me endpoint (IdentityDomainsClient.create_my_api_key)"
+    },
+    "CreateMyAuthToken": {
+      "permissions": [
+        "IDD_AUTH_TOKEN_SELF_CREATE"
+      ],
+      "service": "identitydomains",
+      "note": "Create own auth token via IDD Me endpoint (IdentityDomainsClient.create_my_auth_token)"
+    },
+    "PatchUser": {
+      "permissions": [
+        "IDD_USER_UPDATE"
+      ],
+      "service": "identitydomains",
+      "note": "Patch/update an IDD user via SCIM (IdentityDomainsClient.patch_user; proves User Administrator role)"
+    },
+    "PatchGroup": {
+      "permissions": [
+        "IDD_GROUP_UPDATE"
+      ],
+      "service": "identitydomains",
+      "note": "Patch/update an IDD group via SCIM (IdentityDomainsClient.patch_group; proves Identity Domain Administrator or User Administrator role)"
+    },
+    "IddAddUserToGroup": {
+      "permissions": [
+        "IDD_ADD_USER_TO_GROUP"
+      ],
+      "service": "identitydomains",
+      "note": "Add a user to an IDD group (SCIM PATCH op=ADD path=members; proves Identity Domain Administrator or User Administrator role; recorded explicitly by add_member_idd after a successful member add)"
+    },
+    "CreateAuthenticationFactorsRemover": {
+      "permissions": [
+        "IDD_MFA_REMOVE"
+      ],
+      "service": "identitydomains",
+      "note": "Remove MFA factors from an IDD user (IdentityDomainsClient.create_authentication_factors_remover; proves Authentication Administrator role)"
     }
   },
   "ambiguous_operations": {
@@ -2308,6 +2424,65 @@
     "GetSession": {
       "bastion": [
         "BASTION_READ"
+      ]
+    },
+    "CreateUser": {
+      "identity": [
+        "USER_CREATE"
+      ],
+      "identitydomains": [
+        "IDD_USER_CREATE"
+      ]
+    },
+    "DeleteUser": {
+      "identity": [
+        "USER_DELETE"
+      ],
+      "identitydomains": [
+        "IDD_USER_DELETE"
+      ]
+    },
+    "CreateGroup": {
+      "identity": [
+        "GROUP_CREATE"
+      ],
+      "identitydomains": [
+        "IDD_GROUP_CREATE"
+      ]
+    },
+    "DeleteGroup": {
+      "identity": [
+        "GROUP_DELETE"
+      ],
+      "identitydomains": [
+        "IDD_GROUP_DELETE"
+      ]
+    },
+    "CreateAuthToken": {
+      "identity": [
+        "USER_UPDATE",
+        "USER_AUTHTOKEN_SET"
+      ],
+      "identitydomains": [
+        "IDD_AUTH_TOKEN_CREATE"
+      ]
+    },
+    "DeleteAuthToken": {
+      "identity": [
+        "USER_UPDATE",
+        "USER_AUTHTOKEN_REMOVE"
+      ],
+      "identitydomains": [
+        "IDD_AUTH_TOKEN_DELETE"
+      ]
+    },
+    "DeleteApiKey": {
+      "identity": [
+        "USER_UPDATE",
+        "USER_APIKEY_REMOVE"
+      ],
+      "identitydomains": [
+        "IDD_API_KEY_DELETE"
       ]
     }
   },

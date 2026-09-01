@@ -74,6 +74,7 @@ from ocinferno.modules.opengraph.utilities.helpers.constants import (
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     emit_edge as _emit_edge_shared,
     ensure_new_compute_instance_candidate_node as _ensure_new_compute_instance_candidate_node_shared,
+    ensure_new_rpst_resource_candidate_node as _ensure_new_rpst_resource_candidate_node,
     ensure_node as _ensure_node_shared,
     ensure_scoped_node as _ensure_scoped_node_shared,
 )
@@ -125,6 +126,172 @@ _NEW_POLICY_SCOPE_TOKENS = {
     "new_policy",
     "new_policies",
 }
+
+
+# ---------------------------------------------------------------------------
+# Gap-E: "create new resource → join DG → get RPST" per-service specs.
+# Each spec drives one ALLOW_RULE_DEF (edge_create label), one synthetic-node
+# type, and one derived CAN_JOIN_DG edge label.  The advanced builder uses
+# these centrally so no per-service branching is required.
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _NewRpstResourceSpec:
+    slug: str           # internal key used in _RelationState dicts
+    edge_create: str    # ALLOW_RULE_DEF edge.label (base builder fires this)
+    edge_join_dg: str   # derived CAN_JOIN_DG edge label
+    node_type: str      # synthetic OCINew* node type
+    token_new: str      # ALLOW_RULE_DEF destination.token (matched in _upsert_relation_from_edge)
+    dg_permission: str  # permission string passed to DG matcher
+    resource_type: str  # OCI DG resource.type string for the synthetic node
+
+
+NEW_RPST_RESOURCE_SPECS: tuple[_NewRpstResourceSpec, ...] = (
+    _NewRpstResourceSpec(
+        slug="fn_function", edge_create="OCI_CREATE_FN_FUNCTION",
+        edge_join_dg="FN_FUNCTION_CAN_JOIN_DG", node_type="OCINewFunctionFunction",
+        token_new="new-fn-function", dg_permission="FN_FUNCTION_CREATE", resource_type="fnfunc",
+    ),
+    _NewRpstResourceSpec(
+        slug="container_instance", edge_create="OCI_CREATE_CONTAINER_INSTANCE",
+        edge_join_dg="CONTAINER_INSTANCE_CAN_JOIN_DG", node_type="OCINewContainerInstance",
+        token_new="new-container-instance", dg_permission="COMPUTE_CONTAINER_INSTANCE_CREATE",
+        resource_type="computecontainerinstance",
+    ),
+    _NewRpstResourceSpec(
+        slug="oke_cluster", edge_create="OCI_CREATE_OKE_CLUSTER",
+        edge_join_dg="OKE_CLUSTER_CAN_JOIN_DG", node_type="OCINewOKECluster",
+        token_new="new-oke-cluster", dg_permission="CLUSTER_CREATE", resource_type="cluster",
+    ),
+    _NewRpstResourceSpec(
+        slug="bds_instance", edge_create="OCI_CREATE_BDS_INSTANCE",
+        edge_join_dg="BDS_INSTANCE_CAN_JOIN_DG", node_type="OCINewBDSInstance",
+        token_new="new-bds-instance", dg_permission="BDS_CREATE", resource_type="bdsinstance",
+    ),
+    _NewRpstResourceSpec(
+        slug="dis_workspace", edge_create="OCI_CREATE_DIS_WORKSPACE",
+        edge_join_dg="DIS_WORKSPACE_CAN_JOIN_DG", node_type="OCINewDISWorkspace",
+        token_new="new-dis-workspace", dg_permission="DIS_WORKSPACE_CREATE",
+        resource_type="disworkspace",
+    ),
+    _NewRpstResourceSpec(
+        slug="autonomous_database", edge_create="OCI_CREATE_AUTONOMOUS_DATABASE",
+        edge_join_dg="AUTONOMOUS_DATABASE_CAN_JOIN_DG", node_type="OCINewAutonomousDatabase",
+        token_new="new-autonomous-database", dg_permission="AUTONOMOUS_DATABASE_CREATE",
+        resource_type="autonomousdatabase",
+    ),
+    _NewRpstResourceSpec(
+        slug="mysql_heatwave", edge_create="OCI_CREATE_MYSQL_INSTANCE",
+        edge_join_dg="MYSQL_INSTANCE_CAN_JOIN_DG", node_type="OCINewMySQLHeatWave",
+        token_new="new-mysql-instance", dg_permission="MYSQL_INSTANCE_CREATE",
+        resource_type="mysqldbsystem",
+    ),
+    _NewRpstResourceSpec(
+        slug="oic_instance", edge_create="OCI_CREATE_OIC_INSTANCE",
+        edge_join_dg="OIC_INSTANCE_CAN_JOIN_DG", node_type="OCINewOICInstance",
+        token_new="new-oic-instance", dg_permission="INTEGRATION_INSTANCE_CREATE",
+        resource_type="integrationinstance",
+    ),
+    _NewRpstResourceSpec(
+        slug="gg_deployment", edge_create="OCI_CREATE_GG_DEPLOYMENT",
+        edge_join_dg="GG_DEPLOYMENT_CAN_JOIN_DG", node_type="OCINewGoldenGateDeployment",
+        token_new="new-gg-deployment", dg_permission="GOLDENGATE_DEPLOYMENT_CREATE",
+        resource_type="goldengatedeployment",
+    ),
+    _NewRpstResourceSpec(
+        slug="api_gateway", edge_create="OCI_CREATE_API_GATEWAY",
+        edge_join_dg="API_GATEWAY_CAN_JOIN_DG", node_type="OCINewAPIGateway",
+        token_new="new-api-gateway", dg_permission="API_GATEWAY_CREATE",
+        resource_type="apigateway",
+    ),
+    _NewRpstResourceSpec(
+        slug="resource_schedule", edge_create="OCI_CREATE_RESOURCE_SCHEDULE",
+        edge_join_dg="RESOURCE_SCHEDULE_CAN_JOIN_DG", node_type="OCINewResourceSchedule",
+        token_new="new-resource-schedule", dg_permission="RESOURCE_SCHEDULE_CREATE",
+        resource_type="resourceschedule",
+    ),
+    _NewRpstResourceSpec(
+        slug="ds_notebook_session", edge_create="OCI_CREATE_DS_NOTEBOOK_SESSION",
+        edge_join_dg="DS_NOTEBOOK_SESSION_CAN_JOIN_DG", node_type="OCINewDSNotebookSession",
+        token_new="new-ds-notebook-session", dg_permission="DATA_SCIENCE_NOTEBOOK_SESSION_CREATE",
+        resource_type="datasciencenotebooksession",
+    ),
+    _NewRpstResourceSpec(
+        slug="ds_model_deployment", edge_create="OCI_CREATE_DS_MODEL_DEPLOYMENT",
+        edge_join_dg="DS_MODEL_DEPLOYMENT_CAN_JOIN_DG", node_type="OCINewDSModelDeployment",
+        token_new="new-ds-model-deployment", dg_permission="DATA_SCIENCE_MODEL_DEPLOYMENT_CREATE",
+        resource_type="datasciencemodeldeployment",
+    ),
+    # New Gap-E services discovered in 2025-2026 research pass:
+    _NewRpstResourceSpec(
+        slug="genai_agent", edge_create="OCI_CREATE_GENAI_AGENT",
+        edge_join_dg="GENAI_AGENT_CAN_JOIN_DG", node_type="OCINewGenAIAgent",
+        token_new="new-genai-agent", dg_permission="GENERATIVE_AI_AGENT_CREATE",
+        resource_type="genaiagent",
+    ),
+    _NewRpstResourceSpec(
+        slug="genai_ingestion_job", edge_create="OCI_CREATE_GENAI_INGESTION_JOB",
+        edge_join_dg="GENAI_INGESTION_JOB_CAN_JOIN_DG", node_type="OCINewGenAIIngestionJob",
+        token_new="new-genai-ingestion-job", dg_permission="GENERATIVE_AI_AGENT_DATA_INGESTION_JOB_CREATE",
+        resource_type="genaiagentdataingestionjob",
+    ),
+    _NewRpstResourceSpec(
+        slug="certificate_authority", edge_create="OCI_CREATE_CERTIFICATE_AUTHORITY",
+        edge_join_dg="CERTIFICATE_AUTHORITY_CAN_JOIN_DG", node_type="OCINewCertificateAuthority",
+        token_new="new-certificate-authority", dg_permission="CERTIFICATE_AUTHORITY_CREATE",
+        resource_type="certificateauthority",
+    ),
+    _NewRpstResourceSpec(
+        slug="oda_instance", edge_create="OCI_CREATE_ODA_INSTANCE",
+        edge_join_dg="ODA_INSTANCE_CAN_JOIN_DG", node_type="OCINewODAInstance",
+        token_new="new-oda-instance", dg_permission="ODA_INSTANCE_CREATE",
+        resource_type="odainstance",
+    ),
+    _NewRpstResourceSpec(
+        slug="data_catalog", edge_create="OCI_CREATE_DATA_CATALOG",
+        edge_join_dg="DATA_CATALOG_CAN_JOIN_DG", node_type="OCINewDataCatalog",
+        token_new="new-data-catalog", dg_permission="DATA_CATALOG_CREATE",
+        resource_type="datacatalog",
+    ),
+    _NewRpstResourceSpec(
+        slug="db_tools_connection", edge_create="OCI_CREATE_DB_TOOLS_CONNECTION",
+        edge_join_dg="DB_TOOLS_CONNECTION_CAN_JOIN_DG", node_type="OCINewDatabaseToolsConnection",
+        token_new="new-db-tools-connection", dg_permission="DATABASE_TOOLS_CONNECTION_CREATE",
+        resource_type="databasetoolsconnection",
+    ),
+    _NewRpstResourceSpec(
+        slug="dr_protection_group", edge_create="OCI_CREATE_DR_PROTECTION_GROUP",
+        edge_join_dg="DR_PROTECTION_GROUP_CAN_JOIN_DG", node_type="OCINewDRProtectionGroup",
+        token_new="new-dr-protection-group", dg_permission="DR_PROTECTION_GROUP_CREATE",
+        resource_type="drprotectiongroup",
+    ),
+    _NewRpstResourceSpec(
+        slug="analytics_instance", edge_create="OCI_CREATE_ANALYTICS_INSTANCE",
+        edge_join_dg="ANALYTICS_INSTANCE_CAN_JOIN_DG", node_type="OCINewAnalyticsInstance",
+        token_new="new-analytics-instance", dg_permission="ANALYTICS_INSTANCE_CREATE",
+        resource_type="analyticsinstance",
+    ),
+    _NewRpstResourceSpec(
+        slug="resource_analytics", edge_create="OCI_CREATE_RESOURCE_ANALYTICS",
+        edge_join_dg="RESOURCE_ANALYTICS_CAN_JOIN_DG", node_type="OCINewResourceAnalyticsInstance",
+        token_new="new-resource-analytics", dg_permission="RESOURCE_ANALYTICS_INSTANCE_CREATE",
+        resource_type="resanalyticsinstance",
+    ),
+)
+
+# Derived indexes used in hot paths.
+_NEW_RPST_RESOURCE_EDGE_TYPES: frozenset[str] = frozenset(s.edge_create for s in NEW_RPST_RESOURCE_SPECS)
+_NEW_RPST_RESOURCE_TOKEN_MAP: dict[str, _NewRpstResourceSpec] = {s.token_new: s for s in NEW_RPST_RESOURCE_SPECS}
+
+# UPDATE/MANAGE-path RPST edge types: principal can extract RPST from an existing resource.
+_GENERATE_RPST_EXISTING_EDGE_TYPES: frozenset[str] = frozenset({
+    "GENERATE_RPST_FN_FUNCTION",
+    "GENERATE_RPST_DATAFLOW_RUN",
+    "GENERATE_RPST_CONTAINER_INSTANCE",
+    "GENERATE_RPST_DS_JOB_RUN",
+    "GENERATE_RPST_DS_PIPELINE_RUN",
+    "GENERATE_RPST_OKE_CLUSTER",
+})
+
 CAPABILITY_EDGE_TYPES = {
     EDGE_UPDATE_GROUP,
     EDGE_GROUP_UPDATE,
@@ -138,15 +305,16 @@ CAPABILITY_EDGE_TYPES = {
     EDGE_CREATE_INSTANCE_AGENT_COMMAND,
     EDGE_READ_RUN_INPUT,
     EDGE_READ_RUN_OUTPUT,
-}
+} | _NEW_RPST_RESOURCE_EDGE_TYPES | _GENERATE_RPST_EXISTING_EDGE_TYPES
 _KEEP_ORPHAN_NEW_SCOPE_EDGE_TYPES = {
     "IDD_CREATE_USER",
     "OCI_CREATE_INSTANCE",
     "OCI_CREATE_INSTANCE_AGENT_COMMAND",
-}
+} | _NEW_RPST_RESOURCE_EDGE_TYPES
 _SPECIFIC_DEST_TYPE_FOR_LOC_INFERENCE = {
     EDGE_UPDATE_POLICY: "OCIPolicy",
     EDGE_CREATE_INSTANCE: NODE_NEW_COMPUTE_INSTANCE,
+    **{s.edge_create: s.node_type for s in NEW_RPST_RESOURCE_SPECS},
 }
 NODE_COLUMNS = [
     "node_id",
@@ -209,6 +377,19 @@ class _RelationState:
     update_policy_unresolved_statements: list = field(default_factory=list)
     create_policy_resolved_statements: list = field(default_factory=list)
     create_policy_unresolved_statements: list = field(default_factory=list)
+
+    # Gap-E: generic create-scope tracking for all non-compute RPST-capable services.
+    create_rpst_resource_scope: dict = field(default_factory=dict)
+    create_rpst_resource_resolved: dict = field(default_factory=dict)
+    create_rpst_resource_unresolved: dict = field(default_factory=dict)
+
+    # UPDATE-path RPST capability: principal can extract RPST from existing resources.
+    rpst_fn_function_update: bool = False
+    rpst_dataflow_run: bool = False
+    rpst_container_instance: bool = False
+    rpst_ds_job: bool = False
+    rpst_ds_pipeline: bool = False
+    rpst_oke_cluster: bool = False
 
     resolved_statements: list = field(default_factory=list)
     unresolved_statements: list = field(default_factory=list)
@@ -562,6 +743,26 @@ def _upsert_relation_from_edge(
                     or []
                 ),
             )
+    elif et in _NEW_RPST_RESOURCE_EDGE_TYPES:
+        spec = _NEW_RPST_RESOURCE_TOKEN_MAP.get(token)
+        if spec is not None:
+            cap.create_rpst_resource_scope[spec.slug] = True
+            cap.create_rpst_resource_resolved[spec.slug] = _merge_statement_entries(
+                list(cap.create_rpst_resource_resolved.get(spec.slug) or []),
+                list(
+                    _json_list(edge_row.get("resolved_statement_details"))
+                    or _json_list(edge_row.get("resolved_statements"))
+                    or []
+                ),
+            )
+            cap.create_rpst_resource_unresolved[spec.slug] = _merge_statement_entries(
+                list(cap.create_rpst_resource_unresolved.get(spec.slug) or []),
+                list(
+                    _json_list(edge_row.get("unresolved_statement_details"))
+                    or _json_list(edge_row.get("unresolved_statements"))
+                    or []
+                ),
+            )
     elif et == EDGE_USE_TAG_NAMESPACE:
         scope_token, _scope_loc = _scope_token_loc(dst)
         is_tag_namespace_target = (
@@ -621,6 +822,19 @@ def _upsert_relation_from_edge(
             else:
                 cap.read_run_output_scope = True
                 cap.read_instance_agent_command_execution_scope = True
+    elif et in _GENERATE_RPST_EXISTING_EDGE_TYPES:
+        if et == "GENERATE_RPST_FN_FUNCTION":
+            cap.rpst_fn_function_update = True
+        elif et == "GENERATE_RPST_DATAFLOW_RUN":
+            cap.rpst_dataflow_run = True
+        elif et == "GENERATE_RPST_CONTAINER_INSTANCE":
+            cap.rpst_container_instance = True
+        elif et == "GENERATE_RPST_DS_JOB_RUN":
+            cap.rpst_ds_job = True
+        elif et == "GENERATE_RPST_DS_PIPELINE_RUN":
+            cap.rpst_ds_pipeline = True
+        elif et == "GENERATE_RPST_OKE_CLUSTER":
+            cap.rpst_oke_cluster = True
 
     _merge_relation_metadata(cap, edge_row)
     return cap
@@ -729,6 +943,7 @@ class _DerivedEmitContext:
     dgs_with_compute_members_by_loc: dict
     dg_permission_location_matcher: object
     dg_instance_create_matches_by_loc: dict
+    dg_rpst_create_matches_by_service_loc: dict
     relation_map: dict
     policy_nodes_by_loc: dict
     policy_update_capability_by_principal_loc: set
@@ -1577,6 +1792,190 @@ def _emit_new_instance_and_dynamic_group_edges(
             },
             **_base_edge_kwargs(cap),
         )
+
+
+def _emit_new_rpst_resources_and_dg_edges(
+    emit_ctx: _DerivedEmitContext,
+    *,
+    principal_id: str,
+    principal_type: str,
+    loc: str,
+    cap: _RelationState,
+):
+    """Gap-E: for each non-compute service where the principal has CREATE scope,
+    emit a synthetic candidate node edge and DG join-capability edges."""
+    for spec in NEW_RPST_RESOURCE_SPECS:
+        if not cap.create_rpst_resource_scope.get(spec.slug):
+            continue
+
+        candidate_id = _ensure_new_rpst_resource_candidate_node(
+            emit_ctx.ctx,
+            principal_id=principal_id,
+            loc=loc,
+            slug=spec.slug,
+            node_type=spec.node_type,
+            edge_create=spec.edge_create,
+            resource_type=spec.resource_type,
+            existing_nodes=emit_ctx.existing_nodes,
+            node_type_by_id=emit_ctx.node_type_by_id,
+            node_compartment_by_id=emit_ctx.node_compartment_by_id,
+        )
+        if not candidate_id:
+            continue
+
+        resolved = list(cap.create_rpst_resource_resolved.get(spec.slug) or [])
+        unresolved = list(cap.create_rpst_resource_unresolved.get(spec.slug) or [])
+        stmt_sources = _policy_statement_node_ids_from_details(
+            resolved or unresolved,
+            node_type_by_id=emit_ctx.node_type_by_id,
+        )
+
+        wrote_edge = False
+        for stmt_node_id in stmt_sources:
+            wrote_edge = _write_derived_edge(
+                emit_ctx,
+                source_id=stmt_node_id,
+                source_type="OCIPolicyStatement",
+                destination_id=candidate_id,
+                destination_type=spec.node_type,
+                edge_type=spec.edge_create,
+                description=(
+                    f"Derived from raw IAM edges: this policy statement grants "
+                    f"{spec.dg_permission} in this location, enabling creation of a new "
+                    f"{spec.node_type} resource that can join a Dynamic Group."
+                ),
+                resolved_statements=resolved,
+                unresolved_statements=unresolved,
+                has_unresolved_conditionals=cap.has_unresolved_conditionals,
+                has_impossible_conditionals=cap.has_impossible_conditionals,
+                has_inherited=cap.has_inherited,
+                has_direct=cap.has_direct,
+                extra_edge_inner_properties={
+                    "create_permission": spec.dg_permission,
+                    "scope_location": loc,
+                },
+            ) or wrote_edge
+
+        if not wrote_edge:
+            _write_derived_edge(
+                emit_ctx,
+                source_id=principal_id,
+                source_type=principal_type,
+                destination_id=candidate_id,
+                destination_type=spec.node_type,
+                edge_type=spec.edge_create,
+                description=(
+                    f"Derived from raw IAM edges: principal can create a new "
+                    f"{spec.node_type} in this location."
+                ),
+                resolved_statements=resolved,
+                unresolved_statements=unresolved,
+                has_unresolved_conditionals=cap.has_unresolved_conditionals,
+                has_impossible_conditionals=cap.has_impossible_conditionals,
+                has_inherited=cap.has_inherited,
+                has_direct=cap.has_direct,
+                extra_edge_inner_properties={
+                    "fallback_source": "principal",
+                    "create_permission": spec.dg_permission,
+                    "scope_location": loc,
+                },
+            )
+
+        # Emit DG join-capability edges from the synthetic candidate node.
+        cache_key = (spec.slug, loc)
+        if cache_key not in emit_ctx.dg_rpst_create_matches_by_service_loc:
+            candidate_dgs = [
+                row for row in (emit_ctx.dynamic_group_rows or [])
+                if isinstance(row, dict) and _s(row.get("compartment_id") or "") == loc
+            ]
+            matches = emit_ctx.dg_permission_location_matcher.match_dynamic_groups_for_permission_location(
+                candidate_dgs,
+                permission=spec.dg_permission,
+                location=loc,
+            )
+            emit_ctx.dg_rpst_create_matches_by_service_loc[cache_key] = {
+                _s(m.get("dynamic_group_id") or ""): m
+                for m in (matches or [])
+                if isinstance(m, dict) and _s(m.get("dynamic_group_id") or "")
+            }
+
+        dg_match_map = emit_ctx.dg_rpst_create_matches_by_service_loc.get(cache_key, {}) or {}
+        for dg_id in sorted(dg_match_map.keys()):
+            match_meta = dg_match_map.get(dg_id) if isinstance(dg_match_map, dict) else {}
+            _write_derived_edge(
+                emit_ctx,
+                source_id=candidate_id,
+                source_type=spec.node_type,
+                destination_id=dg_id,
+                destination_type=NODE_DYNAMIC_GROUP,
+                edge_type=spec.edge_join_dg,
+                description=(
+                    f"Derived from raw IAM edges and matching_rules_engine: this candidate "
+                    f"{spec.node_type} node matches dynamic-group permission+location "
+                    f"requirements for {spec.dg_permission}."
+                ),
+                edge_category=EDGE_CATEGORY_GROUP_MEMBERSHIP,
+                extra_edge_inner_properties={
+                    "candidate_node_id": candidate_id,
+                    "evaluated_permission": spec.dg_permission,
+                    "evaluated_location": loc,
+                    "hypothetical_candidate_match": bool(
+                        isinstance(match_meta, dict) and match_meta.get("hypothetical_candidate_match")
+                    ),
+                    "matching_rule_match_count": int(
+                        (match_meta or {}).get("match_count") if isinstance(match_meta, dict) else 0
+                    ),
+                },
+                **_base_edge_kwargs(cap),
+            )
+
+
+def _emit_rpst_update_edges(
+    emit_ctx: _DerivedEmitContext,
+    *,
+    principal_id: str,
+    principal_type: str,
+    loc: str,
+    cap: _RelationState,
+):
+    """Emit GENERATE_RPST_* edges when principal has UPDATE/MANAGE permission on existing RPST resources.
+
+    Each config entry maps (cap_field, edge_type, node_type). When the boolean flag is set,
+    all existing resource nodes of node_type in the same compartment (loc) receive an edge.
+    """
+    _RPST_UPDATE_CONFIGS = (
+        ("rpst_fn_function_update",  "GENERATE_RPST_FN_FUNCTION",      "OCIFunctionFunction"),
+        ("rpst_dataflow_run",        "GENERATE_RPST_DATAFLOW_RUN",      "OCIDataFlowRun"),
+        ("rpst_container_instance",  "GENERATE_RPST_CONTAINER_INSTANCE","OCIContainerInstance"),
+        ("rpst_ds_job",              "GENERATE_RPST_DS_JOB_RUN",        "OCIDataScienceJobRun"),
+        ("rpst_ds_pipeline",         "GENERATE_RPST_DS_PIPELINE_RUN",   "OCIDataSciencePipelineRun"),
+        ("rpst_oke_cluster",         "GENERATE_RPST_OKE_CLUSTER",       "OCIKubernetesCluster"),
+    )
+    node_type_by_id = emit_ctx.node_type_by_id or {}
+    node_compartment_by_id = emit_ctx.node_compartment_by_id or {}
+    loc_s = _s(loc)
+    for cap_field, edge_type, node_type in _RPST_UPDATE_CONFIGS:
+        if not getattr(cap, cap_field, False):
+            continue
+        for node_id, ntype in node_type_by_id.items():
+            if _s(ntype) != node_type:
+                continue
+            node_loc = _s(node_compartment_by_id.get(node_id) or "")
+            if node_loc and node_loc != loc_s:
+                continue
+            _write_derived_edge(
+                emit_ctx,
+                source_id=principal_id,
+                source_type=principal_type,
+                destination_id=node_id,
+                destination_type=node_type,
+                edge_type=edge_type,
+                description=(
+                    f"Principal has UPDATE/MANAGE permission on {node_type} resources — "
+                    f"can update the container image/script to extract the resource principal RPST."
+                ),
+                **_base_edge_kwargs(cap),
+            )
 
 
 def _emit_add_self_to_group_edges(
@@ -2650,6 +3049,7 @@ def build_iam_policy_advanced_relation_edges_offline(*, session, ctx, debug=True
         dgs_with_compute_members_by_loc=dgs_with_compute_members_by_loc,
         dg_permission_location_matcher=dg_permission_location_matcher,
         dg_instance_create_matches_by_loc={},
+        dg_rpst_create_matches_by_service_loc={},
         relation_map=relation_map,
         policy_nodes_by_loc={
             k: sorted(list(v), key=lambda x: _s((x or {}).get("id") or ""))
@@ -2671,6 +3071,8 @@ def build_iam_policy_advanced_relation_edges_offline(*, session, ctx, debug=True
             _emit_policy_update_edges_to_all_resources,
             _emit_create_policy_edges_to_all_resources,
             _emit_new_instance_and_dynamic_group_edges,
+            _emit_new_rpst_resources_and_dg_edges,
+            _emit_rpst_update_edges,
             _emit_add_self_to_group_edges,
             _emit_instance_agent_run_command_edges,
         ):

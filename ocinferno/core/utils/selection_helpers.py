@@ -143,7 +143,11 @@ def paged_search_select(
             print(f"  [{i}] {label_fn(it)}")
         hint = "Select # | 'n'ext | 'p'rev | '/term' filter | 'c'lear | ENTER cancel" if pages > 1 or filt \
             else "Select a number (or ENTER to cancel)"
-        choice = input(f"{hint}: ").strip()
+        try:
+            choice = input(f"{hint}: ").strip()
+        except (EOFError, KeyboardInterrupt, OSError):
+            print("[*] Cancelled.")
+            return None
 
         if choice == "":
             print("[*] Cancelled.")
@@ -196,7 +200,11 @@ def select_from_db_or_manual(
 
     def _manual():
         while True:
-            val = _s(input(f"{manual_prompt}: "))
+            try:
+                val = _s(input(f"{manual_prompt}: "))
+            except (EOFError, KeyboardInterrupt, OSError):
+                print("[*] Cancelled.")
+                return None
             if not val:
                 print("[*] Cancelled.")
                 return None
@@ -213,7 +221,11 @@ def select_from_db_or_manual(
     print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Select {entity}:{UtilityTools.RESET}")
     print(f"  [1] Choose from {len(usable)} {entity} saved in the workspace DB")
     print("  [2] Enter a value manually")
-    choice = _s(input("Select 1 or 2 (ENTER to cancel): "))
+    try:
+        choice = _s(input("Select 1 or 2 (ENTER to cancel): "))
+    except (EOFError, KeyboardInterrupt, OSError):
+        print("[*] Cancelled.")
+        return None
     if choice == "":
         print("[*] Cancelled.")
         return None

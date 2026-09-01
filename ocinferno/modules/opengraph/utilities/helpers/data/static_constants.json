@@ -547,6 +547,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "FN_FUNCTION_UPDATE"
         ]
       }
     },
@@ -570,6 +573,12 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "DEVOPS_BUILD_PIPELINE_UPDATE",
+          "DEVOPS_BUILD_PIPELINE_STAGE_CREATE",
+          "DEVOPS_BUILD_PIPELINE_STAGE_UPDATE",
+          "DEVOPS_BUILD_RUN_CREATE"
         ]
       }
     },
@@ -592,6 +601,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "DATA_FLOW_RUN_CREATE"
         ]
       }
     },
@@ -613,6 +625,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "COMPUTE_CONTAINER_INSTANCE_UPDATE"
         ]
       }
     },
@@ -634,6 +649,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "DATA_SCIENCE_JOB_RUN_CREATE"
         ]
       }
     },
@@ -656,6 +674,10 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "DATA_SCIENCE_NOTEBOOK_SESSION_ACTIVATE",
+          "DATA_SCIENCE_NOTEBOOK_SESSION_UPDATE"
         ]
       }
     },
@@ -677,6 +699,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "DATA_SCIENCE_PIPELINE_RUN_CREATE"
         ]
       }
     },
@@ -699,6 +724,10 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "DATA_SCIENCE_MODEL_DEPLOYMENT_ACTIVATE",
+          "DATA_SCIENCE_MODEL_DEPLOYMENT_UPDATE"
         ]
       }
     },
@@ -722,6 +751,11 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "CLUSTER_NODE_POOL_CREATE",
+          "CLUSTER_NODE_POOL_UPDATE",
+          "CLUSTER_UPDATE"
         ]
       }
     },
@@ -732,7 +766,7 @@
         "token": "instances"
       },
       "edge": {
-        "description": "Manage compute instances → create/modify a VM with a malicious cloud-init script → steal Instance Principal v1.1 cert material from IMDS (http://169.254.169.254/opc/v2/identity/cert.pem + intermediate.pem + key.pem). Mechanism is v1.1 Instance Principal (IMDS cert exchange at auth.<region>.oraclecloud.com/v1/x509), not file-based v2.2 RPST. Load via OCInferno `instance-principal` mode, not `resource-principal`. Exploit: harvest IMDS cert material from the VM then use --reference-file.",
+        "description": "Manage compute instances \u2192 create/modify a VM with a malicious cloud-init script \u2192 steal Instance Principal v1.1 cert material from IMDS (http://169.254.169.254/opc/v2/identity/cert.pem + intermediate.pem + key.pem). Mechanism is v1.1 Instance Principal (IMDS cert exchange at auth.<region>.oraclecloud.com/v1/x509), not file-based v2.2 RPST. Load via OCInferno `instance-principal` mode, not `resource-principal`. Exploit: harvest IMDS cert material from the VM then use --reference-file.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_COMPUTE_INSTANCE",
@@ -743,6 +777,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "INSTANCE_UPDATE"
         ]
       }
     },
@@ -753,7 +790,7 @@
         "token": "bds-instance"
       },
       "edge": {
-        "description": "Use/manage Big Data Service instances → set a malicious bootstrapScriptUrl via UpdateBdsInstance then trigger AddWorkerNodes → the new node runs the bootstrap script which reads v2.2 RPST from /etc/security/tokens/rpst.token and /etc/security/tokens/rpst.pem. No SSH required; all done via OCI API.",
+        "description": "Use/manage Big Data Service instances \u2192 set a malicious bootstrapScriptUrl via UpdateBdsInstance then trigger AddWorkerNodes \u2192 the new node runs the bootstrap script which reads v2.2 RPST from /etc/security/tokens/rpst.token and /etc/security/tokens/rpst.pem. No SSH required; all done via OCI API.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_BDS_INSTANCE",
@@ -765,6 +802,9 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "BDS_UPDATE"
         ]
       }
     },
@@ -775,7 +815,7 @@
         "token": "dis-workspaces"
       },
       "edge": {
-        "description": "Use/manage Data Integration (DIS) workspaces → create a REST task (no code required, low-code UI) pointing to a pentester-controlled endpoint with OCI request signing enabled → CreateTaskRun triggers the task → the workspace's v2.2 resource-principal RPST signs the outbound request (visible in Authorization header). Dynamic group rule: resource.id='<workspace-ocid>' (resource.type='disworkspace' not supported for DG matching).",
+        "description": "Use/manage Data Integration (DIS) workspaces \u2192 create a REST task (no code required, low-code UI) pointing to a pentester-controlled endpoint with OCI request signing enabled \u2192 CreateTaskRun triggers the task \u2192 the workspace's v2.2 resource-principal RPST signs the outbound request (visible in Authorization header). Dynamic group rule: resource.id='<workspace-ocid>' (resource.type='disworkspace' not supported for DG matching).",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_DIS_WORKSPACE",
@@ -787,6 +827,11 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "DIS_WORKSPACE_EXECUTE",
+          "DIS_WORKSPACE_OBJECT_CREATE",
+          "DIS_WORKSPACE_UPDATE"
         ]
       }
     },
@@ -797,7 +842,7 @@
         "token": "devops-deploy-pipeline"
       },
       "edge": {
-        "description": "Manage/use DevOps deploy pipelines → inject a shell stage or modify deployment config → steal the pipeline's resource-principal RPST during a deployment run. Separate principal from Build Pipeline (resource.type='devopsdeploypipeline'). Exploit: `modules run exploit_generate_rpst_devops`.",
+        "description": "Manage/use DevOps deploy pipelines \u2192 inject a shell stage or modify deployment config \u2192 steal the pipeline's resource-principal RPST during a deployment run. Separate principal from Build Pipeline (resource.type='devopsdeploypipeline'). Exploit: `modules run exploit_generate_rpst_devops`.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_DEVOPS_DEPLOY_PIPELINE",
@@ -810,6 +855,12 @@
         "verbs_any": [
           "manage",
           "use"
+        ],
+        "permissions_any": [
+          "DEVOPS_DEPLOY_DEPLOYMENT_CREATE",
+          "DEVOPS_DEPLOY_PIPELINE_UPDATE",
+          "DEVOPS_DEPLOY_STAGE_CREATE",
+          "DEVOPS_DEPLOY_STAGE_UPDATE"
         ]
       }
     },
@@ -820,7 +871,7 @@
         "token": "autonomous-databases"
       },
       "edge": {
-        "description": "Manage Autonomous Databases → enable resource principal via DBMS_CLOUD_ADMIN.ENABLE_RESOURCE_PRINCIPAL() → exfil the RPST via SQL/PL-SQL (UTL_HTTP) or select from DBMS_CLOUD_ADMIN.ALL_CLOUD_STORE_LOCATIONS. Token is managed by the ADB runtime (not a file path). Dynamic group rule: resource.type='autonomousdatabase'.",
+        "description": "Manage Autonomous Databases \u2192 enable resource principal via DBMS_CLOUD_ADMIN.ENABLE_RESOURCE_PRINCIPAL() \u2192 exfil the RPST via SQL/PL-SQL (UTL_HTTP) or select from DBMS_CLOUD_ADMIN.ALL_CLOUD_STORE_LOCATIONS. Token is managed by the ADB runtime (not a file path). Dynamic group rule: resource.type='autonomousdatabase'.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_AUTONOMOUS_DB",
@@ -832,6 +883,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "AUTONOMOUS_DATABASE_UPDATE"
         ]
       }
     },
@@ -842,7 +896,7 @@
         "token": "mysql-db-systems"
       },
       "edge": {
-        "description": "Manage MySQL HeatWave DB systems → execute stored procedures or HeatWave ML calls → exfil RPST via outbound HTTP from within the DB runtime. Dynamic group rule: resource.type='mysqldbsystem'.",
+        "description": "Manage MySQL HeatWave DB systems \u2192 execute stored procedures or HeatWave ML calls \u2192 exfil RPST via outbound HTTP from within the DB runtime. Dynamic group rule: resource.type='mysqldbsystem'.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_MYSQL_HEATWAVE",
@@ -853,6 +907,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "MYSQL_INSTANCE_UPDATE"
         ]
       }
     },
@@ -863,7 +920,7 @@
         "token": "integration-instances"
       },
       "edge": {
-        "description": "Manage Oracle Integration Cloud 3 (OIC) instances → create/update an integration flow with a REST adapter targeting a pentester-controlled endpoint → trigger the flow → the flow's resource-principal RPST signs outbound requests. Requires IAM Domains. Dynamic group rule: resource.type='integration-instance'.",
+        "description": "Manage Oracle Integration Cloud 3 (OIC) instances \u2192 create/update an integration flow with a REST adapter targeting a pentester-controlled endpoint \u2192 trigger the flow \u2192 the flow's resource-principal RPST signs outbound requests. Requires IAM Domains. Dynamic group rule: resource.type='integration-instance'.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_OIC",
@@ -874,6 +931,9 @@
         ],
         "verbs_any": [
           "manage"
+        ],
+        "permissions_any": [
+          "INTEGRATION_INSTANCE_UPDATE"
         ]
       }
     },
@@ -884,7 +944,7 @@
         "token": "goldengate-deployments"
       },
       "edge": {
-        "description": "Manage GoldenGate deployments → update deployment image/config → the deployment's resource-principal RPST is available in standard env vars inside the GoldenGate runtime. Dynamic group rule: resource.type='goldengatedeployment'.",
+        "description": "Manage GoldenGate deployments \u2192 update deployment image/config \u2192 the deployment's resource-principal RPST is available in standard env vars inside the GoldenGate runtime. Dynamic group rule: resource.type='goldengatedeployment'.",
         "label": "GENERATE_RPST"
       },
       "id": "GENERATE_RPST_GOLDENGATE",
@@ -892,6 +952,850 @@
         "resource_tokens": [
           "goldengate-deployments",
           "goldengate-deployment-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "GOLDENGATE_DEPLOYMENT_UPDATE"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIAPIGateway",
+        "token": "api-gateways"
+      },
+      "edge": {
+        "description": "Manage/update API Gateway deployments \u2192 modify a route's backend URL to point to a pentester-controlled HTTPS endpoint \u2192 the gateway's resource-principal RPST signs every forwarded request (Authorization: Signature header) \u2192 capture the RPST from the incoming request at the attacker server. No code execution required \u2014 the gateway itself signs outbound HTTP. Dynamic group rule: resource.type='apigateway'.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_API_GATEWAY",
+      "match": {
+        "resource_tokens": [
+          "api-gateways",
+          "api-gateway-family",
+          "api-deployments"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ],
+        "permissions_any": [
+          "API_DEPLOYMENT_CREATE",
+          "API_DEPLOYMENT_UPDATE",
+          "API_GATEWAY_UPDATE"
+        ]
+      }
+    },
+    {
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceSchedule",
+        "token": "resourceschedule"
+      },
+      "edge": {
+        "description": "Manage/create Resource Scheduler schedules \u2192 create or update a schedule with an HTTP action targeting a pentester-controlled endpoint \u2192 when the schedule fires, the scheduler's resource-principal RPST signs the outbound HTTP request (Authorization: Signature header visible at the listener). Dynamic group rule: resource.type='resourceschedule'.",
+        "label": "GENERATE_RPST"
+      },
+      "id": "GENERATE_RPST_RESOURCE_SCHEDULER",
+      "match": {
+        "resource_tokens": [
+          "resource-schedule",
+          "resourceschedule"
+        ],
+        "verbs_any": [
+          "manage",
+          "use"
+        ],
+        "permissions_any": [
+          "RESOURCE_SCHEDULE_UPDATE"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_FN_FUNCTION",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-fn-function"
+      },
+      "edge": {
+        "description": "Create a new OCI Function in scope \u2192 synthetic NEW_FN_FUNCTION candidate that can join a Dynamic Group via FN_FUNCTION_CREATE.",
+        "label": "OCI_CREATE_FN_FUNCTION"
+      },
+      "match": {
+        "permissions_any": [
+          "FN_FUNCTION_CREATE"
+        ],
+        "resource_tokens": [
+          "fn-function",
+          "functions-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_CONTAINER_INSTANCE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-container-instance"
+      },
+      "edge": {
+        "description": "Create a new OCI Container Instance in scope \u2192 synthetic NEW_CONTAINER_INSTANCE candidate that can join a Dynamic Group via COMPUTE_CONTAINER_INSTANCE_CREATE.",
+        "label": "OCI_CREATE_CONTAINER_INSTANCE"
+      },
+      "match": {
+        "permissions_any": [
+          "COMPUTE_CONTAINER_INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "compute-container-instances",
+          "compute-container-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_OKE_CLUSTER",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-oke-cluster"
+      },
+      "edge": {
+        "description": "Create a new OKE Cluster in scope \u2192 synthetic NEW_OKE_CLUSTER candidate that can join a Dynamic Group via CLUSTER_CREATE.",
+        "label": "OCI_CREATE_OKE_CLUSTER"
+      },
+      "match": {
+        "permissions_any": [
+          "CLUSTER_CREATE"
+        ],
+        "resource_tokens": [
+          "clusters",
+          "cluster-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_BDS_INSTANCE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-bds-instance"
+      },
+      "edge": {
+        "description": "Create a new Big Data Service instance in scope \u2192 synthetic NEW_BDS_INSTANCE candidate that can join a Dynamic Group via BDS_CREATE.",
+        "label": "OCI_CREATE_BDS_INSTANCE"
+      },
+      "match": {
+        "permissions_any": [
+          "BDS_CREATE"
+        ],
+        "resource_tokens": [
+          "bds-instance",
+          "big-data-service-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_DIS_WORKSPACE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-dis-workspace"
+      },
+      "edge": {
+        "description": "Create a new Data Integration Workspace in scope \u2192 synthetic NEW_DIS_WORKSPACE candidate that can join a Dynamic Group via DIS_WORKSPACE_CREATE.",
+        "label": "OCI_CREATE_DIS_WORKSPACE"
+      },
+      "match": {
+        "permissions_any": [
+          "DIS_WORKSPACE_CREATE"
+        ],
+        "resource_tokens": [
+          "dis-workspaces",
+          "dis-workspace-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_AUTONOMOUS_DATABASE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-autonomous-database"
+      },
+      "edge": {
+        "description": "Create a new Autonomous Database in scope \u2192 synthetic NEW_AUTONOMOUS_DATABASE candidate that can join a Dynamic Group via AUTONOMOUS_DATABASE_CREATE.",
+        "label": "OCI_CREATE_AUTONOMOUS_DATABASE"
+      },
+      "match": {
+        "permissions_any": [
+          "AUTONOMOUS_DATABASE_CREATE"
+        ],
+        "resource_tokens": [
+          "autonomous-databases",
+          "autonomous-database-family",
+          "database-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_MYSQL_INSTANCE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-mysql-instance"
+      },
+      "edge": {
+        "description": "Create a new MySQL HeatWave DB System in scope \u2192 synthetic NEW_MYSQL_INSTANCE candidate that can join a Dynamic Group via MYSQL_INSTANCE_CREATE.",
+        "label": "OCI_CREATE_MYSQL_INSTANCE"
+      },
+      "match": {
+        "permissions_any": [
+          "MYSQL_INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "mysql-db-systems",
+          "mysql-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_OIC_INSTANCE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-oic-instance"
+      },
+      "edge": {
+        "description": "Create a new Oracle Integration Cloud instance in scope \u2192 synthetic NEW_OIC_INSTANCE candidate that can join a Dynamic Group via INTEGRATION_INSTANCE_CREATE.",
+        "label": "OCI_CREATE_OIC_INSTANCE"
+      },
+      "match": {
+        "permissions_any": [
+          "INTEGRATION_INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "integration-instances",
+          "integration-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_GG_DEPLOYMENT",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-gg-deployment"
+      },
+      "edge": {
+        "description": "Create a new GoldenGate Deployment in scope \u2192 synthetic NEW_GG_DEPLOYMENT candidate that can join a Dynamic Group via GOLDENGATE_DEPLOYMENT_CREATE.",
+        "label": "OCI_CREATE_GG_DEPLOYMENT"
+      },
+      "match": {
+        "permissions_any": [
+          "GOLDENGATE_DEPLOYMENT_CREATE"
+        ],
+        "resource_tokens": [
+          "goldengate-deployments",
+          "goldengate-deployment-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_API_GATEWAY",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-api-gateway"
+      },
+      "edge": {
+        "description": "Create a new API Gateway in scope \u2192 synthetic NEW_API_GATEWAY candidate that can join a Dynamic Group via API_GATEWAY_CREATE.",
+        "label": "OCI_CREATE_API_GATEWAY"
+      },
+      "match": {
+        "permissions_any": [
+          "API_GATEWAY_CREATE"
+        ],
+        "resource_tokens": [
+          "api-gateways",
+          "api-gateway-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_RESOURCE_SCHEDULE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-resource-schedule"
+      },
+      "edge": {
+        "description": "Create a new Resource Schedule in scope \u2192 synthetic NEW_RESOURCE_SCHEDULE candidate that can join a Dynamic Group via RESOURCE_SCHEDULE_CREATE.",
+        "label": "OCI_CREATE_RESOURCE_SCHEDULE"
+      },
+      "match": {
+        "permissions_any": [
+          "RESOURCE_SCHEDULE_CREATE"
+        ],
+        "resource_tokens": [
+          "resource-schedule",
+          "resourceschedule"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_DS_NOTEBOOK_SESSION",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-ds-notebook-session"
+      },
+      "edge": {
+        "description": "Create a new Data Science Notebook Session in scope \u2192 synthetic NEW_DS_NOTEBOOK_SESSION candidate that can join a Dynamic Group via DATA_SCIENCE_NOTEBOOK_SESSION_CREATE.",
+        "label": "OCI_CREATE_DS_NOTEBOOK_SESSION"
+      },
+      "match": {
+        "permissions_any": [
+          "DATA_SCIENCE_NOTEBOOK_SESSION_CREATE"
+        ],
+        "resource_tokens": [
+          "data-science-notebook-sessions",
+          "data-science-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_DS_MODEL_DEPLOYMENT",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-ds-model-deployment"
+      },
+      "edge": {
+        "description": "Create a new Data Science Model Deployment in scope \u2192 synthetic NEW_DS_MODEL_DEPLOYMENT candidate that can join a Dynamic Group via DATA_SCIENCE_MODEL_DEPLOYMENT_CREATE.",
+        "label": "OCI_CREATE_DS_MODEL_DEPLOYMENT"
+      },
+      "match": {
+        "permissions_any": [
+          "DATA_SCIENCE_MODEL_DEPLOYMENT_CREATE"
+        ],
+        "resource_tokens": [
+          "data-science-model-deployments",
+          "data-science-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_GENAI_AGENT",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIGenAIAgent",
+        "token": "genai-agents"
+      },
+      "edge": {
+        "description": "Manage OCI Generative AI Agents \u2192 create/modify an agent to intercept its resource-principal RPST, which grants access to OCI Vault secrets and Object Storage used for agent data sources. The RPST is held by the GenAI Agents service and used for all agent outbound OCI API calls.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "genai-agents",
+          "generative-ai-agents",
+          "generative-ai-agent-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "GENERATIVE_AI_AGENT_UPDATE",
+          "GENERATIVE_AI_AGENT_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_GENAI_INGESTION_JOB",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIGenAIAgentDataIngestionJob",
+        "token": "genai-agent-data-ingestion-jobs"
+      },
+      "edge": {
+        "description": "Manage OCI Generative AI Agent Data Ingestion Jobs \u2192 a data ingestion job uses resource-principal RPST to read from Object Storage data sources; intercepting this RPST grants read access to the configured source buckets.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "genai-agent-data-ingestion-jobs"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "GENERATIVE_AI_AGENT_DATA_INGESTION_JOB_UPDATE",
+          "GENERATIVE_AI_AGENT_DATA_INGESTION_JOB_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_CERTIFICATE_AUTHORITY",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCICertificateAuthority",
+        "token": "certificate-authorities"
+      },
+      "edge": {
+        "description": "Manage OCI Certificate Authorities \u2192 a CA uses resource-principal RPST to access OCI Vault keys (for signing certificates); intercepting the CA's RPST grants cryptographic key usage including signing arbitrary data. Extremely sensitive for PKI environments.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "certificate-authorities",
+          "certificate-authority-family",
+          "certificates-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "CERTIFICATE_AUTHORITY_UPDATE",
+          "CERTIFICATE_AUTHORITY_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_ODA_INSTANCE",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIODAInstance",
+        "token": "oda-instances"
+      },
+      "edge": {
+        "description": "Manage OCI Digital Assistant (ODA) instances \u2192 ODA uses resource-principal RPST to invoke OCI Functions, OCI Language/AI services, and OCI Notifications; intercepting the RPST enables lateral movement into those services. Exploit: configure a malicious ODA skill that calls back with the RPST.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "oda-instances",
+          "digital-assistant-instances",
+          "oda-instance-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "ODA_INSTANCE_UPDATE",
+          "ODA_INSTANCE_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_DATA_CATALOG",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDataCatalog",
+        "token": "data-catalogs"
+      },
+      "edge": {
+        "description": "Manage OCI Data Catalog instances \u2192 Data Catalog uses resource-principal RPST to access DIS workspaces, Object Storage, Vault, and Autonomous DB for metadata harvest; intercepting the RPST grants read access to all configured data sources.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "data-catalogs",
+          "data-catalog-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "DATA_CATALOG_UPDATE",
+          "DATA_CATALOG_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_DB_TOOLS_CONNECTION",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDatabaseToolsConnection",
+        "token": "database-tools-connections"
+      },
+      "edge": {
+        "description": "Manage OCI Database Tools Connections \u2192 a connection using resource-principal auth reads database credentials directly from OCI Vault without storing them in plaintext; intercepting the connection's RPST grants Vault secret read access for any secret referenced by the connection.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "database-tools-connections",
+          "db-tools-connections",
+          "database-tools-service-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "DATABASE_TOOLS_CONNECTION_UPDATE",
+          "DATABASE_TOOLS_CONNECTION_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_MANAGEMENT_AGENT",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIManagementAgent",
+        "token": "management-agents"
+      },
+      "edge": {
+        "description": "Management Agents installed on on-prem/non-OCI hosts receive resource-principal RPST to communicate with OCI control-plane services (OS Management Hub, Log Analytics, Database Management, etc.). Compromise the host running the agent \u2192 read OCI_RESOURCE_PRINCIPAL_RPST from disk \u2192 steal the agent's OCI identity for cloud lateral movement.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "management-agents",
+          "management-agent-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "MGMT_AGENT_UPDATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_DR_PROTECTION_GROUP",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIDRProtectionGroup",
+        "token": "dr-protection-groups"
+      },
+      "edge": {
+        "description": "Manage OCI Full Stack DR Protection Groups \u2192 a DR protection group uses resource-principal RPST to orchestrate cross-region failover operations (stop/start instances, switchover databases, run scripts); intercepting the RPST grants the DR group's broad cross-service permissions including compute and database control-plane access.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "dr-protection-groups",
+          "disaster-recovery-protection-groups",
+          "fullstackdr-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "DR_PROTECTION_GROUP_UPDATE",
+          "DR_PROTECTION_GROUP_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_ANALYTICS_INSTANCE",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIAnalyticsInstance",
+        "token": "analytics-instances"
+      },
+      "edge": {
+        "description": "Manage Oracle Analytics Cloud (OAC) instances \u2192 OAC uses resource-principal RPST to invoke OCI Functions, access Autonomous DB, and read Object Storage for data pipelines; intercepting the RPST grants access to all configured data sources and OCI Functions invocation. Exploit: configure a malicious OAC data flow that exfils the RPST.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "analytics-instances",
+          "analytics-instance-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "ANALYTICS_INSTANCE_UPDATE",
+          "ANALYTICS_INSTANCE_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "GENERATE_RPST_RESOURCE_ANALYTICS",
+      "destination": {
+        "allow_specific": true,
+        "node_type": "OCIResourceAnalyticsInstance",
+        "token": "resanalyticsinstances"
+      },
+      "edge": {
+        "description": "Manage OCI Resource Analytics instances \u2192 Resource Analytics uses resource-principal RPST to harvest resource metadata across the tenancy; intercepting the RPST grants broad read access to resource inventory and configuration data.",
+        "label": "GENERATE_RPST"
+      },
+      "match": {
+        "resource_tokens": [
+          "resanalyticsinstances",
+          "resource-analytics-instances",
+          "resource-analytics-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ],
+        "permissions_any": [
+          "RESOURCE_ANALYTICS_INSTANCE_UPDATE",
+          "RESOURCE_ANALYTICS_INSTANCE_CREATE"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_GENAI_AGENT",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-genai-agent"
+      },
+      "edge": {
+        "description": "Create a new Generative AI Agent in scope \u2192 synthetic NEW_GENAI_AGENT candidate that can join a Dynamic Group via GENERATIVE_AI_AGENT_CREATE, granting the agent RPST access to OCI Vault and Object Storage.",
+        "label": "OCI_CREATE_GENAI_AGENT"
+      },
+      "match": {
+        "permissions_any": [
+          "GENERATIVE_AI_AGENT_CREATE"
+        ],
+        "resource_tokens": [
+          "genai-agents",
+          "generative-ai-agents",
+          "generative-ai-agent-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_GENAI_INGESTION_JOB",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-genai-ingestion-job"
+      },
+      "edge": {
+        "description": "Create a new Generative AI Agent Data Ingestion Job \u2192 synthetic NEW_GENAI_INGESTION_JOB candidate that can join a Dynamic Group and read from Object Storage data sources.",
+        "label": "OCI_CREATE_GENAI_INGESTION_JOB"
+      },
+      "match": {
+        "permissions_any": [
+          "GENERATIVE_AI_AGENT_DATA_INGESTION_JOB_CREATE"
+        ],
+        "resource_tokens": [
+          "genai-agent-data-ingestion-jobs"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_CERTIFICATE_AUTHORITY",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-certificate-authority"
+      },
+      "edge": {
+        "description": "Create a new OCI Certificate Authority \u2192 synthetic NEW_CERTIFICATE_AUTHORITY candidate that can join a Dynamic Group and use OCI Vault keys for signing.",
+        "label": "OCI_CREATE_CERTIFICATE_AUTHORITY"
+      },
+      "match": {
+        "permissions_any": [
+          "CERTIFICATE_AUTHORITY_CREATE"
+        ],
+        "resource_tokens": [
+          "certificate-authorities",
+          "certificate-authority-family",
+          "certificates-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_ODA_INSTANCE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-oda-instance"
+      },
+      "edge": {
+        "description": "Create a new OCI Digital Assistant instance \u2192 synthetic NEW_ODA_INSTANCE candidate that can join a Dynamic Group and invoke OCI Functions / call AI services.",
+        "label": "OCI_CREATE_ODA_INSTANCE"
+      },
+      "match": {
+        "permissions_any": [
+          "ODA_INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "oda-instances",
+          "digital-assistant-instances",
+          "oda-instance-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_DATA_CATALOG",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-data-catalog"
+      },
+      "edge": {
+        "description": "Create a new OCI Data Catalog instance \u2192 synthetic NEW_DATA_CATALOG candidate that can join a Dynamic Group and access DIS workspaces, Object Storage, and Autonomous DB for metadata.",
+        "label": "OCI_CREATE_DATA_CATALOG"
+      },
+      "match": {
+        "permissions_any": [
+          "DATA_CATALOG_CREATE"
+        ],
+        "resource_tokens": [
+          "data-catalogs",
+          "data-catalog-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_DB_TOOLS_CONNECTION",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-db-tools-connection"
+      },
+      "edge": {
+        "description": "Create a new OCI Database Tools Connection using resource-principal auth \u2192 synthetic NEW_DB_TOOLS_CONNECTION candidate that can join a Dynamic Group and read Vault secrets for database credentials.",
+        "label": "OCI_CREATE_DB_TOOLS_CONNECTION"
+      },
+      "match": {
+        "permissions_any": [
+          "DATABASE_TOOLS_CONNECTION_CREATE"
+        ],
+        "resource_tokens": [
+          "database-tools-connections",
+          "db-tools-connections",
+          "database-tools-service-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_DR_PROTECTION_GROUP",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-dr-protection-group"
+      },
+      "edge": {
+        "description": "Create a new Full Stack DR Protection Group \u2192 synthetic NEW_DR_PROTECTION_GROUP candidate that can join a Dynamic Group and receive broad cross-service RPST for DR orchestration.",
+        "label": "OCI_CREATE_DR_PROTECTION_GROUP"
+      },
+      "match": {
+        "permissions_any": [
+          "DR_PROTECTION_GROUP_CREATE"
+        ],
+        "resource_tokens": [
+          "dr-protection-groups",
+          "disaster-recovery-protection-groups",
+          "fullstackdr-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_ANALYTICS_INSTANCE",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-analytics-instance"
+      },
+      "edge": {
+        "description": "Create a new Oracle Analytics Cloud instance \u2192 synthetic NEW_ANALYTICS_INSTANCE candidate that can join a Dynamic Group and access Autonomous DB, Object Storage, and OCI Functions.",
+        "label": "OCI_CREATE_ANALYTICS_INSTANCE"
+      },
+      "match": {
+        "permissions_any": [
+          "ANALYTICS_INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "analytics-instances",
+          "analytics-instance-family"
+        ],
+        "verbs_any": [
+          "manage"
+        ]
+      }
+    },
+    {
+      "id": "CREATE_RESOURCE_ANALYTICS",
+      "destination": {
+        "allow_specific": false,
+        "node_type": "OCIResourceGroup",
+        "token": "new-resource-analytics"
+      },
+      "edge": {
+        "description": "Create a new OCI Resource Analytics instance \u2192 synthetic NEW_RESOURCE_ANALYTICS candidate that can join a Dynamic Group and read tenancy-wide resource inventory.",
+        "label": "OCI_CREATE_RESOURCE_ANALYTICS"
+      },
+      "match": {
+        "permissions_any": [
+          "RESOURCE_ANALYTICS_INSTANCE_CREATE"
+        ],
+        "resource_tokens": [
+          "resanalyticsinstances",
+          "resource-analytics-instances",
+          "resource-analytics-family"
         ],
         "verbs_any": [
           "manage"

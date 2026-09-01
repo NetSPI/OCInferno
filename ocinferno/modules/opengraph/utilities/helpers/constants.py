@@ -116,6 +116,31 @@ DYNAMIC_GROUP_RESOURCE_TYPES = {
     "devopsbuildpipeline",
     "devopsrepository",
     "devopsconnection",
+    # Resource-principal capable services added in RPST expansion pass:
+    "datasciencejobrun",
+    "datasciencenotebooksession",
+    "datasciencepipelinerun",
+    "datasciencemodeldeployment",
+    "cluster",          # OKE (request.principal.type='cluster')
+    "bdsinstance",      # Big Data Service
+    "autonomousdatabase",
+    "mysqldbsystem",
+    "apigateway",
+    # Gap-E additions: services confirmed as resource-principal types in OCI docs.
+    "integrationinstance",   # Oracle Integration Cloud
+    "goldengatedeployment",  # GoldenGate Deployment
+    "disworkspace",          # Data Integration Service Workspace
+    # New services discovered in 2025-2026 research pass:
+    "drprotectiongroup",            # Full Stack Disaster Recovery
+    "genaiagent",                   # Generative AI Agents
+    "genaiagentdataingestionjob",   # GenAI Agent Data Ingestion Jobs
+    "certificateauthority",         # OCI Certificates / Certificate Authority
+    "odainstance",                  # OCI Digital Assistant
+    "datacatalog",                  # OCI Data Catalog
+    "databasetoolsconnection",      # OCI Database Tools Connections
+    "managementagent",              # OCI Management Agent (on-prem/non-OCI hosts)
+    "analyticsinstance",            # Oracle Analytics Cloud (OAC)
+    "resanalyticsinstance",         # OCI Resource Analytics
 }
 
 # Resource-type alias expansion used by evaluators to bridge canonical
@@ -134,23 +159,51 @@ RESOURCE_TYPE_ALIASES = {
 # request.principal.type value 'apigateway' (see iam_conditionals.py's
 # _REQUEST_PRINCIPAL_TYPE_RESOLVABLE), and "mysql-db-systems" to 'mysqldbsystem'.
 # api-gateways / mysql-db-systems / iot-domain added because OCInferno already
-# enumerates each as an OpenGraph node (OCIAPIGateway / OCIMySqlDbSystem /
-# OCIIoTDomain) and each is a confirmed real resource-principal type via official
-# OCI docs, so they belong in the any-user resource-principal set the same as
-# instances/functions/etc.
+# enumerates each as an OpenGraph node and each is a confirmed real resource-principal
+# type via official OCI docs. Data Science subtypes, OKE clusters, BDS, DIS, ADB,
+# OIC, and GoldenGate added in the RPST expansion pass.
 RESOURCE_PRINCIPAL_SCOPE_TOKENS = {
+    # Compute
     "instances",
+    # Serverless/containers
     "fn-function",
     "computecontainerinstance",
+    # Data & analytics
     "dataflowrun",
-    "resourceschedule",
+    "data-science-job-run",
+    "data-science-notebook-session",
+    "data-science-pipeline-run",
+    "data-science-model-deployment",
+    "bds-instance",
+    "dis-workspaces",
+    # DevOps
     "devopsdeploypipeline",
     "devopsbuildpipeline",
     "devopsrepository",
     "devopsconnection",
+    # Kubernetes
+    "clusters",
+    # Integration / middleware
     "api-gateways",
+    "resourceschedule",
+    "integration-instances",
+    "goldengate-deployments",
+    # Database
     "mysql-db-systems",
+    "autonomous-databases",
+    # IoT
     "iot-domain",
+    # New services (2025-2026 research pass):
+    "dr-protection-groups",           # Full Stack Disaster Recovery
+    "genai-agents",                   # Generative AI Agents
+    "genai-agent-data-ingestion-jobs", # GenAI Agent Data Ingestion Jobs
+    "certificate-authorities",        # OCI Certificates / CA
+    "oda-instances",                  # OCI Digital Assistant
+    "data-catalogs",                  # OCI Data Catalog
+    "database-tools-connections",     # OCI Database Tools Connections
+    "management-agents",              # OCI Management Agent
+    "analytics-instances",            # Oracle Analytics Cloud
+    "resanalyticsinstances",          # OCI Resource Analytics
 }
 
 @dataclass(slots=True)

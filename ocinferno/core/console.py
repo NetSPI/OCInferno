@@ -342,7 +342,11 @@ class UtilityTools:
             print(f"  [{i}] {to_label(it)}")
 
         while True:
-            choice = input("Select a number (or ENTER to cancel): ").strip()
+            try:
+                choice = input("Select a number (or ENTER to cancel): ").strip()
+            except (EOFError, KeyboardInterrupt, OSError):
+                print("[*] Cancelled.")
+                return None
             if choice == "":
                 print("[*] Cancelled.")
                 return None

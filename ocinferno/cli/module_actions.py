@@ -194,7 +194,7 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
-    "exploit_add_self_to_group": ModulePolicySpec(
+    "exploit_add_user_to_group": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
@@ -214,7 +214,47 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    "exploit_dataflow_runs_rpst": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_containerinstances_rpst": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_datascience_jobs_rpst": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     "exploit_ocir_image_manipulate": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_kubernetes_clusters_rpst": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_generate_rpst_dis": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_generate_rpst_devops_deploy": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_datascience_pipelines_rpst": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
+    "exploit_generate_rpst_genai_agent": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,

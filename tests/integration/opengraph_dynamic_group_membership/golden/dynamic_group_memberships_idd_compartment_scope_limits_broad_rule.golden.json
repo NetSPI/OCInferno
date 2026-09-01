@@ -37,12 +37,47 @@
           "tenant_id": "ocid1.tenancy.oc1..testtenant",
           "workspace_id": "5252"
         }
+      },
+      {
+        "id": "ocid1.instance.oc1..instb",
+        "kinds": [
+          "OCIComputeInstance",
+          "OCIResource"
+        ],
+        "properties": {
+          "compartment_id": "ocid1.compartment.oc1..compb",
+          "defined_tags": "{}",
+          "display_name": "inst-b",
+          "id": "ocid1.instance.oc1..instb",
+          "lifecycle_state": "RUNNING",
+          "name": "inst-b",
+          "node_type": "OCIComputeInstance",
+          "tenant_id": "ocid1.tenancy.oc1..testtenant",
+          "workspace_id": "5252"
+        }
       }
     ],
     "edges": [
       {
         "start": {
           "value": "ocid1.instance.oc1..insta"
+        },
+        "end": {
+          "value": "ocid1.dynamicgroup.oc1..idddg_scope"
+        },
+        "kind": "OCI_DYNAMIC_GROUP_MEMBER",
+        "properties": {
+          "edge_category": "GROUP_MEMBERSHIP",
+          "group_type": "dynamic",
+          "matching_rule": "RULE_RESOURCE_TYPE_INSTANCES",
+          "tables_matching_rules": [
+            "compute_instances"
+          ]
+        }
+      },
+      {
+        "start": {
+          "value": "ocid1.instance.oc1..instb"
         },
         "end": {
           "value": "ocid1.dynamicgroup.oc1..idddg_scope"

@@ -191,6 +191,10 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             return "oci"
         if host.startswith("cell") and ".submit.email." in host:
             return "email_data_plane"
+        # Identity Domains (SCIM) endpoints: idcs-<uuid>.identity.oraclecloud.com
+        # Normalize to a stable service slug so the permissions map can match them.
+        if ".identity.oraclecloud.com" in host and not host.startswith("identity."):
+            return "identitydomains"
         # first DNS label is usually a useful OCI service identifier
         label = host.split(".", 1)[0]
         return label or "oci"

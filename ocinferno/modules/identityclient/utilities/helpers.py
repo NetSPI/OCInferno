@@ -2650,6 +2650,30 @@ def _tenancy_and_region(session) -> Tuple[str, str]:
     return IdentityHelperUtils.resolve_tenancy_region_from_session(session)
 
 
+_PRINCIPAL_CRED_TYPES: frozenset = frozenset({"instance-principal", "resource-principal"})
+
+
+def active_cred_type(session) -> str:
+    """Return the credtype string for the active credential, or '' if not determinable."""
+    credname = _s(getattr(session, "credname", ""))
+    get_creds = getattr(session, "get_all_creds", None)
+    if not callable(get_creds):
+        return ""
+    for row in (get_creds() or []):
+        if isinstance(row, dict) and _s(row.get("credname")) == credname:
+            return _s(row.get("credtype"))
+    return ""
+
+
+def is_principal_credential(session) -> bool:
+    """Return True when the active credential is instance-principal or resource-principal.
+
+    These credential types are not backed by an IAM user and cannot use ``--self`` on any
+    exploit module that targets a user resource (api-key, auth-token, group membership).
+    """
+    return active_cred_type(session) in _PRINCIPAL_CRED_TYPES
+
+
 def generate_rsa_keypair(key_size: int = 2048) -> Tuple[str, str]:
     """Return ``(private_pem, public_pem)`` for a fresh RSA keypair.
 
@@ -2692,7 +2716,7 @@ def resolve_domain_url(
     url = _s(existing_url) or _s(getattr(args, "domain_url", ""))
     if url:
         return url
-    if args.no_prompt:
+    if getattr(args, "no_prompt", False):
         if error_on_no_prompt:
             print(f"{UtilityTools.RED}[X] {error_on_no_prompt}{UtilityTools.RESET}")
         return ""
@@ -2725,7 +2749,11 @@ def choose_classic_or_idd(
     print(f"{UtilityTools.BOLD}{UtilityTools.BRIGHT_GREEN}[*] Is the {context} classic IAM or an identity domain (IDD)?{UtilityTools.RESET}")
     print("  [1] classic IAM")
     print("  [2] identity domain (IDD)")
-    c = _s(input("Select 1-2: "))
+    try:
+        c = _s(input("Select 1-2: "))
+    except (EOFError, KeyboardInterrupt, OSError):
+        print("[*] Cancelled.")
+        return None
     if c == "2":
         return True
     if c == "1":
@@ -2858,7 +2886,12 @@ class User(_DualPathClientMixin):
         self.domain_url = _s(domain_url)
 
     def label(self) -> str:
-        return f"{self.name or '<unnamed>'} | {self.kind.upper()} | {self.ocid}"
+        domain = ""
+        if self.kind == "idd" and self.domain_url:
+            from urllib.parse import urlparse
+            host = urlparse(self.domain_url).hostname or self.domain_url
+            domain = f" | {host}"
+        return f"{self.name or '<unnamed>'} | {self.kind.upper()}{domain} | {self.ocid}"
 
     def to_dict(self) -> Dict[str, str]:
         return {"kind": self.kind, "ocid": self.ocid, "name": self.name, "scim_id": self.scim_id,
@@ -2952,6 +2985,11 @@ class User(_DualPathClientMixin):
         name = _s(user_name)
         if name:
             matches = [u for u in users if name.lower() in u.name.lower()]
+            # When a domain-url is supplied, narrow to that domain first so
+            # identically-named users in different domains don't force a picker.
+            durl = _s(domain_url)
+            if durl and any(u.domain_url == durl for u in matches):
+                matches = [u for u in matches if u.domain_url == durl]
             if len(matches) == 1:
                 return matches[0]
             if not matches:
@@ -2974,7 +3012,11 @@ class User(_DualPathClientMixin):
             print(f"  [1] Choose from {len(usable)} saved user{'s' if len(usable) != 1 else ''} in the workspace DB")
             print("  [2] Enter a user OCID manually")
             print("  [3] Yourself (current active credential's user)")
-            choice = _s(input("Select 1-3 (ENTER to cancel): "))
+            try:
+                choice = _s(input("Select 1-3 (ENTER to cancel): "))
+            except (EOFError, KeyboardInterrupt, OSError):
+                print("[*] Cancelled.")
+                return None
             if not choice:
                 print("[*] Cancelled.")
                 return None
@@ -3005,7 +3047,11 @@ class User(_DualPathClientMixin):
                 return cls.from_dict(picked)
             if choice == "2":
                 while True:
-                    val = _s(input("Enter target user OCID: "))
+                    try:
+                        val = _s(input("Enter target user OCID: "))
+                    except (EOFError, KeyboardInterrupt, OSError):
+                        print("[*] Cancelled.")
+                        return None
                     if not val:
                         print("[*] Cancelled.")
                         return None
@@ -3138,22 +3184,55 @@ class User(_DualPathClientMixin):
         )
         resp = client.create_auth_token(auth_token=body)
         data = oci.util.to_dict(getattr(resp, "data", None)) or {}
-        return {"token": _s(data.get("token")), "id": _s(data.get("ocid") or data.get("id")), "mode": "idd"}
+        return {"token": _s(data.get("token")), "id": _s(data.get("ocid") or data.get("id")),
+                "scim_id": _s(data.get("id")), "mode": "idd"}
 
     def create_auth_token_idd_self(self, session, *, description: str = "") -> Dict[str, str]:
         """Create an auth token for the currently-authenticated IDD user via the Me endpoint.
 
         The admin endpoint rejects self-targeting for User Administrators; use Me endpoint.
+        Uses raw REST (requests) rather than the OCI SDK because the SDK's MyAuthToken model
+        does not include 'token' in its attribute_map, stripping the value on deserialization.
         """
+        import requests as _requests
         if not self.domain_url:
             raise ValueError("identity-domain self-service requires the domain URL.")
+        cfg    = session.credentials.get("config", {})
+        signer = session.credentials.get("signer")
+        if signer is None:
+            signer_kw: Dict[str, Any] = dict(
+                tenancy=cfg.get("tenancy", ""), user=cfg.get("user", ""),
+                fingerprint=cfg.get("fingerprint", ""), pass_phrase=cfg.get("pass_phrase"),
+            )
+            key_file = cfg.get("key_file", "") or ""
+            if key_file and os.path.isfile(key_file):
+                signer_kw["private_key_file_location"] = key_file
+            else:
+                signer_kw["private_key_content"] = (
+                    cfg.get("key_content") or cfg.get("private_key") or "").strip()
+            signer = oci.Signer(**signer_kw)
+        url  = f"{self.domain_url.rstrip('/')}/admin/v1/MyAuthTokens"
+        body = {"description": description or "ocinferno-pentest",
+                "schemas": [IDD_AUTH_TOKEN_SCHEMA]}
+        resp = _requests.post(url, auth=signer, json=body,
+                              headers={"Content-Type": "application/json"})
+        resp.raise_for_status()
+        data = resp.json()
+        return {"token": _s(data.get("token")), "id": _s(data.get("ocid") or data.get("id")),
+                "scim_id": _s(data.get("id")), "mode": "idd-self"}
+
+    def delete_auth_token_idd(self, session, *, token_id: str) -> None:
+        """Delete an IDD auth token via the SCIM admin endpoint.
+
+        ``token_id`` should be the SCIM id (the non-OCID ``id`` field from create).  If an
+        OCID is passed instead (create_auth_token_idd returns ``data.get("ocid") or data.get("id")``
+        so callers may hold either), the classic IAM delete path is a reliable fallback because
+        OCI maintains a unified auth-token store across both APIs.
+        """
+        if not self.domain_url:
+            raise ValueError("identity-domain auth token delete requires the domain URL.")
         client = self._idd_client(session, self.domain_url)
-        body = oci.identity_domains.models.MyAuthToken(
-            schemas=[IDD_AUTH_TOKEN_SCHEMA], description=description or "ocinferno-pentest",
-        )
-        resp = client.create_my_auth_token(my_auth_token=body)
-        data = oci.util.to_dict(getattr(resp, "data", None)) or {}
-        return {"token": _s(data.get("token")), "id": _s(data.get("ocid") or data.get("id")), "mode": "idd-self"}
+        client.delete_auth_token(auth_token_id=token_id)
 
     def create_api_key(self, session, *, public_pem: str, description: str = "", force_idd: bool = False) -> ApiKey:
         """Add an API key, choosing the write path that actually works.
@@ -3347,7 +3426,12 @@ class Group(_DualPathClientMixin):
         self.domain_url = _s(domain_url)
 
     def label(self) -> str:
-        return f"{self.name or '<unnamed>'} | {self.kind.upper()} | {self.ocid}"
+        domain = ""
+        if self.kind == "idd" and self.domain_url:
+            from urllib.parse import urlparse
+            host = urlparse(self.domain_url).hostname or self.domain_url
+            domain = f" | {host}"
+        return f"{self.name or '<unnamed>'} | {self.kind.upper()}{domain} | {self.ocid}"
 
     def to_dict(self) -> Dict[str, str]:
         return {"kind": self.kind, "ocid": self.ocid, "name": self.name, "scim_id": self.scim_id,
@@ -3381,6 +3465,67 @@ class Group(_DualPathClientMixin):
             out.append(cls(kind="idd", ocid=ocid, scim_id=_s(r.get("id")), name=_s(r.get("display_name")),
                            domain_ocid=dom, domain_url=domain_url_by_ocid.get(dom, "")))
         return out
+
+    @classmethod
+    def resolve(cls, session, *, group_ocid: str = "", group_name: str = "", group_scim_id: str = "",
+                idd: bool = False, classic: bool = False, domain_url: str = "",
+                no_prompt: bool = False) -> Optional["Group"]:
+        """Resolve a target group: explicit OCID, name match against the workspace DB, or
+        interactive pick-from-DB-or-manual. Mirrors User.resolve()."""
+        groups = cls.collect_all(session)
+
+        ocid = _s(group_ocid)
+        if ocid:
+            for g in groups:
+                if g.ocid == ocid:
+                    return g
+            resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                                  no_prompt=no_prompt, context="target group")
+            if resolved_idd is None:
+                return None
+            return cls(kind="idd" if resolved_idd else "classic", ocid=ocid,
+                       scim_id=_s(group_scim_id), domain_url=_s(domain_url))
+
+        name = _s(group_name)
+        if name:
+            matches = [g for g in groups if name.lower() in g.name.lower()]
+            # When a domain-url is supplied, narrow to that domain first so
+            # identically-named groups in different domains don't force a picker.
+            durl = _s(domain_url)
+            if durl and any(g.domain_url == durl for g in matches):
+                matches = [g for g in matches if g.domain_url == durl]
+            if len(matches) == 1:
+                return matches[0]
+            if not matches:
+                print(f"{UtilityTools.RED}[X] No saved group matches '{name}'.{UtilityTools.RESET}")
+                return None
+            if no_prompt:
+                print(f"{UtilityTools.RED}[X] '{name}' is ambiguous; pass --group-ocid.{UtilityTools.RESET}")
+                return None
+            return paged_search_select(matches, title=f"Groups matching '{name}'", label_fn=lambda g: g.label())
+
+        if no_prompt:
+            print(f"{UtilityTools.RED}[X] --yes requires --group-ocid or --group-name.{UtilityTools.RESET}")
+            return None
+
+        sel = select_from_db_or_manual(
+            rows=[g.to_dict() for g in groups], entity="target group",
+            label_fn=lambda d: cls.from_dict(d).label(),
+            manual_prompt="Enter target group OCID",
+            manual_validate=lambda v: v.startswith("ocid1.group"),
+            empty_hint="Run enum_identity first, or enter a group OCID.",
+        )
+        if sel is None:
+            return None
+        kind, val = sel
+        if kind == "row":
+            return cls.from_dict(val)
+        resolved_idd = choose_classic_or_idd(idd=idd, classic=classic, domain_url=domain_url,
+                                              no_prompt=no_prompt, context="target group")
+        if resolved_idd is None:
+            return None
+        return cls(kind="idd" if resolved_idd else "classic", ocid=val,
+                   scim_id=_s(group_scim_id), domain_url=_s(domain_url))
 
     def _resolve_scim_id(self, session) -> str:
         """IDD group writes key off the group SCIM id; resolve + cache it from the OCID if
@@ -3462,6 +3607,8 @@ class Group(_DualPathClientMixin):
         patch = oci.identity_domains.models.PatchOp(schemas=[PATCHOP_SCHEMA], operations=[op])
         resp = client.patch_group(group_id=group_scim_id, patch_op=patch)
         data = oci.util.to_dict(getattr(resp, "data", None)) or {}
+        # Record the specific add-member action (more precise than the generic PatchGroup → IDD_GROUP_UPDATE).
+        getattr(session, "_record_operation_permissions", lambda *a: None)("IddAddUserToGroup", "identitydomains", self.ocid)
         return {"mode": "idd", "user_ocid": user.ocid, "user_scim_id": user_scim_id, "group_scim_id": group_scim_id,
                 "member_count": len(data.get("members") or [])}
 

@@ -45,6 +45,16 @@
     "table": "identity_domain_sign_on_policies",
     "tenant_col": "tenancy_ocid"
   },
+  "(autonomous-databases,autonomousdatabase)": {
+    "compartment_col": "compartment_id",
+    "defined_tags_col": "defined_tags",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIAutonomousDatabase",
+    "table": "db_autonomous_databases",
+    "tenant_col": null
+  },
   "(bastion,bastion)": {
     "compartment_col": "compartment_id",
     "defined_tags_col": "defined_tags",
@@ -518,6 +528,15 @@
     "table": "functions_functions",
     "tenant_col": null
   },
+  "(goldengate-deployments,goldengatedeployment)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIGoldenGateDeployment",
+    "table": "goldengate_deployments",
+    "tenant_col": null
+  },
   "(groups,group)": {
     "node_type": "OCIGroup",
     "tables": [
@@ -685,6 +704,15 @@
     "name_col": "display_name",
     "node_type": "OCIComputeInstance",
     "table": "compute_instances",
+    "tenant_col": null
+  },
+  "(integration-instances,integrationinstance)": {
+    "compartment_col": "compartment_id",
+    "display_col": "display_name",
+    "id_col": "id",
+    "name_col": "display_name",
+    "node_type": "OCIIntegrationInstance",
+    "table": "integration_instances",
     "tenant_col": null
   },
   "(iot-digital-twin-adapter,iotdigitaltwinadapter)": {

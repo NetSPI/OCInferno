@@ -44,6 +44,7 @@ from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (  # noqa:
     canonical_resource_row_from_spec,
     ensure_edge,
     ensure_new_compute_instance_candidate_node,
+    ensure_new_rpst_resource_candidate_node,
     ensure_node,
     ensure_principal_node,
     ensure_scope_node,

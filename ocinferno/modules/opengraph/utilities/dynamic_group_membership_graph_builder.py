@@ -85,8 +85,6 @@ def build_dynamic_group_membership_edges_offline(*, session, ctx, debug: bool = 
         if not dg_id:
             return
 
-        dg_comp_id = str(dg.get("compartment_ocid") or dg.get("compartment_id") or "").strip()
-
         rule = str(dg.get("matching_rule") or "").strip()
         if not rule:
             totals["groups_no_rule"] += 1
@@ -104,8 +102,14 @@ def build_dynamic_group_membership_edges_offline(*, session, ctx, debug: bool = 
         #     }
         #   },
         # }
+        # Pass compartment_id=None: the DG's own compartment is NOT a constraint on
+        # which resources it can match. A rule like
+        #   ALL {resource.type='instance', resource.compartment.id='CHILD_CID'}
+        # should match instances in CHILD_CID even when the DG lives in PARENT_CID.
+        # Letting _eval_pred handle the resource.compartment.id predicate correctly
+        # covers all cases (no compartment constraint, exact match, ANY union).
         try:
-            for m in evaluator.match_iter(rule, compartment_id=dg_comp_id or None):
+            for m in evaluator.match_iter(rule, compartment_id=None):
                 matched_any = True
                 totals["matches_seen"] += 1
                 src_id = str(m.get("id") or "").strip()
