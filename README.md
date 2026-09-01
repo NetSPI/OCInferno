@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](./CONTRIBUTING.md)
-[![OCI SDK](https://img.shields.io/badge/oci--sdk-2.183.0-orange)](https://pypi.org/project/oci/)
+[![OCI SDK](https://img.shields.io/badge/oci--sdk-2.185.0-orange)](https://pypi.org/project/oci/)
 [![Stars](https://img.shields.io/github/stars/NetSPI/OCInferno.svg)](https://github.com/NetSPI/OCInferno/stargazers)
 [![Forks](https://img.shields.io/github/forks/NetSPI/OCInferno.svg)](https://github.com/NetSPI/OCInferno/network)
 [![Issues](https://img.shields.io/github/issues/NetSPI/OCInferno.svg)](https://github.com/NetSPI/OCInferno/issues)
