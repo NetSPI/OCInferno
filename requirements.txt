@@ -1,4 +1,4 @@
-oci==2.183.0
+oci==2.185.0
 requests==2.34.2
 oci-lexer-parser==0.5.0
 kubernetes>=28.1.0
