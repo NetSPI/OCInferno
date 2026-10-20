@@ -29,7 +29,7 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
-  "ruff==0.16.9"
+  "ruff==0.16.10"
 ]
 excel = [
   "pandas==3.0.6",
