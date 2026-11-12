@@ -25,7 +25,6 @@ from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.selection_helpers import _s
 from ocinferno.core.utils.service_runtime import _init_client
 
-
 # =============================================================================
 # Shared: forward an optional list-scope kwarg only when it's truthy
 # =============================================================================
@@ -370,7 +369,10 @@ class InstanceConfigurationsResource(OciListResource):
     LIST_METHOD = "list_instance_configurations"
     GET_METHOD = "get_instance_configuration"
     GET_ID_PARAM = "instance_configuration_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    # instance_details holds launch_details.metadata.user_data (cloud-init) for the
+    # pool template — captured here so a scaled-to-zero pool's user-data is still
+    # reviewable even when no live instance exists. Populated on --get.
+    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created", "instance_details"]
 
 
 class InstancePoolsResource(OciListResource):
@@ -429,7 +431,10 @@ class ComputeInstancesResource(OciListResource):
     LIST_METHOD = "list_instances"
     GET_METHOD = "get_instance"
     GET_ID_PARAM = "instance_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "shape", "availability_domain"]
+    # instance_options carries are_legacy_imds_endpoints_disabled: when False, IMDSv1
+    # is still reachable, so any SSRF/code-exec on the host can mint the instance
+    # principal's token. Surfaced so an operator can spot IMDSv1-enabled hosts.
+    COLUMNS = ["id", "display_name", "lifecycle_state", "shape", "availability_domain", "instance_options"]
 
     # NOTE (behavior change / improvement): the pre-migration ``list_instances``
     # wrapper called ``self.client.list_instances(compartment_id=...)`` directly

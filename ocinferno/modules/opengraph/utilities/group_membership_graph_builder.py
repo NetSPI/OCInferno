@@ -1,12 +1,20 @@
 # group_membership_graph_builder.py
 from ocinferno.modules.opengraph.utilities.helpers import (
-    build_edge_properties as _build_edge_properties,
     EDGE_CATEGORY_GROUP_MEMBERSHIP,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    build_edge_properties as _build_edge_properties,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     merge_value as _merge_value,
 )
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     EDGE_TYPE_OCI_GROUP_MEMBER as EDGE_GROUP_MEMBER,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_GROUP as NODE_GROUP,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_USER as NODE_USER,
 )
 from ocinferno.modules.opengraph.utilities.helpers.context import _dlog, _json_load
@@ -63,6 +71,13 @@ def build_group_membership_edges_offline(*, session, ctx, debug=False, auto_comm
         "membership_rows_seen": 0,
         "idd_json_edges_seen": 0,
     }
+
+    # Warm the in-memory OG cache once so emit_edge dedupe is O(1) per call,
+    # not a SELECT per call (N+1).  Failure is non-fatal: we fall back to N+1.
+    try:
+        ctx.refresh_opengraph_state(force=False)
+    except Exception:
+        pass
 
     # -------------------------------------------------------------------------
     # In-memory aggregators (prefer richer data - write final nodes/edges at the end)

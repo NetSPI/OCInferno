@@ -6,8 +6,8 @@ from collections import deque
 from typing import Any, Optional
 
 from ocinferno.core.console import UtilityTools
-from ocinferno.modules.identityclient.utilities.helpers import IdentityResourceClient
 from ocinferno.core.utils.module_helpers import print_results_table
+from ocinferno.modules.identityclient.utilities.helpers import IdentityResourceClient
 
 
 def _parse_args(user_args):

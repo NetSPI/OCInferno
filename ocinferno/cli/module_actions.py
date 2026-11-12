@@ -12,20 +12,18 @@ from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Sequence, List, Dict, Any, Set
+from typing import Any, Dict, List, Optional, Sequence, Set
 
 try:
-    from requests.exceptions import ConnectTimeout as _ConnectTimeout, ReadTimeout as _ReadTimeout
+    from requests.exceptions import ConnectTimeout as _ConnectTimeout
+    from requests.exceptions import ReadTimeout as _ReadTimeout
     _TIMEOUT_EXC: tuple = (_ConnectTimeout, _ReadTimeout)
 except ImportError:
     _TIMEOUT_EXC = ()
 
-from ocinferno.core.contracts import AuthError
-from ocinferno.core.contracts import ErrorCode
-from ocinferno.core.contracts import OperationResult
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.contracts import AuthError, ErrorCode, OperationResult
 from ocinferno.core.utils.service_runtime import invoke_run_module as _invoke_run_module
-
 
 # =============================================================================
 # Policy models

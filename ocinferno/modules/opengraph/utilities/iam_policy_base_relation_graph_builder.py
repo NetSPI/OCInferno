@@ -26,36 +26,61 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 from oci_lexer_parser import parse_policy_statements
-from ocinferno.modules.opengraph.utilities.helpers.iam_conditionals import StatementConditionalsEngine
-from ocinferno.modules.opengraph.utilities.helpers.constants import (
-    DEFAULT_ALLOW_EDGE_RULES,
-    NODE_TYPE_OCI_GENERIC_RESOURCE,
-    NODE_TYPE_OCI_DYNAMIC_GROUP,
-    NODE_TYPE_OCI_GROUP,
-    NODE_TYPE_OCI_USER,
-    PRINCIPAL_GROUPS,
-    PERMISSION_MAPPING,
-    RESOURCE_SCOPE_MAP,
+
+from ocinferno.modules.opengraph.utilities.helpers import (
+    EDGE_CATEGORY_PERMISSION,
+    build_table_token_indexes,
 )
 from ocinferno.modules.opengraph.utilities.helpers import (
     build_edge_properties as _build_edge_properties,
-    build_table_token_indexes,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     dlog as _dlog,
-    EDGE_CATEGORY_PERMISSION,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     ensure_scope_node as _shared_ensure_scope_node,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     family_keys_l as _family_keys_l_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     family_members_l as _family_members_l_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     get_og_state as _og_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     json_list as _json_list,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     l as _l,
-    short_text as _short,
-    synthetic_principal_id as _synthetic_principal_id,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     s as _s,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    short_text as _short,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    synthetic_principal_id as _synthetic_principal_id,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
+    DEFAULT_ALLOW_EDGE_RULES,
+    NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_GENERIC_RESOURCE,
+    NODE_TYPE_OCI_GROUP,
+    NODE_TYPE_OCI_USER,
+    PERMISSION_MAPPING,
+    PRINCIPAL_GROUPS,
+    RESOURCE_SCOPE_MAP,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    _short_ocid,
 )
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     emit_edge as _emit_edge_shared,
-    _short_ocid,
 )
+from ocinferno.modules.opengraph.utilities.helpers.iam_conditionals import StatementConditionalsEngine
 from ocinferno.modules.opengraph.utilities.helpers.policy_parser_enrichment import (
     enrich_domain_ocids_in_parsed_statements as _enrich_domain_ocids_in_parsed_statements,
 )

@@ -16,6 +16,9 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Iterable, List
 
+# NOTE FOR TESTS: _CANCEL_EVENT is a module-level singleton. Tests that call
+# request_cancel() must call clear_cancel() in teardown, or subsequent tests
+# will see cancel_requested() == True and skip all work silently.
 _CANCEL_EVENT = threading.Event()
 
 
@@ -100,13 +103,17 @@ def parallel_map(
             idx, item = future_to_context[future]
             try:
                 results[idx] = future.result()
-            except Exception:
+            except Exception as e:
+                print(f"[!] {label}: worker failed for {_progress_token(item)}: {e}")
                 results[idx] = None
             finally:
                 completed += 1
                 if show_progress and _should_emit(completed):
                     print(f"[*] {label}: {completed}/{total} completed (last={_progress_token(item)})")
             if cancel_requested():
+                skipped = total - completed
+                if skipped > 0 and show_progress:
+                    print(f"[!] {label}: cancelled; {skipped} queued item(s) not started")
                 break
     except BaseException:
         # Any abnormal exit -- KeyboardInterrupt, or e.g. executor.submit() raising

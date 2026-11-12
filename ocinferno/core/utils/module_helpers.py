@@ -8,9 +8,10 @@ without redefining the same helpers repeatedly.
 
 import os
 import re
-import requests
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+import requests
 
 from ocinferno.core.console import UtilityTools
 
@@ -74,17 +75,6 @@ def parse_csv_args(values: List[str]) -> List[str]:
         parts.extend([x.strip() for x in str(v).split(",") if x and str(x).strip()])
     return dedupe_strs(parts)
 
-
-def resolve_component_flags(args: Any, keys: List[str]) -> Dict[str, bool]:
-    """Resolve component booleans with an "all if none selected" behavior.
-
-    If any key in ``keys`` is explicitly set on ``args``, only those selected
-    keys are enabled. If none are selected, all keys are enabled.
-    """
-    any_selected = any(bool(getattr(args, k, False)) for k in keys)
-    if any_selected:
-        return {k: bool(getattr(args, k, False)) for k in keys}
-    return {k: True for k in keys}
 
 
 def cached_table_count(
@@ -166,28 +156,20 @@ def fill_missing_fields(dst: Dict[str, Any], src: Dict[str, Any]) -> bool:
     return changed
 
 
-def unique_dict_rows_by_key(rows: List[Dict[str, Any]], key: str = "id") -> List[Dict[str, Any]]:
-    """Deduplicate dict rows by ``key`` while preserving order.
-
-    Rows without ``key`` are kept.
-    """
-    seen = set()
+def unique_rows_by_id(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Deduplicate rows by ``id`` key while preserving order."""
+    seen: set = set()
     out: List[Dict[str, Any]] = []
     for r in rows or []:
         if not isinstance(r, dict):
             continue
-        rid = r.get(key)
+        rid = r.get("id")
         if isinstance(rid, str) and rid:
             if rid in seen:
                 continue
             seen.add(rid)
         out.append(r)
     return out
-
-
-def unique_rows_by_id(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Deduplicate rows by ``id`` key."""
-    return unique_dict_rows_by_key(rows, key="id")
 
 
 def ids_from_db(

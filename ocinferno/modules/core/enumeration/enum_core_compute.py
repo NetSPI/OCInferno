@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Sequence
 
 import oci
+
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.module_helpers import cached_table_count, fill_missing_fields, save_rows
+from ocinferno.core.utils.service_runtime import resolve_selected_components
 from ocinferno.modules.core.utilities.helpers import (
     ClusterNetworksResource,
     ComputeClustersResource,
@@ -24,7 +27,6 @@ from ocinferno.modules.core.utilities.helpers import (
     _extract_execution_output_text,
     _write_instance_agent_merged_files,
 )
-from ocinferno.core.utils.module_helpers import fill_missing_fields, cached_table_count, save_rows, resolve_component_flags
 
 
 def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
@@ -70,7 +72,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
     if not comp_id:
         raise ValueError("session.compartment_id is not set. Select a compartment first.")
 
-    flags = resolve_component_flags(
+    flags = resolve_selected_components(
         args,
         [
             "instances",

@@ -14,7 +14,6 @@ from types import SimpleNamespace
 from typing import Any, Dict, Iterator, List, Optional, Sequence
 from unittest.mock import patch
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

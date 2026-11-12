@@ -8,7 +8,6 @@ from ocinferno.core.utils import regions
 from ocinferno.core.utils import regions as R
 from ocinferno.core.utils.scoped_session import CompartmentScopedSession
 
-
 # ---------------------------------------------------------------------------
 # Subscription awareness: caching + not-subscribed error detection
 # ---------------------------------------------------------------------------

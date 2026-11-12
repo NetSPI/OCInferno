@@ -22,7 +22,11 @@ class DevOpsConnectionsResource(OciListResource):
     LIST_METHOD = "list_connections"
     GET_METHOD = "get_connection"
     GET_ID_PARAM = "connection_id"
-    COLUMNS = ["id", "display_name", "connection_type", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "connection_type", "time_created",
+        # Available with --get (ConnectionSummary omits credentials):
+        "access_token", "app_password", "base_url",
+    ]
 
 
 class DevOpsRepositoriesResource(OciListResource):
@@ -42,7 +46,11 @@ class DevOpsBuildPipelinesResource(OciListResource):
     LIST_METHOD = "list_build_pipelines"
     GET_METHOD = "get_build_pipeline"
     GET_ID_PARAM = "build_pipeline_id"
-    COLUMNS = ["id", "display_name", "project_id", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "project_id", "time_created",
+        # Available with --get:
+        "build_pipeline_parameters",
+    ]
 
 
 class DevOpsDeployPipelinesResource(OciListResource):
@@ -54,4 +62,8 @@ class DevOpsDeployPipelinesResource(OciListResource):
     LIST_METHOD = "list_deploy_pipelines"
     GET_METHOD = "get_deploy_pipeline"
     GET_ID_PARAM = "deploy_pipeline_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "project_id"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "project_id",
+        # Available with --get:
+        "deploy_pipeline_parameters",
+    ]

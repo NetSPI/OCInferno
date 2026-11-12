@@ -4,13 +4,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ocinferno.modules.objectstorage.utilities.helpers import (
-    ObjectStorageBucketsResource,
-    ObjectStorageNamespacesResource,
-    ObjectStorageObjectsResource,
-    ObjectStoragePreauthenticatedRequestsResource,
-    normalize_sse_c_key,
-)
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import fill_missing_fields, parse_csv_args, safe_path_component
@@ -19,7 +12,13 @@ from ocinferno.core.utils.service_runtime import (
     parse_wrapper_args,
     resolve_selected_components,
 )
-
+from ocinferno.modules.objectstorage.utilities.helpers import (
+    ObjectStorageBucketsResource,
+    ObjectStorageNamespacesResource,
+    ObjectStorageObjectsResource,
+    ObjectStoragePreauthenticatedRequestsResource,
+    normalize_sse_c_key,
+)
 
 COMPONENTS = [
     ("namespaces", "namespaces", "Enumerate namespaces"),

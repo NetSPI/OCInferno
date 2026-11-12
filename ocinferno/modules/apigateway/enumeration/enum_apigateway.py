@@ -3,12 +3,6 @@ from __future__ import annotations
 
 import argparse
 
-from ocinferno.modules.apigateway.utilities.helpers import (
-    ApiGatewayApisResource,
-    ApiGatewayDeploymentsResource,
-    ApiGatewayGatewaysResource,
-    ApiGatewaySdksResource,
-)
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import fill_missing_fields, guess_blob_ext, parse_csv_args, write_bytes_file
@@ -18,7 +12,12 @@ from ocinferno.core.utils.service_runtime import (
     resolve_selected_components,
     run_standard_enum_component,
 )
-
+from ocinferno.modules.apigateway.utilities.helpers import (
+    ApiGatewayApisResource,
+    ApiGatewayDeploymentsResource,
+    ApiGatewayGatewaysResource,
+    ApiGatewaySdksResource,
+)
 
 COMPONENTS = [
     ("gateways", "gateways", "Enumerate gateways"),

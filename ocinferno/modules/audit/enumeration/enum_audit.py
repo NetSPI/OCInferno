@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from ocinferno.modules.audit.utilities.helpers import AuditEventsResource
+from ocinferno.core.utils.module_helpers import parse_iso_datetime
 from ocinferno.core.utils.service_runtime import (
     SOFT_SKIP_STATUSES,
     append_cached_component_counts,
@@ -11,6 +11,7 @@ from ocinferno.core.utils.service_runtime import (
     resolve_selected_components,
     run_standard_enum_component,
 )
+from ocinferno.modules.audit.utilities.helpers import AuditEventsResource
 
 # Audit may be unavailable/denied for a given compartment; treat 401/403/404 on
 # listing as an empty result rather than an error.
@@ -42,18 +43,6 @@ def _parse_args(user_args):
     )
 
 
-def _parse_rfc3339(value):
-    # Accept a trailing 'Z' (UTC) which datetime.fromisoformat does not handle
-    # before 3.11; normalize to +00:00.
-    text = str(value).strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    dt = datetime.fromisoformat(text)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
 def run_module(user_args, session):
     args, _ = _parse_args(user_args)
 
@@ -63,9 +52,9 @@ def run_module(user_args, session):
     if not compartment_id:
         raise ValueError("session.compartment_id is not set")
 
-    end = _parse_rfc3339(args.end_time) if getattr(args, "end_time", None) else datetime.now(timezone.utc)
+    end = parse_iso_datetime(args.end_time) if getattr(args, "end_time", None) else datetime.now(timezone.utc)
     if getattr(args, "start_time", None):
-        start = _parse_rfc3339(args.start_time)
+        start = parse_iso_datetime(args.start_time)
     else:
         start = end - timedelta(hours=int(getattr(args, "hours", 24) or 24))
 

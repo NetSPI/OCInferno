@@ -5,7 +5,6 @@ import sys
 import types
 import unittest
 
-
 try:
     import oci_lexer_parser  # noqa: F401
 except ImportError:

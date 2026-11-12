@@ -5,7 +5,10 @@ import argparse
 from typing import Any, Dict, Sequence
 
 import oci
+
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.module_helpers import cached_table_count, fill_missing_fields
+from ocinferno.core.utils.service_runtime import resolve_selected_components
 from ocinferno.modules.core.utilities.helpers import (
     DhcpOptionsResource,
     DrgAttachmentsResource,
@@ -22,7 +25,6 @@ from ocinferno.modules.core.utilities.helpers import (
     VcnsResource,
     print_section_table,
 )
-from ocinferno.core.utils.module_helpers import fill_missing_fields, cached_table_count, resolve_component_flags
 
 
 def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
@@ -61,7 +63,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
     if not comp_id:
         raise ValueError("session.compartment_id is not set. Select a compartment first.")
 
-    flags = resolve_component_flags(
+    flags = resolve_selected_components(
         args,
         [
             "vcns",

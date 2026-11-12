@@ -6,8 +6,7 @@ import oci
 
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import dedupe_strs
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 def build_file_storage_clients(session, region: Optional[str] = None):

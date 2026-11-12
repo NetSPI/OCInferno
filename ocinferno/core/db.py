@@ -107,6 +107,17 @@ class DataController:
         "identity_domain_dynamic_groups": [
             ("ix_identity_domain_dynamic_groups_workspace_compartment", ("workspace_id", "compartment_ocid")),
         ],
+        "vault_vaults":    [("ix_vault_vaults_ws_lc",    ("workspace_id", "lifecycle_state"))],
+        "vault_keys":      [("ix_vault_keys_ws_lc",      ("workspace_id", "lifecycle_state"))],
+        "vault_secrets":   [("ix_vault_secrets_ws_lc",   ("workspace_id", "lifecycle_state"))],
+        "containerengine_clusters":   [("ix_ce_clusters_ws_lc",    ("workspace_id", "lifecycle_state"))],
+        "containerengine_node_pools": [("ix_ce_node_pools_ws_lc",  ("workspace_id", "lifecycle_state"))],
+        "cr_repositories":            [("ix_cr_repos_ws_lc",       ("workspace_id", "lifecycle_state"))],
+        "virtual_network_security_lists": [("ix_vnsl_ws_comp",     ("workspace_id", "compartment_id"))],
+        "virtual_network_subnets":        [("ix_vnsn_ws_comp",     ("workspace_id", "compartment_id"))],
+        "virtual_network_route_tables":   [("ix_vnrt_ws_comp",     ("workspace_id", "compartment_id"))],
+        "logging_logs":               [("ix_logging_logs_ws_lc",   ("workspace_id", "lifecycle_state"))],
+        "identity_user_api_keys":     [("ix_iam_api_keys_ws_lc",   ("workspace_id", "lifecycle_state"))],
     }
     """
     DataController: two SQLite DBs
@@ -300,14 +311,11 @@ class DataController:
             print("[X] Failed to delete workspace:", e)
             return False
 
-    def ensure_user_permissions_row(self, workspace_id: int, credname: str) -> None:
-        """
-        Ensure row exists so merge/upsert always has a base.
-        Does not overwrite existing blobs.
-        """
+    def ensure_user_permissions_row(self, workspace_id: int, credname: str) -> Optional[Dict[str, Any]]:
+        """Ensure row exists and return it.  Returns the existing row dict (or None after insert)."""
         existing = self.fetch_user_permissions(workspace_id, credname)
         if existing:
-            return
+            return existing
         payload = {
             "workspace_id": workspace_id,
             "credname": credname,
@@ -324,6 +332,7 @@ class DataController:
             conflict_cols=["workspace_id", "credname"],
             commit=True,
         )
+        return None
 
     # ---- small internal helpers ----
 
@@ -438,8 +447,7 @@ class DataController:
         """
         now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-        self.ensure_user_permissions_row(workspace_id, credname)
-        row = self.fetch_user_permissions(workspace_id, credname) or {}
+        row = self.ensure_user_permissions_row(workspace_id, credname) or {}
 
         perms = self._safe_json_obj(row.get("permissions_json"))
         ok = self._safe_json_obj(row.get("apis_success_json"))
@@ -1297,7 +1305,7 @@ class DataController:
                 conn.rollback()
             except Exception:
                 pass
-            return 0
+            return -1  # distinguish "failed" from "empty batch" (which returns 0)
 
     # -------------------------------------------------------------------------
     # Delete dict row

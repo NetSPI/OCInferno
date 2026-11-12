@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import oci
+
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import write_response_stream_to_file
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 def build_resource_manager_client(session, region: Optional[str] = None):
@@ -29,7 +29,11 @@ def _write_blob(data: Any, out_path: str) -> bool:
 
 class ResourceManagerStacksResource(ResourceBase):
     TABLE_NAME = "resource_manager_stacks"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        # Available with --get (StackSummary omits these):
+        "variables", "config_source",
+    ]
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session

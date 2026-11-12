@@ -859,7 +859,7 @@
     "id_col": "id",
     "name_col": "display_name",
     "node_type": "OCIMySqlDbSystem",
-    "table": "db_mysql_db_systems",
+    "table": "mysql_db_systems",
     "tenant_col": null
   },
   "(network-firewall-policies,networkfirewallpolicy)": {

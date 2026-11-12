@@ -15,6 +15,7 @@ import oci
 import requests
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
+
 try:
     from oci.config import from_file, validate_config
 except Exception:  # pragma: no cover - allows lightweight test stubs to import session.py
@@ -48,20 +49,19 @@ except Exception:  # pragma: no cover - allows lightweight test stubs to import 
     X509FederationClientBasedSecurityTokenSigner = None
 
 
-from ocinferno.core.db import DataController
+from ocinferno.core import output_paths as _output_paths
+
+# Your logger (ensure ApiRequestLogger.record supports opc_request_id)
+from ocinferno.core.api_logger import ApiLogEvent, ApiRequestLogger  # ApiLogEvent must exist in LoggingController
+from ocinferno.core.auth import AuthMixin, CredRecord
+from ocinferno.core.coerce import _safe_str
 from ocinferno.core.config import (
     WORKSPACE_CONFIG_KEYS,
 )
-from ocinferno.core.http_policy import HttpPolicyService
 from ocinferno.core.console import UtilityTools
-from ocinferno.core import output_paths as _output_paths
+from ocinferno.core.db import DataController
+from ocinferno.core.http_policy import HttpPolicyService
 from ocinferno.core.workspace_config import WorkspaceConfigMixin
-from ocinferno.core.coerce import _safe_str
-from ocinferno.core.auth import AuthMixin, CredRecord
-
-# Your logger (ensure ApiRequestLogger.record supports opc_request_id)
-from ocinferno.core.api_logger import ApiRequestLogger, ApiLogEvent  # ApiLogEvent must exist in LoggingController
-
 
 
 class SessionUtility(WorkspaceConfigMixin, AuthMixin):
@@ -114,6 +114,11 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
     _GLOBAL_REQUESTS_OWNER = None
     _GLOBAL_OCI_PATCH_LOCK = threading.Lock()
     _GLOBAL_OCI_PATCHED = False
+    # _GLOBAL_OCI_OWNER is a class-level singleton: always the LATEST SessionUtility
+    # that called _install_global_oci_api_logging_hook().  The patched call_api
+    # closure captures `self` (the first patcher) but reads _GLOBAL_OCI_OWNER at
+    # call time, so it follows credential/workspace switches automatically.  There
+    # is intentionally only one hook; a second `install` call just updates the owner.
     _GLOBAL_OCI_OWNER = None
 
     # ----------------------------
@@ -897,8 +902,8 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             )
             if db_rows:
                 rows = list(db_rows)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[!] get_all_creds: DB fetch failed (workspace {self.workspace_id}): {e}")
 
         # Ensure currently active creds are visible even if DB rows are stale/missing.
         active_credname = (self.credname or "").strip()
@@ -1344,9 +1349,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
                     continue
             if not isinstance(row, dict):
                 continue
-            row = dict(row)
-            row["workspace_id"] = self.workspace_id
-            normalized.append(row)
+            normalized.append({**row, "workspace_id": self.workspace_id})
 
         if not normalized:
             return 0
@@ -1510,3 +1513,42 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         if not ok:
             print("[X] save_dict_row returned False for opengraph_edges")
         return ok
+
+    def set_node_fields_bulk(
+        self,
+        rows: list,
+        *,
+        on_conflict: str = "update",
+    ) -> int:
+        """Bulk upsert into opengraph_nodes via executemany.  Faster than N set_node_fields
+        calls when merge logic is not needed (e.g. fresh builds where existing_nodes_set
+        already confirms all rows are new).  workspace_id is injected on every row."""
+        for row in rows:
+            if isinstance(row, dict):
+                row["workspace_id"] = self.workspace_id
+        return self.data_master.save_dict_rows_bulk(
+            db="service",
+            table_name="opengraph_nodes",
+            rows=rows,
+            on_conflict=on_conflict,
+            conflict_cols=["node_type", "node_id"],
+        )
+
+    def set_edge_fields_bulk(
+        self,
+        rows: list,
+        *,
+        on_conflict: str = "update",
+    ) -> int:
+        """Bulk upsert into opengraph_edges via executemany.  Faster than N set_edge_fields
+        calls for fresh builds.  workspace_id is injected on every row."""
+        for row in rows:
+            if isinstance(row, dict) and "workspace_id" not in row:
+                row["workspace_id"] = self.workspace_id
+        return self.data_master.save_dict_rows_bulk(
+            db="service",
+            table_name="opengraph_edges",
+            rows=rows,
+            on_conflict=on_conflict,
+            conflict_cols=["source_id", "edge_type", "destination_id", "workspace_id"],
+        )

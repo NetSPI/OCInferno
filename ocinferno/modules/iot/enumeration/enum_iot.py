@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from ocinferno.core.utils.enum_framework import Component, component_arg_specs, nested_list_fn, run_components
 from ocinferno.core.utils.module_helpers import domain_ids_from_db
-from ocinferno.core.utils.service_runtime import parse_wrapper_args, resolve_selected_components, resource_method_download
+from ocinferno.core.utils.service_runtime import (
+    parse_wrapper_args,
+    resolve_selected_components,
+    resource_method_download,
+)
 from ocinferno.modules.iot.utilities.helpers import (
     IotDigitalTwinAdaptersResource,
     IotDigitalTwinInstancesResource,
@@ -12,7 +16,6 @@ from ocinferno.modules.iot.utilities.helpers import (
     IotDomainGroupsResource,
     IotDomainsResource,
 )
-
 
 _NESTED_KEYS = (
     "digital_twin_models",

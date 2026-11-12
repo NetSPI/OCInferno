@@ -104,26 +104,88 @@ def _backfill_rt_attachments(session, subnet_rows: list) -> int:
     return len(rt_rows)
 
 
+_KIND_LABEL = {
+    ni.KIND_IP: "IP",
+    ni.KIND_CIDR: "CIDR",
+    ni.KIND_URL: "URL",
+    ni.KIND_FQDN: "FQDN",
+    ni.KIND_NET_REF: "Net Ref",
+}
+
+
 def _print_inventory_report(records, summary) -> None:
     if not records:
         print(f"{UtilityTools.YELLOW}[!] No network identifiers found. Run enum_all first to populate resource tables.{UtilityTools.RESET}")
         return
-    order = {ni.KIND_IP: 0, ni.KIND_CIDR: 1, ni.KIND_FQDN: 2, ni.KIND_URL: 3, ni.KIND_NET_REF: 4}
-    for kind in sorted({r["kind"] for r in records}, key=lambda k: order.get(k, 9)):
-        subset = sorted([r for r in records if r["kind"] == kind], key=lambda r: r["value"])
-        print(f"\n{UtilityTools.BRIGHT_CYAN}[*] {kind.upper()} ({len(subset)} rows, {len({r['value'] for r in subset})} distinct){UtilityTools.RESET}")
-        rows = [
-            {"value": r["value"], "resource": r["resource_name"] or r["resource_id"],
-             "source_table": r["source_table"], "column": r["column_name"], "compartment_id": r["compartment_id"]}
-            for r in subset
-        ]
+
+    # Flatten all network-navigable identifiers into one scannable table.
+    # Net refs (OCID subnet/VCN/NSG) are printed separately — they're pivoting
+    # aids rather than "where do I go" identifiers.
+    navigable_kinds = {ni.KIND_IP, ni.KIND_CIDR, ni.KIND_URL, ni.KIND_FQDN}
+    navigable = [r for r in records if r["kind"] in navigable_kinds]
+    net_refs  = [r for r in records if r["kind"] == ni.KIND_NET_REF]
+
+    if navigable:
+        # Sort public (internet-reachable) endpoints to the top — they're the most
+        # actionable — then by service → kind → value.
+        kind_order = {ni.KIND_IP: 0, ni.KIND_FQDN: 1, ni.KIND_URL: 2, ni.KIND_CIDR: 3}
+        scope_rank = {"public": 0, "private": 1}
+        navigable.sort(key=lambda r: (
+            scope_rank.get(r.get("scope", ""), 2),
+            r.get("service", ""),
+            kind_order.get(r["kind"], 9),
+            r["value"],
+        ))
+        pub = sum(1 for r in navigable if r.get("scope") == "public")
+        priv = sum(1 for r in navigable if r.get("scope") == "private")
+        rows = []
+        for r in navigable:
+            # Truncate long values for display
+            val = r["value"]
+            if len(val) > 80:
+                val = val[:77] + "..."
+            rows.append({
+                "type":       _KIND_LABEL.get(r["kind"], r["kind"]),
+                "scope":      r.get("scope", "") or "—",
+                "endpoint":   val,
+                "service":    r.get("service", r["source_table"]),
+                "resource":   (r["resource_name"] or r["resource_id"])[:40] or "—",
+                "context":    r.get("context", r["column_name"])[:35],
+                "compartment_id": r["compartment_id"],
+            })
+        print(f"\n{UtilityTools.BRIGHT_CYAN}[*] Network Scope — IPs / FQDNs / URLs / CIDRs "
+              f"({len(navigable)} rows; {pub} public / {priv} private){UtilityTools.RESET}")
         UtilityTools.print_limited_table(
             rows,
-            ["value", "resource", "source_table", "column", "compartment_id"],
-            title=f"Network Resources - {kind.replace('_', ' ').title()}",
+            ["type", "scope", "endpoint", "service", "resource", "context", "compartment_id"],
+            title="Network Inventory",
         )
-    distinct_counts = ", ".join(f"{k}={summary.get(f'{k}_distinct', 0)}" for k in ni.ALL_KINDS)
-    print(f"\n{UtilityTools.GREEN}[+] Network inventory (distinct): {distinct_counts}{UtilityTools.RESET}")
+
+    if net_refs:
+        net_refs.sort(key=lambda r: (r.get("service", ""), r["value"]))
+        ref_rows = [
+            {
+                "ocid":      r["value"],
+                "service":   r.get("service", r["source_table"]),
+                "resource":  (r["resource_name"] or r["resource_id"])[:40] or "—",
+                "context":   r.get("context", r["column_name"])[:35],
+            }
+            for r in net_refs
+        ]
+        print(f"\n{UtilityTools.CYAN}[*] Network References — subnet / VCN / NSG OCIDs ({len(net_refs)} rows){UtilityTools.RESET}")
+        UtilityTools.print_limited_table(
+            ref_rows, ["ocid", "service", "resource", "context"],
+            title="Network References",
+        )
+
+    distinct_counts = ", ".join(
+        f"{_KIND_LABEL.get(k, k)}={summary.get(f'{k}_distinct', 0)}"
+        for k in ni.ALL_KINDS
+    )
+    print(f"\n{UtilityTools.GREEN}[+] Distinct: {distinct_counts}{UtilityTools.RESET}")
+    print(f"{UtilityTools.GREEN}[+] Navigable endpoints: "
+          f"{summary.get('public_endpoints', 0)} public / "
+          f"{summary.get('private_endpoints', 0)} private{UtilityTools.RESET}")
 
 
 # ── parser ─────────────────────────────────────────────────────────────────────
@@ -146,7 +208,13 @@ def _parse_args(user_args) -> argparse.Namespace:
 
     # inventory flags
     p.add_argument("--kinds", default=None,
-                   help=f"Comma-separated identifier kinds to include (default: all). Options: {','.join(ni.ALL_KINDS)}")
+                   help=f"Comma-separated identifier kinds to include (default: all navigable). Options: {','.join(ni.ALL_KINDS)}")
+    p.add_argument("--net-refs", dest="net_refs", action="store_true", default=False,
+                   help="Inventory: also include net_ref rows (subnet/VCN/NSG OCIDs). Off by default — "
+                        "these are pivot pointers, not reachable endpoints; the subnet→security-list "
+                        "mapping is already produced by step 2.")
+    p.add_argument("--scope", default=None, choices=["public", "private"],
+                   help="Inventory: only report endpoints with this reachability scope (public = externally interactable).")
     p.add_argument("--table", default=None,
                    help="Inventory: only sweep this one source table (e.g. compute_instances).")
     p.add_argument("--value-contains", default=None,
@@ -192,26 +260,37 @@ def run_module(user_args, session) -> Dict[str, Any]:
             records.extend(ni.extract_from_rows(table_name, rows))
 
         records = ni.dedupe(records)
+        # net_ref rows (OCID pivot pointers) are excluded by default — opt in with --net-refs.
+        if not args.net_refs and not (kinds and ni.KIND_NET_REF in kinds):
+            records = [r for r in records if r["kind"] != ni.KIND_NET_REF]
         if kinds:
             records = [r for r in records if r["kind"] in kinds]
+        if args.scope:
+            records = [r for r in records if r.get("scope") == args.scope]
         if args.value_contains:
             needle = str(args.value_contains).lower()
             records = [r for r in records if needle in r["value"].lower()]
 
         summary = ni.summarize(records)
 
-        saved = 0
-        for r in records:
-            try:
-                session.data_master.save_dict_row(
-                    db="service",
-                    table_name=_OUTPUT_TABLE,
-                    row={"workspace_id": session.workspace_id, **r},
-                    on_conflict="replace",
-                )
-                saved += 1
-            except Exception:
-                pass
+        bulk = [{"workspace_id": session.workspace_id, **r} for r in records]
+        saved = session.data_master.save_dict_rows_bulk(
+            db="service", table_name=_OUTPUT_TABLE, rows=bulk, on_conflict="replace",
+        )
+        if saved < 0:
+            # Bulk executemany is all-or-nothing; one bad row fails the batch.
+            # Fall back to per-row saves so the good rows still persist.
+            UtilityTools.dlog(debug, "process_network_resources: bulk save failed, retrying per-row")
+            saved = 0
+            for row in bulk:
+                try:
+                    session.data_master.save_dict_row(
+                        db="service", table_name=_OUTPUT_TABLE, row=row, on_conflict="replace",
+                    )
+                    saved += 1
+                except Exception as exc:
+                    UtilityTools.dlog(debug, "process_network_resources: row save failed",
+                                      kind=row.get("kind"), err=str(exc))
 
         if not args.quiet:
             _print_inventory_report(records, summary)

@@ -50,6 +50,7 @@ def _install_oci_stub() -> None:
 _install_oci_stub()
 
 import ocinferno.modules.objectstorage.utilities.helpers as objectstorage_helpers
+
 objectstorage_helpers = importlib.reload(objectstorage_helpers)
 
 from ocinferno.modules.objectstorage.utilities.helpers import ObjectStorageNamespacesResource

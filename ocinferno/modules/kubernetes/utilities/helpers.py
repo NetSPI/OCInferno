@@ -4,10 +4,10 @@ from argparse import Namespace
 from typing import Any, Dict, List, Optional
 
 import oci
+
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import dedupe_strs, parse_csv_args
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 def build_container_engine_client(session, region: Optional[str] = None):

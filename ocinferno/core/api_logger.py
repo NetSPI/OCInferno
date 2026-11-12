@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import getpass
 import json
 import os
 import socket
@@ -8,7 +9,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
-import getpass
 
 from ocinferno.core.console import UtilityTools
 

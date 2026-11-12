@@ -28,4 +28,5 @@ class MysqlDbSystemsResource(OciListResource):
         "port",
         "data_storage_size_in_gbs",
         "is_heat_wave_cluster_attached",
+        "nsg_ids",
     ]

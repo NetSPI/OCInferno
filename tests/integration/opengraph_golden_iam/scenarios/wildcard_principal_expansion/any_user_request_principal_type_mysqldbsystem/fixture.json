@@ -43,7 +43,7 @@
           "lifecycle_state": "ACTIVE"
         }
       ],
-      "db_mysql_db_systems": [
+      "mysql_db_systems": [
         {
           "id": "ocid1.mysqldbsystem.oc1..orders01",
           "display_name": "orders01",

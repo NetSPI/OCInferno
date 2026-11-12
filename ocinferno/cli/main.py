@@ -2,7 +2,7 @@ import argparse
 import json
 import sys
 from importlib import resources
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 # Patch socket.getaddrinfo BEFORE any OCI SDK imports so DNS resolution for
 # non-existent regional endpoints times out quickly (10 s) instead of blocking
@@ -11,11 +11,13 @@ from typing import List, Tuple, Optional
 # OCI pagination DEFAULT_RETRY_STRATEGY from treating it as a retriable
 # ConnectionError (else it would retry 8× for a 80+ s total hang).
 from ocinferno.core.net_util import install_dns_timeout
+
 install_dns_timeout()
 
 from ocinferno.cli.workspace_instructions import workspace_instructions
-from ocinferno.core.db import DataController
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.db import DataController
+
 
 def create_workspace(dc: DataController, workspace_name: str) -> Optional[int]:
     workspace_name = (workspace_name or "").strip()

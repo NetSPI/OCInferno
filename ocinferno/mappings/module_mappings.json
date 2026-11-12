@@ -12,7 +12,7 @@
     {
       "module_name": "process_config_check",
       "module_category": "Process",
-      "info_blurb": "Run saved-data configuration audits",
+      "info_blurb": "Minimal example config-audit framework (ships 1 example check; extend with your own)",
       "author": "Scott (@WebbinRoot)",
       "location": "ocinferno.modules.everything.processing.process_config_check",
       "service": "AllCoverage"
@@ -546,6 +546,14 @@
       "service": "Big Data"
     },
     {
+      "module_name": "enum_batch",
+      "module_category": "Enumeration",
+      "info_blurb": "Enumerate OCI Batch jobs/tasks/environments - tasks carry environment_variables + command + arguments (plaintext container config, like Functions/Container Instances)",
+      "author": "OCInferno",
+      "location": "ocinferno.modules.batch.enumeration.enum_batch",
+      "service": "Batch"
+    },
+    {
       "module_name": "enum_data_catalog",
       "module_category": "Enumeration",
       "info_blurb": "Enumerate Data Catalog catalogs, private endpoints, and metastores - maps where sensitive data lives plus the network endpoints and object-storage table locations backing it",
@@ -775,6 +783,14 @@
       "info_blurb": "Push OCI OpenGraph custom node color/image styling to BloodHound (standalone; re-style without regenerating the graph).",
       "author": "OCInferno",
       "location": "ocinferno.modules.opengraph.processing.process_og_node_color_images",
+      "service": "OpenGraph"
+    },
+    {
+      "module_name": "process_og_attack_paths",
+      "module_category": "Process",
+      "info_blurb": "Text-based attack path analysis over OCI OpenGraph JSON (no BloodHound needed)",
+      "author": "OCInferno",
+      "location": "ocinferno.modules.opengraph.processing.process_og_attack_paths",
       "service": "OpenGraph"
     },
     {

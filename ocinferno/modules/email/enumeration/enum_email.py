@@ -4,6 +4,10 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from ocinferno.core.console import UtilityTools
+from ocinferno.core.utils.service_runtime import (
+    make_parse_args,
+    resolve_selected_components,
+)
 from ocinferno.modules.email.utilities.helpers import (
     EmailConfigurationResource,
     EmailDkimsResource,
@@ -13,11 +17,6 @@ from ocinferno.modules.email.utilities.helpers import (
     EmailSpfsResource,
     EmailSuppressionsResource,
 )
-from ocinferno.core.utils.service_runtime import (
-    make_parse_args,
-    resolve_selected_components,
-)
-
 
 COMPONENTS = [
     ("senders", "senders", "Enumerate email senders"),

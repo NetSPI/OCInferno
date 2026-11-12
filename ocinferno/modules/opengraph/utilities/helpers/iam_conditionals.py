@@ -32,28 +32,27 @@ This version:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
 import fnmatch
 import json
 import re
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Any
 
-
+from ocinferno.core.utils import hierarchy as _hierarchy
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
-    SUPPORTED_VARIABLES,
-    CORE_API_OPERATION_PERMISSIONS,
     API_OPERATION_PERMISSION_SOURCES,
+    CORE_API_OPERATION_PERMISSIONS,
+    DEFAULT_RESOURCE_FAMILIES,
     NODE_TYPE_OCI_DYNAMIC_GROUP,
     NODE_TYPE_OCI_GROUP,
     NODE_TYPE_OCI_USER,
-    RESOURCE_SCOPE_MAP,
-    RESOURCE_PRINCIPAL_SCOPE_TOKENS,
     PERMISSION_MAPPING,
-    DEFAULT_RESOURCE_FAMILIES,
+    RESOURCE_PRINCIPAL_SCOPE_TOKENS,
+    RESOURCE_SCOPE_MAP,
+    SUPPORTED_VARIABLES,
 )
-from ocinferno.core.utils import hierarchy as _hierarchy
 
 
 def _build_operation_indexes_shared(*, api_sources, core_sources, norm_s, norm_l):
@@ -226,7 +225,7 @@ _SUPPORTED_VAR_KEYS = {
 _REQUEST_PRINCIPAL_TYPE_RESOLVABLE = {
     "resourceschedule": {"table": "resource_schedules", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIResourceSchedule"},
     "apigateway": {"table": "apigw_gateways", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIAPIGateway"},
-    "mysqldbsystem": {"table": "db_mysql_db_systems", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIMySqlDbSystem"},
+    "mysqldbsystem": {"table": "mysql_db_systems", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIMySqlDbSystem"},
     "iotdomain": {"table": "iot_domains", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIIoTDomain"},
     "dataflowrun": {"table": "dataflow_runs", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIDataFlowRun"},
     "cluster": {"table": "containerengine_clusters", "id_col": "id", "comp_col": "compartment_id", "node_type": "OCIKubernetesCluster"},
@@ -2037,7 +2036,9 @@ class StatementConditionalsEngine:
         )
         if not isinstance(scope_map, dict):
             try:
-                from ocinferno.modules.opengraph.utilities.resource_scope_graph_builder import RESOURCE_SCOPE_MAP as scope_map
+                from ocinferno.modules.opengraph.utilities.resource_scope_graph_builder import (
+                    RESOURCE_SCOPE_MAP as scope_map,
+                )
             except Exception:
                 scope_map = {}
 

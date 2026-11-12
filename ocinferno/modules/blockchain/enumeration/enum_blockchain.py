@@ -14,7 +14,6 @@ from ocinferno.modules.blockchain.utilities.helpers import (
     BlockchainWorkRequestsResource,
 )
 
-
 _PLATFORM_SCOPED_KEYS = ("peers", "osns", "patches", "work_requests")
 
 

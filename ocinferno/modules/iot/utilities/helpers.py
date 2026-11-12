@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import oci
+
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import write_response_stream_to_file
 

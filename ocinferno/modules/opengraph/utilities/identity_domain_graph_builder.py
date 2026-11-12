@@ -21,29 +21,48 @@ import json
 import re
 from collections import Counter
 
+from ocinferno.core.utils.selection_helpers import _s
 from ocinferno.modules.opengraph.utilities.helpers import (
-    build_edge_properties as _build_edge_properties,
     EDGE_CATEGORY_PERMISSION,
     EDGE_CATEGORY_RESOURCE,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    build_edge_properties as _build_edge_properties,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     json_list as _json_list_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     json_load as _json_load_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     synthetic_principal_id as _synthetic_principal_id,
 )
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_DYNAMIC_GROUP as NODE_DG,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_GROUP as NODE_GROUP,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_USER as NODE_USER,
 )
 from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
-    ensure_edge as _ensure_edge_shared,
-    get_og_state as _og_shared,
-    ensure_scope_node as _ensure_scope_node_shared,
-    fetch_rows_cached as _fetch_rows_cached,
     _short_ocid,
 )
-from ocinferno.core.utils.selection_helpers import _s
-
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    ensure_edge as _ensure_edge_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    ensure_scope_node as _ensure_scope_node_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    fetch_rows_cached as _fetch_rows_cached,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    get_og_state as _og_shared,
+)
 
 # Tables
 TABLE_DOMAINS = "identity_domains"
@@ -53,6 +72,7 @@ TABLE_IDD_APP_ROLES = "identity_domain_app_roles"
 TABLE_IDD_GRANTS = "identity_domain_grants"
 TABLE_IDD_USER_API_KEYS = "identity_domain_user_api_keys"
 TABLE_IDD_USER_SMTP_CREDS = "identity_domain_user_smtp_credentials"
+TABLE_IDD_PROPAGATION_TRUSTS = "identity_domain_identity_propagation_trusts"
 TABLE_OG_NODES = "opengraph_nodes"
 
 
@@ -62,6 +82,7 @@ NODE_ROLE = "OCIIDDAppRole"
 NODE_USER_API_KEY = "OCIIdentityDomainUserApiKey"
 NODE_USER_SMTP_CRED = "OCIIdentityDomainUserSmtpCredential"
 NODE_EMAIL_SERVICE = "OCIEmailService"
+NODE_IDD_PROPAGATION_TRUST = "OCIIdentityPropagationTrust"
 
 
 # Edge types
@@ -70,6 +91,8 @@ EDGE_USER_SMTP_CRED = "USER_SMTP_CRED"
 EDGE_SMTP_AUTH_TO_EMAIL_SERVICE = "SMTP_AUTH_TO_EMAIL_SERVICE"
 EDGE_IDD_CREATE_USER = "IDD_CREATE_USER"
 EDGE_SCOPE_MEMBER_OF = "OCI_SCOPE_MEMBER_OF"
+# A propagation trust lets an external (federated) principal impersonate an OCI user.
+EDGE_IPT_IMPERSONATE = "IDD_PROPAGATION_IMPERSONATE"
 
 
 def _json_obj_or_list(value):
@@ -156,6 +179,26 @@ def _iter_ref_values(raw_val) -> list[str]:
                 out.append(val.strip())
     elif isinstance(refs, str) and refs.strip():
         out.append(refs.strip())
+    return out
+
+
+def _impersonation_user_refs(trust: dict) -> list[str]:
+    """Pull user references (ocid / scim ref / value) out of a propagation trust's
+    impersonation_service_users list — the OCI identities an external token may become."""
+    out = []
+    imp = _json_obj_or_list(trust.get("impersonation_service_users"))
+    if isinstance(imp, dict):
+        imp = [imp]
+    if isinstance(imp, list):
+        for e in imp:
+            if isinstance(e, dict):
+                for k in ("ocid", "ref", "value"):
+                    v = e.get(k)
+                    if isinstance(v, str) and v.strip():
+                        out.append(v.strip())
+                        break
+            elif isinstance(e, str) and e.strip():
+                out.append(e.strip())
     return out
 
 
@@ -421,6 +464,49 @@ def _build_identity_domain_resource_graph_offline(*, session, ctx, debug=True, *
             default_tenant_id=tenant_id,
             edge_type=EDGE_USER_SMTP_CRED,
             edge_description="SMTP credential belongs to user.",
+        )
+
+    # Identity Propagation Trusts (workload OIDC/JWT token exchange, e.g. GitHub Actions).
+    # The trust node carries the exposure signal (unrestricted_client_claim = trusts any
+    # principal from the issuer); the IMPERSONATE edge shows which OCI user a federated
+    # external token is allowed to become.
+    trusts = _table_rows(session, table_cache, TABLE_IDD_PROPAGATION_TRUSTS)
+    for t in trusts:
+        did = _s(t.get("domain_ocid") or "")
+        if not did or did not in domain_by_id:
+            continue
+        trust_node_id = _s(t.get("ocid") or t.get("id") or "")
+        if not trust_node_id:
+            continue
+        comp_id = _s(t.get("compartment_ocid") or "")
+        tenant_id = _s(t.get("tenancy_ocid") or "")
+        domain_url = _domain_url(domain_by_id.get(did) or {})
+        display = _s(t.get("name") or trust_node_id)
+        ctx.upsert_node(
+            node_id=trust_node_id,
+            node_type=NODE_IDD_PROPAGATION_TRUST,
+            display_name=display,
+            compartment_id=comp_id,
+            tenant_id=tenant_id or ctx.tenant_for_compartment(comp_id),
+            node_properties={
+                **dict(t),
+                "domain_url": domain_url,
+            },
+            commit=False,
+        )
+        _link_credential_to_users(
+            ctx=ctx,
+            did=did,
+            domain_url=domain_url,
+            credential_node_id=trust_node_id,
+            credential_node_type=NODE_IDD_PROPAGATION_TRUST,
+            user_refs=_impersonation_user_refs(t),
+            user_by_scim=user_by_scim,
+            user_by_ocid=user_by_ocid,
+            default_compartment_id=comp_id,
+            default_tenant_id=tenant_id,
+            edge_type=EDGE_IPT_IMPERSONATE,
+            edge_description="Identity propagation trust lets a federated external token impersonate this user.",
         )
 
     if debug:
@@ -1937,8 +2023,8 @@ def build_idd_app_role_graph_offline(
     if auto_commit:
         try:
             ctx.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            _dlog(debug, "idd_app_roles: commit failed", err=f"{type(e).__name__}: {e}")
 
     res = {
         "ok": True,

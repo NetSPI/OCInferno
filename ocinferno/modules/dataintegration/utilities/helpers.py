@@ -27,3 +27,29 @@ class DataIntegrationWorkspacesResource(OciListResource):
         "is_private_network_enabled",
         "dns_server_ip",
     ]
+
+
+class DataIntegrationDataAssetsResource(OciListResource):
+    """Data Integration data assets — hold connection host/endpoint details (and,
+    in asset_properties/default_connection, user-supplied connection metadata that
+    may reference credentials). Scoped by workspace_id, not compartment."""
+
+    CLIENT_CLS = oci.data_integration.DataIntegrationClient
+    SERVICE_NAME = "DataIntegration"
+    TABLE_NAME = "data_integration_data_assets"
+    LIST_METHOD = "list_data_assets"
+    GET_METHOD = "get_data_asset"
+    GET_ID_PARAM = "data_asset_key"
+    LIST_SCOPE_KWARG = "workspace_id"
+    COLUMNS = [
+        "key",
+        "name",
+        "identifier",
+        "description",
+        "type",
+        "external_key",
+        "asset_properties",
+        "default_connection",
+        "di_workspace_id",
+        "compartment_id",
+    ]

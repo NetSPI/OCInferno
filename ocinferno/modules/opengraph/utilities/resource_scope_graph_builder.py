@@ -30,32 +30,51 @@ Notes:
 - Assumes ctx.refresh_opengraph_state(force=False) is available.
 - Does NOT expand "all-resources" (too broad).
 """
-from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
-from ocinferno.modules.opengraph.utilities.helpers.constants import (
-    NODE_TYPE_OCI_GENERIC_RESOURCE,
-    NODE_TYPE_OCI_DYNAMIC_GROUP,
-    NODE_TYPE_OCI_GROUP,
-    NODE_TYPE_OCI_USER,
-    RESOURCE_SCOPE_MAP,
-    RESOURCE_PRINCIPAL_SCOPE_TOKENS,
+from collections import defaultdict, deque
+
+from ocinferno.modules.opengraph.utilities.helpers import (
+    EDGE_CATEGORY_GROUP_MEMBERSHIP,
+    EDGE_CATEGORY_RESOURCE,
 )
 from ocinferno.modules.opengraph.utilities.helpers import (
     build_edge_properties as _build_edge_properties,
-    EDGE_CATEGORY_GROUP_MEMBERSHIP,
-    EDGE_CATEGORY_RESOURCE,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     family_keys_l as _family_keys_l,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     family_members_l as _family_members_l,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     get_og_state as _og,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     iter_scope_specs as _iter_scope_specs,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     l as _l,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     row_get as _shared_row_get,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     s as _s,
 )
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
+    NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_GENERIC_RESOURCE,
+    NODE_TYPE_OCI_GROUP,
+    NODE_TYPE_OCI_USER,
+    RESOURCE_PRINCIPAL_SCOPE_TOKENS,
+    RESOURCE_SCOPE_MAP,
+)
+from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared
-from ocinferno.modules.opengraph.utilities.helpers.graph_utils import ensure_principal_node as _ensure_principal_node_shared
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    ensure_principal_node as _ensure_principal_node_shared,
+)
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import ensure_scope_node as _shared_ensure_scope_node
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import fetch_rows_cached as _fetch_rows_cached
-from collections import defaultdict, deque
 
 # Edges
 EDGE_SCOPE_INCLUDES = "OCI_SPECIFIC_RESOURCE"
@@ -840,8 +859,8 @@ def build_resource_scope_expansion_edges_offline(
     # Refresh OG dedupe sets once, then use ctx.og_state everywhere
     try:
         ctx.refresh_opengraph_state(force=False)
-    except Exception:
-        pass
+    except Exception as e:
+        _dlog(debug, "resource-scope: refresh_opengraph_state failed; proceeding without cache (N+1 mode)", err=f"{type(e).__name__}: {e}")
 
     og = _og(ctx)
     existing_nodes = og["existing_nodes_set"]
@@ -1078,8 +1097,8 @@ def build_resource_scope_expansion_edges_offline(
     if auto_commit:
         try:
             ctx.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            _dlog(debug, "resource-scope: final commit failed", err=f"{type(e).__name__}: {e}")
 
     if debug:
         _dlog(debug, "resource-scope: done", **stats)

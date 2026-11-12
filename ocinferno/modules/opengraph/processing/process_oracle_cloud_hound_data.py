@@ -23,28 +23,38 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from ocinferno.modules.opengraph.utilities.dynamic_group_membership_graph_builder import build_dynamic_group_membership_edges_offline
-from ocinferno.modules.opengraph.utilities.group_membership_graph_builder import build_group_membership_edges_offline
-from ocinferno.modules.opengraph.utilities.iam_policy_advanced_relation_graph_builder import build_iam_policy_advanced_relation_edges_offline
-from ocinferno.modules.opengraph.utilities.iam_policy_base_relation_graph_builder import build_iam_policy_base_relation_edges_offline
-from ocinferno.modules.opengraph.utilities.identity_domain_graph_builder import (
-    build_identity_domain_graph_offline,
-)
-from ocinferno.modules.opengraph.utilities.management_agent_install_key_graph_builder import build_management_agent_install_key_dg_edges_offline
 from ocinferno.modules.opengraph.utilities.allowlist_bundle_graph_builder import build_allowlist_bundle_edges_offline
-from ocinferno.modules.opengraph.utilities.resource_scope_graph_builder import build_resource_scope_expansion_edges_offline
-from ocinferno.modules.opengraph.utilities.edge_command_annotator import annotate_edge_module_commands
-from ocinferno.modules.opengraph.utilities.helpers.graph_export import (
-    write_graph_json_with_progress,
-    write_split_outputs,
+from ocinferno.modules.opengraph.utilities.dynamic_group_membership_graph_builder import (
+    build_dynamic_group_membership_edges_offline,
 )
+from ocinferno.modules.opengraph.utilities.edge_command_annotator import annotate_edge_module_commands
+from ocinferno.modules.opengraph.utilities.group_membership_graph_builder import build_group_membership_edges_offline
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
-    NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_GROUP,
     NODE_TYPE_OCI_USER,
 )
 from ocinferno.modules.opengraph.utilities.helpers.context import OfflineIamContext, _dlog
+from ocinferno.modules.opengraph.utilities.helpers.graph_export import (
+    write_graph_json_with_progress,
+    write_split_outputs,
+)
+from ocinferno.modules.opengraph.utilities.iam_policy_advanced_relation_graph_builder import (
+    build_iam_policy_advanced_relation_edges_offline,
+)
+from ocinferno.modules.opengraph.utilities.iam_policy_base_relation_graph_builder import (
+    build_iam_policy_base_relation_edges_offline,
+)
+from ocinferno.modules.opengraph.utilities.identity_domain_graph_builder import (
+    build_identity_domain_graph_offline,
+)
+from ocinferno.modules.opengraph.utilities.management_agent_install_key_graph_builder import (
+    build_management_agent_install_key_dg_edges_offline,
+)
+from ocinferno.modules.opengraph.utilities.resource_scope_graph_builder import (
+    build_resource_scope_expansion_edges_offline,
+)
 
 NODE_COLUMNS = [
     "node_id",
@@ -330,6 +340,14 @@ def _collapse_manage_shadowed_permission_edges(edge_rows, *, enabled: bool = Tru
         canonical_idx = manage_idxs[0]
         includes = set()
 
+        # Pre-parse edge_properties for all rows in this group once.
+        parsed_props: dict = {}
+        for i in idxs:
+            try:
+                parsed_props[i] = json.loads((rows[i].get("edge_properties") or "").strip() or "{}")
+            except Exception:
+                parsed_props[i] = {}
+
         for i in idxs:
             if i == canonical_idx:
                 continue
@@ -343,11 +361,7 @@ def _collapse_manage_shadowed_permission_edges(edge_rows, *, enabled: bool = Tru
                 duplicate_manage_edges_pruned += 1
                 continue
 
-            try:
-                raw_payload = json.loads((rows[i].get("edge_properties") or "").strip() or "{}")
-            except Exception:
-                raw_payload = {}
-            category = str((raw_payload or {}).get("edge_category") or "").strip().upper()
+            category = str((parsed_props[i] or {}).get("edge_category") or "").strip().upper()
 
             if category == "PERMISSION":
                 keep[i] = False
@@ -355,10 +369,7 @@ def _collapse_manage_shadowed_permission_edges(edge_rows, *, enabled: bool = Tru
                 includes.add(edge_type)
 
         # Ensure retained OCI_MANAGE edge carries explicit collapse metadata.
-        try:
-            manage_payload = json.loads((rows[canonical_idx].get("edge_properties") or "").strip() or "{}")
-        except Exception:
-            manage_payload = {}
+        manage_payload = parsed_props.get(canonical_idx, {})
         if not isinstance(manage_payload, dict):
             manage_payload = {}
         edge_inner = manage_payload.get("edge_inner_properties")
@@ -651,9 +662,9 @@ def _parse_args(user_args):
         help="Target max size (MB) per split part (with --split). Default 90.",
     )
     g_general.add_argument(
-        "--stream", action="store_true",
-        help="Stream the single-file export node-by-node/edge-by-edge with a progress line "
-             "(bounded memory for very large graphs; compact output).",
+        "--no-stream", dest="no_stream", action="store_true",
+        help="Write the single-file export via json.dumps (holds full serialized string in memory). "
+             "Default is streaming output, which avoids the peak memory spike.",
     )
     g_general.add_argument(
         "--from-inventory",
@@ -844,12 +855,13 @@ def run_module(user_args, session):
     if bool(getattr(args, "split", False)):
         split_result = write_split_outputs(out_path, out, max_size_mb=float(getattr(args, "max_split_mb", 90.0)), debug=debug)
         print(f"[*] wrote {split_result['part_count']} split part(s) + manifest {split_result['manifest']}")
-    elif bool(getattr(args, "stream", False)):
-        # Opt-in: stream node-by-node/edge-by-edge with progress (bounded memory, compact).
-        write_graph_json_with_progress(out_path, out)
+    elif bool(getattr(args, "no_stream", False)):
+        # Opt-out: in-memory json.dumps (holds full serialized string; use only when streaming is unwanted).
+        out_path.write_text(json.dumps(out, indent=2, sort_keys=False), encoding="utf-8")
         print(f"[*] wrote {out_path}")
     else:
-        out_path.write_text(json.dumps(out, indent=2, sort_keys=False), encoding="utf-8")
+        # Default: stream node-by-node/edge-by-edge (avoids peak memory spike from full serialized string).
+        write_graph_json_with_progress(out_path, out)
         print(f"[*] wrote {out_path}")
 
 

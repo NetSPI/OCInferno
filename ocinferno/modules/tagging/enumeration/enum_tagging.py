@@ -4,19 +4,19 @@ from __future__ import annotations
 import argparse
 
 import oci
+
 from ocinferno.core.console import UtilityTools
-from ocinferno.modules.tagging.utilities.helpers import (
-    TaggingTagDefaultsResource,
-    TaggingTagDefinitionsResource,
-    TaggingTagNamespacesResource,
-)
 from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
     run_standard_enum_component,
 )
-
+from ocinferno.modules.tagging.utilities.helpers import (
+    TaggingTagDefaultsResource,
+    TaggingTagDefinitionsResource,
+    TaggingTagNamespacesResource,
+)
 
 COMPONENTS = [
     ("namespaces", "namespaces", "Enumerate namespaces"),

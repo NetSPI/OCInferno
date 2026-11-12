@@ -4,27 +4,43 @@ from __future__ import annotations
 import hashlib
 import json
 
-from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
-    dlog as _dlog,
-    json_load as _json_load,
-    l as _l,
-    merge_edge_properties as _merge_edge_properties,
-    merge_value as _merge_value,
-    node_properties_from_row as _node_properties_from_row_shared,
-    s as _s,
-)
-from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
-    canonical_resource_row_from_spec as _canonical_resource_row_from_spec,
-    select_scope_specs as _select_scope_specs,
-    table_specs_for_token as _table_specs_for_token,
-)
+from ocinferno.core.utils import hierarchy as _hierarchy
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_DYNAMIC_GROUP,
     NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_USER,
     RESOURCE_SCOPE_MAP,
 )
-from ocinferno.core.utils import hierarchy as _hierarchy
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    dlog as _dlog,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    json_load as _json_load,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    l as _l,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    merge_edge_properties as _merge_edge_properties,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    merge_value as _merge_value,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    node_properties_from_row as _node_properties_from_row_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    s as _s,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    canonical_resource_row_from_spec as _canonical_resource_row_from_spec,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    select_scope_specs as _select_scope_specs,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
+    table_specs_for_token as _table_specs_for_token,
+)
 
 
 def _base_name(display_name):

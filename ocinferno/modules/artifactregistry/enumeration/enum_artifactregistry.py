@@ -7,17 +7,16 @@ from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.enum_framework import nested_list_fn
 from ocinferno.core.utils.module_helpers import fill_missing_fields, unique_rows_by_id
-from ocinferno.modules.artifactregistry.utilities.helpers import (
-    ArtifactRegistryArtifactsResource,
-    ArtifactRegistryRepositoriesResource,
-)
 from ocinferno.core.utils.service_runtime import (
     append_cached_component_counts,
     parse_wrapper_args,
     resolve_selected_components,
     run_standard_enum_component,
 )
-
+from ocinferno.modules.artifactregistry.utilities.helpers import (
+    ArtifactRegistryArtifactsResource,
+    ArtifactRegistryRepositoriesResource,
+)
 
 COMPONENTS = [
     ("repositories", "repositories", "Enumerate repositories"),

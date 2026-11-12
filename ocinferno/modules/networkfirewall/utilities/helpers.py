@@ -4,6 +4,7 @@ from argparse import Namespace
 from typing import Any, Dict, List, Optional
 
 import oci
+
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import ids_from_db, parse_csv_args, save_rows
 
@@ -84,5 +85,4 @@ class NetworkFirewallSecurityRulesResource(OciListResource):
 
     # No binary download endpoint for rule rows.
 
-normalize_csv_args = parse_csv_args
 db_ids = ids_from_db

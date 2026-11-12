@@ -8,17 +8,17 @@ from __future__ import annotations
 # Model (LLM). It is actively being manually reviewed, verified, and expanded
 # by maintainers. 
 # =============================================================================
-
 import argparse
 import json
 from typing import List, Optional
 
 from ocinferno.core.console import UtilityTools
 from ocinferno.modules.everything.utilities.config_audit import (
-    run_audit,
-    print_audit_report,
     DEFAULT_SERVICE_AUDITORS,
+    print_audit_report,
+    run_audit,
 )
+
 
 def _parse_args(user_args) -> argparse.Namespace:
     service_hint = ",".join(cls.service for cls in DEFAULT_SERVICE_AUDITORS)

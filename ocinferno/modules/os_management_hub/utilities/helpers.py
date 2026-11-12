@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import oci
+
 from ocinferno.core.resource import OciListResource
 
 

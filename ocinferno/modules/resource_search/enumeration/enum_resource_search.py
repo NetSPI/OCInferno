@@ -7,12 +7,11 @@ from collections import Counter
 from pathlib import Path
 
 from ocinferno.core.console import UtilityTools
-from ocinferno.modules.resource_search.utilities.helpers import ResourceSearchInventoryResource
 from ocinferno.core.utils.service_runtime import (
     component_error_summary,
     parse_wrapper_args,
 )
-
+from ocinferno.modules.resource_search.utilities.helpers import ResourceSearchInventoryResource
 
 COMPONENTS = [
     ("inventory", "inventory", "Search ALL resources tenancy-wide (asset inventory)"),

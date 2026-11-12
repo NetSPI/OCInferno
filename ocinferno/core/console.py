@@ -6,9 +6,9 @@ import os
 import re
 import shutil
 import textwrap
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, Iterator, Optional, TypeVar
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 try:
     import oci

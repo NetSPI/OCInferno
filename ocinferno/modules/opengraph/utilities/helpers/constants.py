@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from ocinferno.modules.opengraph.utilities.helpers.core_helpers import s as _s

@@ -2,13 +2,9 @@
 from __future__ import annotations
 
 import oci
+
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import fill_missing_fields
-from ocinferno.modules.kubernetes.utilities.helpers import (
-    KubernetesClustersResource,
-    KubernetesNodePoolsResource,
-    KubernetesVirtualNodePoolsResource,
-)
 from ocinferno.core.utils.service_runtime import (
     SOFT_SKIP_STATUSES,
     append_cached_component_counts,
@@ -16,7 +12,11 @@ from ocinferno.core.utils.service_runtime import (
     resolve_selected_components,
     run_standard_enum_component,
 )
-
+from ocinferno.modules.kubernetes.utilities.helpers import (
+    KubernetesClustersResource,
+    KubernetesNodePoolsResource,
+    KubernetesVirtualNodePoolsResource,
+)
 
 COMPONENTS = [
     ("clusters", "clusters", "Enumerate clusters"),

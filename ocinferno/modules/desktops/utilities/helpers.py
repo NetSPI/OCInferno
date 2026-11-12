@@ -6,6 +6,7 @@ from argparse import Namespace
 from typing import Any, Dict, List
 
 import oci
+
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import dedupe_strs, ids_from_db, parse_csv_args

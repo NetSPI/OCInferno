@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
-    dlog as _dlog,
-    l as _l,
-    s as _s,
-    short_hash as _short_hash,
-)
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     DEFAULT_RESOURCE_FAMILIES,
 )
-
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    dlog as _dlog,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    l as _l,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    s as _s,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    short_hash as _short_hash,
+)
 
 # -----------------------------------------------------------------------------
 # Display helpers

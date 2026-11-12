@@ -80,7 +80,13 @@ class DataScienceJobsResource(OciListResource):
     LIST_METHOD = "list_jobs"
     GET_METHOD = "get_job"
     GET_ID_PARAM = "job_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        # Available with --get (JobSummary omits these):
+        "job_configuration_details",           # DEFAULT type: has environment_variables
+        "job_environment_configuration_details", # OCIR_CONTAINER type: has env array + image
+        "job_infrastructure_configuration_details", # has subnet_id, shape
+    ]
 
     def download_artifact(self, *, resource_id, out_path) -> bool:
         """Export the developer-supplied job artifact (code/script bundle) bytes."""

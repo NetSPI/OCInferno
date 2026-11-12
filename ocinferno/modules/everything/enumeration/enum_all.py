@@ -10,26 +10,31 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 try:
-    from requests.exceptions import ConnectTimeout, ReadTimeout as _RequestsTimeout
+    from requests.exceptions import ConnectTimeout
+    from requests.exceptions import ReadTimeout as _RequestsTimeout
     _TIMEOUT_EXC: tuple = (ConnectTimeout, _RequestsTimeout)
 except ImportError:
     _TIMEOUT_EXC = ()
 
-from ocinferno.modules.everything.utilities.enum_all_summary import (
-    print_compartment_tree as _print_compartment_tree_impl,
-    resource_type_area as _resource_type_area,
-    summarize_resources_by_compartment as _summarize_resources_by_compartment_impl,
-)
 from datetime import datetime, timezone
 
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.contracts import AuthError
-from ocinferno.core.utils.service_runtime import invoke_run_module as _invoke_run_module
-from ocinferno.core.utils.service_runtime import component_error_summary as _component_error_summary
-from ocinferno.core.utils.parallel import cancel_requested, clear_cancel, parallel_map, request_cancel
-from ocinferno.core.utils.scoped_session import CompartmentScopedSession
-from ocinferno.core.utils.regions import home_region, resolve_regions, subscribed_regions
 from ocinferno.core.utils import hierarchy as _hierarchy
+from ocinferno.core.utils.parallel import cancel_requested, clear_cancel, parallel_map, request_cancel
+from ocinferno.core.utils.regions import home_region, resolve_regions, subscribed_regions
+from ocinferno.core.utils.scoped_session import CompartmentScopedSession
+from ocinferno.core.utils.service_runtime import component_error_summary as _component_error_summary
+from ocinferno.core.utils.service_runtime import invoke_run_module as _invoke_run_module
+from ocinferno.modules.everything.utilities.enum_all_summary import (
+    print_compartment_tree as _print_compartment_tree_impl,
+)
+from ocinferno.modules.everything.utilities.enum_all_summary import (
+    resource_type_area as _resource_type_area,
+)
+from ocinferno.modules.everything.utilities.enum_all_summary import (
+    summarize_resources_by_compartment as _summarize_resources_by_compartment_impl,
+)
 
 # Compartment enumerator module
 COMP_MODULE = "ocinferno.modules.identityclient.enumeration.enum_comp"
@@ -561,7 +566,7 @@ def _is_nonfatal_service_error(exc: Exception) -> bool:
     return False
 
 
-def _run_other_module(session, user_args: List[str], module_name: str):
+def _run_other_module(session, user_args: List[str], module_name: str) -> "dict | None":
     try:
         ensure_fresh_creds = getattr(session, "ensure_fresh_creds", None)
         if callable(ensure_fresh_creds):

@@ -3,11 +3,6 @@ from __future__ import annotations
 
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import fill_missing_fields
-from ocinferno.modules.dns.utilities.helpers import (
-    DnsPrivateResolversResource,
-    DnsZoneRecordsResource,
-    DnsZonesResource,
-)
 from ocinferno.core.utils.service_runtime import (
     SOFT_SKIP_STATUSES,
     append_cached_component_counts,
@@ -15,7 +10,11 @@ from ocinferno.core.utils.service_runtime import (
     resolve_selected_components,
     run_standard_enum_component,
 )
-
+from ocinferno.modules.dns.utilities.helpers import (
+    DnsPrivateResolversResource,
+    DnsZoneRecordsResource,
+    DnsZonesResource,
+)
 
 COMPONENTS = [
     ("zones", "zones", "Enumerate zones"),

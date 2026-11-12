@@ -15,16 +15,21 @@ from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from oci_lexer_parser import parse_dynamic_group_matching_rules  # type: ignore
-from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
-    dlog as _core_dlog,
-    json_load as _json_load,
-    parse_defined_tag_var as _parse_defined_tag_var,
-)
+
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     PERMISSION_MAPPING,
     RESOURCE_PRINCIPAL_SCOPE_TOKENS,
     RESOURCE_SCOPE_MAP_TUPLE,
     RESOURCE_TYPE_ALIASES,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    dlog as _core_dlog,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    json_load as _json_load,
+)
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import (
+    parse_defined_tag_var as _parse_defined_tag_var,
 )
 
 VAR_INSTANCE_ID = "instance.id"

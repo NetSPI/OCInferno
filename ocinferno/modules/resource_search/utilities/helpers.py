@@ -4,8 +4,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import oci
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 class ResourceSearchInventoryResource(ResourceBase):

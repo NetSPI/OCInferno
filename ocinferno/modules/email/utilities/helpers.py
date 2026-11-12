@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 import oci
+
 from ocinferno.core.resource import OciListResource
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 def build_email_clients(session, region: Optional[str] = None) -> Tuple[Any, Any]:

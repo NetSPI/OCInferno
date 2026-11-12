@@ -23,7 +23,6 @@ except ImportError:
 
 from ocinferno.modules.opengraph.processing.process_oracle_cloud_hound_data import run_module
 
-
 WORKSPACE_ID = 4242
 TENANCY_OCID = "ocid1.tenancy.oc1..testtenant"
 COMPARTMENT_ID = "ocid1.compartment.oc1..testcompartment"

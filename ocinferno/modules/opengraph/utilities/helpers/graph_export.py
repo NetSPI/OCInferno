@@ -51,7 +51,10 @@ def write_graph_json_with_progress(out_path: Path, payload: dict) -> None:
     nodes = [n for n in (graph.get("nodes") or []) if isinstance(n, dict)]
     edges = [e for e in (graph.get("edges") or []) if isinstance(e, dict)]
     metadata = payload.get("metadata")
-    summary = payload.get("summary") or {"nodes": len(nodes), "edges": len(edges)}
+    # Only emit a top-level "summary" when the payload actually carries one — the
+    # standard export payload is {metadata, graph}, and adding an unsolicited summary
+    # key diverges the written file from the in-memory payload (and the golden fixtures).
+    summary = payload.get("summary")
     total = len(nodes) + len(edges)
     print(f"[*] streaming graph: nodes={len(nodes)}, edges={len(edges)}, total={total}")
 
@@ -75,9 +78,12 @@ def write_graph_json_with_progress(out_path: Path, payload: dict) -> None:
             json.dump(edge, fh, ensure_ascii=False, separators=(",", ":"))
             _progress("write edges", i, len(edges))
         _progress("write edges", len(edges), len(edges), force=True)
-        fh.write("]\n  },\n  \"summary\": ")
-        json.dump(summary, fh, ensure_ascii=False, separators=(",", ":"))
-        fh.write("\n}\n")
+        if summary is not None:
+            fh.write("]\n  },\n  \"summary\": ")
+            json.dump(summary, fh, ensure_ascii=False, separators=(",", ":"))
+            fh.write("\n}\n")
+        else:
+            fh.write("]\n  }\n}\n")
 
 
 def write_split_outputs(base_out_path: Path, payload: dict, *, max_size_mb: float = 90.0, debug: bool = False) -> dict:

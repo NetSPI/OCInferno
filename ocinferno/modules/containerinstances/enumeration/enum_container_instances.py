@@ -5,7 +5,6 @@ from ocinferno.core.utils.enum_framework import Component, run_components
 from ocinferno.core.utils.service_runtime import resource_method_download
 from ocinferno.modules.containerinstances.utilities.helpers import ContainerInstancesResource
 
-
 _container_configs_download = resource_method_download(
     method="download_container_configs",
     service_name="containerinstances",

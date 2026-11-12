@@ -34,11 +34,14 @@ import json
 from pathlib import Path
 
 from ocinferno.modules.opengraph.utilities.helpers import (
-    build_edge_properties as _build_edge_properties,
     EDGE_CATEGORY_PERMISSION,
 )
+from ocinferno.modules.opengraph.utilities.helpers import (
+    build_edge_properties as _build_edge_properties,
+)
 from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
-from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared, ensure_node
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import ensure_node
 from ocinferno.modules.opengraph.utilities.iam_policy_advanced_relation_graph_builder import (
     _edge_statement_texts,
     _entry_field,

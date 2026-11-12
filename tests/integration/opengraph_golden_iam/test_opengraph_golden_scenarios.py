@@ -13,7 +13,6 @@ from tests.integration.opengraph_golden_iam.framework import (
     scenario_id_for_path,
 )
 
-
 SCENARIO_DIRS = discover_scenario_dirs()
 
 

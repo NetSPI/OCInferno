@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
-
 WORKSPACE_CONFIG_KEYS: List[str] = [
     "proxy",
     "current_default_region",

@@ -13,13 +13,13 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
+from ocinferno.core.coerce import _safe_str
 from ocinferno.core.config import (
     KNOWN_OCI_REGION_SET,
     WORKSPACE_CONFIG_KEYS,
     default_workspace_config,
     is_region_format_like,
 )
-from ocinferno.core.coerce import _safe_str
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.contracts import ErrorCode, OperationResult
 

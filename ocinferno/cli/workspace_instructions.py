@@ -10,22 +10,22 @@ import shlex
 import subprocess
 import traceback
 from datetime import datetime
+from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-from importlib import resources
 
 from ocinferno.cli.module_actions import interact_with_module
 from ocinferno.core.config import CONFIG_VALUE_CHOICES, KNOWN_OCI_REGIONS, WORKSPACE_CONFIG_KEYS
-from ocinferno.core.session import SessionUtility
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.db import DataController
+from ocinferno.core.session import SessionUtility
+from ocinferno.core.utils import hierarchy as _hierarchy
 from ocinferno.core.utils.module_helpers import (
     export_compartment_tree_image,
     export_sqlite_dbs_to_csv_blob,
     export_sqlite_dbs_to_excel_blob,
     export_sqlite_dbs_to_json_blob,
 )
-from ocinferno.core.utils import hierarchy as _hierarchy
 
 
 def help_banner():

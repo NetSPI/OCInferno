@@ -1,17 +1,26 @@
 # dynamic_group_membership_graph_builder.py
 from ocinferno.modules.opengraph.utilities.helpers import (
-    build_edge_properties as _build_edge_properties,
     EDGE_CATEGORY_GROUP_MEMBERSHIP,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    build_edge_properties as _build_edge_properties,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     merge_value as _merge_value,
 )
-from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     EDGE_TYPE_OCI_DYNAMIC_GROUP_MEMBER as EDGE_DYNAMIC_GROUP_MEMBER,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_DYNAMIC_GROUP as DYNAMIC_GROUP_NODE,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_GENERIC_RESOURCE as GENERIC_RESOURCE,
 )
+from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared
 from ocinferno.modules.opengraph.utilities.helpers.matching_rules_engine import DynamicGroupRuleEvaluator
+
 
 def build_dynamic_group_membership_edges_offline(*, session, ctx, debug: bool = False, auto_commit=True) -> dict:
     """Evaluate dynamic-group matching rules and create edges resource -> dynamic-group."""

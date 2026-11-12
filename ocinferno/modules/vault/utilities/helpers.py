@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import oci
+
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import dedupe_strs
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 def build_vault_client(session, client_cls, service_name: str, region: Optional[str] = None, endpoint: Optional[str] = None):

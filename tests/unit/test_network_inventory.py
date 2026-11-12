@@ -75,3 +75,55 @@ def test_dedupe_and_summarize():
     assert len(deduped) == 1
     summary = ni.summarize(deduped)
     assert summary["ip_distinct"] == 1
+
+
+def test_noise_ips_are_filtered_out():
+    # loopback, link-local/metadata, unspecified, broadcast — never targets.
+    rows = [{
+        "id": "x", "compartment_id": "c",
+        "ip_address": "127.0.0.1",
+        "metadata_ip": "169.254.169.254",
+        "any_ip": "0.0.0.0",
+        "bcast_ip": "255.255.255.255",
+        "real_ip": "203.0.113.9",
+    }]
+    k = _kinds(ni.extract_from_rows("t", rows))
+    ips = k.get(ni.KIND_IP, set())
+    assert ips == {"203.0.113.9"}  # only the routable public IP survives
+
+
+def test_any_wildcard_cidr_filtered_but_real_cidr_kept():
+    rows = [{"id": "x", "compartment_id": "c",
+             "source_cidr": "0.0.0.0/0", "allowed_cidr": "10.1.0.0/16"}]
+    k = _kinds(ni.extract_from_rows("t", rows))
+    cidrs = k.get(ni.KIND_CIDR, set())
+    assert "0.0.0.0/0" not in cidrs
+    assert "10.1.0.0/16" in cidrs
+
+
+def test_scope_public_vs_private_classification():
+    rows = [{"id": "x", "compartment_id": "c",
+             "pub_ip": "8.8.8.8", "priv_ip": "10.0.1.5",
+             "cidr": "192.168.0.0/16"}]
+    recs = ni.extract_from_rows("t", rows)
+    by_val = {r["value"]: r.get("scope") for r in recs}
+    assert by_val["8.8.8.8"] == "public"
+    assert by_val["10.0.1.5"] == "private"
+    assert by_val["192.168.0.0/16"] == "private"
+
+
+def test_summarize_counts_public_and_private_endpoints():
+    rows = [{"id": "x", "compartment_id": "c",
+             "pub_ip": "8.8.8.8", "priv_ip": "10.0.1.5", "cidr": "172.16.0.0/12"}]
+    recs = ni.extract_from_rows("t", rows)
+    s = ni.summarize(recs)
+    assert s["public_endpoints"] == 1
+    assert s["private_endpoints"] == 2  # 10.0.1.5 + 172.16.0.0/12
+
+
+def test_oraclevcn_fqdn_marked_private():
+    rows = [{"id": "x", "compartment_id": "c",
+             "hostname": "db1.sub.vcn.oraclevcn.com"}]
+    recs = ni.extract_from_rows("t", rows)
+    fq = [r for r in recs if r["kind"] == ni.KIND_FQDN and r["value"].endswith("oraclevcn.com")]
+    assert fq and fq[0]["scope"] == "private"

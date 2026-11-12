@@ -41,41 +41,71 @@ Current derived edges:
     and skipped when plugin state is explicitly disabled/false or known absent.
 """
 
-from collections import Counter, defaultdict
-from dataclasses import dataclass, field
 import json
 import re
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 from functools import lru_cache
 
 from ocinferno.modules.opengraph.utilities.helpers import (
-    build_edge_properties as _build_edge_properties,
-    dlog as _dlog,
     EDGE_CATEGORY_GROUP_MEMBERSHIP,
     EDGE_CATEGORY_PERMISSION,
     EDGE_CATEGORY_RESOURCE,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    build_edge_properties as _build_edge_properties,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    dlog as _dlog,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     edge_row_with_flattened_properties as _edge_row_with_flattened_properties,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     get_og_state as _og_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     json_list as _json_list,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     merge_statement_entries as _merge_statement_entries,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     node_properties_from_row as _node_properties_from_row,
-    scope_token_loc as _scope_token_loc,
-    statement_policy_ids as _statement_policy_ids,
-    statement_texts as _statement_texts,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
     s as _s,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    scope_token_loc as _scope_token_loc,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    statement_policy_ids as _statement_policy_ids,
+)
+from ocinferno.modules.opengraph.utilities.helpers import (
+    statement_texts as _statement_texts,
 )
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     EDGE_TYPE_OCI_DYNAMIC_GROUP_MEMBER,
     EDGE_TYPE_OCI_GROUP_MEMBER,
-    NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_GROUP,
     NODE_TYPE_OCI_USER,
 )
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     emit_edge as _emit_edge_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     ensure_new_compute_instance_candidate_node as _ensure_new_compute_instance_candidate_node_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     ensure_new_rpst_resource_candidate_node as _ensure_new_rpst_resource_candidate_node,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     ensure_node as _ensure_node_shared,
+)
+from ocinferno.modules.opengraph.utilities.helpers.graph_utils import (
     ensure_scoped_node as _ensure_scoped_node_shared,
 )
 from ocinferno.modules.opengraph.utilities.helpers.matching_rules_engine import (
@@ -2764,7 +2794,7 @@ def build_iam_policy_advanced_relation_edges_offline(*, session, ctx, debug=True
     #   node_type_by_id: {"ocid1.tagnamespace.oc1..x": "OCITagNamespace", ...}
     #   node_compartment_by_id: {"ocid1.tagnamespace.oc1..x": "ocid1.compartment..a", ...}
     # Tenancy is resolved later from ctx.tenant_for_compartment(loc) as needed.
-    node_type_by_id = dict(og["existing_node_types"])
+    node_type_by_id = og["existing_node_types"]
     node_compartment_by_id = {}
     compute_instance_name_by_id = {}
     policy_nodes_by_loc = defaultdict(list)

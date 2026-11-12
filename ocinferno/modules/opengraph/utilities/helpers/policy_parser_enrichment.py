@@ -4,7 +4,8 @@ policy_parser_enrichment.py
 Helpers for enriching parsed OCI IAM policy statements before graph emission.
 """
 
-from ocinferno.modules.opengraph.utilities.helpers.core_helpers import l as _l, s as _s
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import l as _l
+from ocinferno.modules.opengraph.utilities.helpers.core_helpers import s as _s
 
 _SUBJ_TYPES_NEED_DOMAIN = {
     "group",

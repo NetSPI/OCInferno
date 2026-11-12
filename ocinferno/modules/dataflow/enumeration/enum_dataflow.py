@@ -11,6 +11,7 @@ from ocinferno.modules.dataflow.utilities.helpers import (
     DataFlowWorkRequestsResource,
 )
 
+
 def _applications_download(session, args, resource):
     def _dl(rows):
         from ocinferno.core.utils.download_budget import DownloadBudget

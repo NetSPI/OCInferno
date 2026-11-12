@@ -12,7 +12,6 @@ from ocinferno.core.console import UtilityTools
 from ocinferno.core.net_util import DnsTimeoutError
 from ocinferno.core.utils.module_helpers import cached_table_count, fill_missing_fields, save_rows
 
-
 ComponentSpec = Tuple[str, str, str]  # (key, method_suffix, help_text)
 
 # A service/compartment may be unavailable or denied; enum wrappers treat these

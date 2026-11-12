@@ -5,10 +5,10 @@ import re
 from typing import Any, Dict, List, Optional
 
 import oci
+
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.module_helpers import write_response_stream_to_file
-from ocinferno.core.utils.service_runtime import _init_client
-from ocinferno.core.utils.service_runtime import ResourceBase
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 
 class ArtifactRegistryRepositoriesResource(OciListResource):

@@ -17,6 +17,8 @@ from unittest.mock import patch
 
 from tests.unit._session_helpers import (
     FakeDataMaster as _FakeDataMaster,
+)
+from tests.unit._session_helpers import (
     _import_session_module,
 )
 
@@ -221,8 +223,8 @@ class TestInstancePrincipalDelegation(unittest.TestCase):
                 "log_requests": True,
             }))
             with self._federation_patches():
-                import io
                 import contextlib
+                import io
                 buf = io.StringIO()
                 with contextlib.redirect_stdout(buf):
                     rc = session._load_instance_profile_from_record(rec, force_refresh=True)

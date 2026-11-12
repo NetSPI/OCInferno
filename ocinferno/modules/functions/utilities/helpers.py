@@ -12,7 +12,11 @@ class FunctionsAppsResource(OciListResource):
     LIST_METHOD = "list_applications"
     GET_METHOD = "get_application"
     GET_ID_PARAM = "application_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "time_created",
+        # Available with --get (absent from ApplicationSummary):
+        "config", "syslog_url", "network_security_group_ids", "subnet_ids",
+    ]
 
 
 class FunctionsFunctionsResource(OciListResource):
@@ -25,4 +29,8 @@ class FunctionsFunctionsResource(OciListResource):
     GET_METHOD = "get_function"
     GET_ID_PARAM = "function_id"
     LIST_SCOPE_KWARG = "application_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "application_id", "time_created"]
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "application_id", "time_created",
+        # Available with --get (absent from FunctionSummary):
+        "config", "image", "invoke_endpoint",
+    ]

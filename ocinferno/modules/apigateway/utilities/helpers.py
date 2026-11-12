@@ -23,7 +23,6 @@ from ocinferno.core.utils.module_helpers import (
 )
 from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
-
 _PATH_PARAM_RE = re.compile(r"\{([^}]+)\}")
 
 

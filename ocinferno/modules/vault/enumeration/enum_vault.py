@@ -4,11 +4,6 @@ from __future__ import annotations
 import argparse
 from typing import Any, Dict, List
 
-from ocinferno.modules.vault.utilities.helpers import (
-    VaultKeysResource,
-    VaultSecretsResource,
-    VaultVaultsResource,
-)
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.module_helpers import dedupe_strs
 from ocinferno.core.utils.service_runtime import (
@@ -17,7 +12,11 @@ from ocinferno.core.utils.service_runtime import (
     parse_wrapper_args,
     resolve_selected_components,
 )
-
+from ocinferno.modules.vault.utilities.helpers import (
+    VaultKeysResource,
+    VaultSecretsResource,
+    VaultVaultsResource,
+)
 
 COMPONENTS = [
     ("vaults", "vaults", "Enumerate vaults"),

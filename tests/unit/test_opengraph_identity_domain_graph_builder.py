@@ -1,20 +1,20 @@
 from __future__ import annotations
 
+import re
 from collections import Counter
 from pathlib import Path
-import re
 
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
+    DEFAULT_ALLOW_EDGE_RULES,
+    NODE_TYPE_OCI_USER,
+)
+from ocinferno.modules.opengraph.utilities.helpers.context import OfflineIamContext
 from ocinferno.modules.opengraph.utilities.identity_domain_graph_builder import (
     EDGE_IDD_USER_MANAGER,
     NODE_USER,
     _ensure_user_node_from_ref,
     _run_idd_role_emitters,
 )
-from ocinferno.modules.opengraph.utilities.helpers.constants import (
-    DEFAULT_ALLOW_EDGE_RULES,
-    NODE_TYPE_OCI_USER,
-)
-from ocinferno.modules.opengraph.utilities.helpers.context import OfflineIamContext
 
 
 class _NodeCaptureCtx:

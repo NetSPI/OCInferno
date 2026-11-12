@@ -1,6 +1,6 @@
 import argparse
-import json
 import hashlib
+import json
 import os
 from collections import deque
 from dataclasses import dataclass
@@ -21,7 +21,6 @@ from ocinferno.core.utils.selection_helpers import (
     select_from_db_or_manual,
 )
 from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
-
 
 # =============================================================================
 # Table names (service DB)
@@ -60,6 +59,22 @@ TABLE_IDD_USER_DB_CREDENTIALS = "identity_domain_user_db_credentials"
 TABLE_IDD_USER_SMTP_CREDENTIALS = "identity_domain_user_smtp_credentials"
 TABLE_IDD_USER_API_KEYS = "identity_domain_user_api_keys"
 TABLE_IDD_USER_AUTH_TOKENS = "identity_domain_user_auth_tokens"
+TABLE_IDD_USER_CUSTOMER_SECRET_KEYS = "identity_domain_user_customer_secret_keys"
+TABLE_IDD_IDENTITY_PROPAGATION_TRUSTS = "identity_domain_identity_propagation_trusts"
+
+
+def ipt_unrestricted_client_claim(trust_row: dict) -> str:
+    """Return 'yes' if an Identity Propagation Trust places NO client_claim_values
+    restriction on the external issuer — i.e. it trusts ANY principal from that issuer
+    (e.g. any GitHub repo under token.actions.githubusercontent.com), the over-broad
+    'confused deputy' federation misconfiguration. 'no' when the claim is restricted."""
+    if not isinstance(trust_row, dict):
+        return "no"
+    ccv = trust_row.get("client_claim_values")
+    # Empty/absent list (or a non-list falsy value) = unrestricted.
+    if isinstance(ccv, (list, tuple, set)):
+        return "yes" if len(ccv) == 0 else "no"
+    return "yes" if not ccv else "no"
 
 TABLE_POLICIES = "identity_policies"
 TABLE_POLICY_PARSED = "identity_policy_statements"
@@ -525,6 +540,60 @@ class IdentityDomainResourceClient:
         saved = self.session.save_resources(password_policies or [], TABLE_IDD_PASSWORD_POLICIES)
         return {"saved": saved, "table": TABLE_IDD_PASSWORD_POLICIES}
 
+    def list_identity_providers(self, *, attributes: str | None = None) -> list[dict[str, Any]]:
+        """Returns SCIM IdentityProvider resources — external SAML/OIDC trust configured
+        on the domain (inbound federation). Surfaces who can federate IN to the tenancy."""
+        kwargs: dict[str, Any] = {}
+        if attributes is not None:
+            kwargs["attributes"] = attributes
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_identity_providers(
+                **kwargs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
+
+    def save_idd_identity_providers(self, *, identity_providers: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+        saved = self.session.save_resources(identity_providers or [], TABLE_IDD_IDENTITY_PROVIDERS)
+        return {"saved": saved, "table": TABLE_IDD_IDENTITY_PROVIDERS}
+
+    def list_identity_propagation_trusts(self, *, attributes: str | None = None) -> list[dict[str, Any]]:
+        """Returns SCIM IdentityPropagationTrust resources — external OIDC/JWT token-exchange
+        trusts (the GitHub-Actions / Kubernetes / SPIFFE workload-federation surface). The
+        issuer + client_claim_values + impersonation rules reveal over-broad 'trust any repo'
+        misconfigurations and which OCI identity an external token is allowed to become."""
+        kwargs: dict[str, Any] = {}
+        if attributes is not None:
+            kwargs["attributes"] = attributes
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_identity_propagation_trusts(
+                **kwargs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
+
+    def save_idd_identity_propagation_trusts(self, *, trusts: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+        saved = self.session.save_resources(trusts or [], TABLE_IDD_IDENTITY_PROPAGATION_TRUSTS)
+        return {"saved": saved, "table": TABLE_IDD_IDENTITY_PROPAGATION_TRUSTS}
+
 
     # -------------------------------------------------------------------------
     # DB-save helpers (normalized rows) used by enum_iam / enum_idd_grants
@@ -592,6 +661,37 @@ class IdentityDomainResourceClient:
 
     def save_idd_auth_tokens(self, *, auth_tokens: list[dict[str, Any]]) -> None:
         self.session.save_resources(auth_tokens or [], TABLE_IDD_USER_AUTH_TOKENS)
+
+    def list_customer_secret_keys(
+        self,
+        *,
+        user_id: str | None = None,
+        user_ocid: str | None = None,
+        attributes: str | None = None,
+        attribute_sets: list[str] | None = None,
+    ):
+        """List a user's Customer Secret Keys (S3-compatible access keys). The SCIM list
+        returns the public accessKey ID and metadata only — the secret is never returned."""
+        kwargs = {}
+        attrs = (attributes or "").strip()
+        if attrs:
+            kwargs["attributes"] = attrs
+        if attribute_sets:
+            kwargs["attribute_sets"] = [str(x).strip() for x in attribute_sets if str(x).strip()]
+
+        if user_ocid:
+            kwargs["filter"] = f'user.ocid eq "{user_ocid}"'
+        elif user_id:
+            kwargs["filter"] = f'user.value eq "{user_id}"'
+        else:
+            raise ValueError('list_customer_secret_keys requires user_id or user_ocid (SCIM filter: user.value/user.ocid).')
+
+        rows = self.identity_domain_client.list_customer_secret_keys(**kwargs)
+        data = oci.util.to_dict(rows.data)
+        return data.get("resources", []) or []
+
+    def save_idd_customer_secret_keys(self, *, customer_secret_keys: list[dict[str, Any]]) -> None:
+        self.session.save_resources(customer_secret_keys or [], TABLE_IDD_USER_CUSTOMER_SECRET_KEYS)
 
 
 
@@ -2204,6 +2304,126 @@ class IdentityResourceSuite(ResourceBase):
         return {"ok": True, "auth_tokens": int(total), "saved": True}
 
     # -------------------------------------------------------------------------
+    # Identity Domain Customer Secret Keys (S3-compatible access keys)
+    # -------------------------------------------------------------------------
+    def _run_idd_customer_secret_keys(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain Customer Secret Keys (SCIM CustomerSecretKey) for saved Identity Domains.",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_customer_secret_keys().")
+        parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; cannot enumerate IDD customer secret keys.{UtilityTools.RESET}")
+            return {"ok": False, "customer_secret_keys": 0}
+
+        _comp, domains, _domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "customer_secret_keys": 0}
+
+        attrs = args.attributes or None
+        attribute_sets = parse_csv_args(args.attribute_sets) or None
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            if not dom_url:
+                continue
+
+            users = self.session.get_resource_fields(TABLE_IDD_USERS, where_conditions={"domain_ocid": dom_id}) or []
+            users = [u for u in users if isinstance(u, dict)]
+            if not users:
+                UtilityTools.dlog(self.debug, "enum_idd_customer_secret_keys: no cached users for domain", domain_id=dom_id)
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            keys: list[dict[str, Any]] = []
+            for user in users:
+                try:
+                    rows = [
+                        r for r in (
+                            ops.list_customer_secret_keys(
+                                user_ocid=user.get("ocid"),
+                                attributes=attrs,
+                                attribute_sets=attribute_sets,
+                            ) or []
+                        ) if isinstance(r, dict)
+                    ]
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_customer_secret_keys: list_customer_secret_keys failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                    continue
+                for row in rows:
+                    keys.append(self._normalize_customer_secret_key_row(row, user_row=user, dom=dom))
+                total += len(rows)
+
+            # Dedupe on stable csk_id.
+            deduped: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            for k in keys:
+                kid = _s(k.get("csk_id"))
+                if not kid or kid in seen:
+                    continue
+                seen.add(kid)
+                deduped.append(k)
+            keys = deduped
+
+            if keys:
+                try:
+                    ops.save_idd_customer_secret_keys(customer_secret_keys=keys)
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_customer_secret_keys: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] Customer Secret Keys for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                keys,
+                ["owner", "domain_ocid", "key_name", "access_key", "status", "created", "source"],
+                sort_key="owner",
+                title="Identityclient - Idd Customer Secret Keys",
+            )
+
+        print(f"\n[*] enum_idd_customer_secret_keys complete. Domains: {len(domains)} | CustomerSecretKeys: {total}")
+        return {"ok": True, "customer_secret_keys": int(total), "saved": True}
+
+    def _normalize_customer_secret_key_row(self, row: dict[str, Any], *, user_row: dict[str, Any], dom: dict[str, Any]) -> dict[str, Any]:
+        out = dict(row or {})
+        user_obj = out.get("user") if isinstance(out.get("user"), dict) else {}
+        meta = out.get("meta") if isinstance(out.get("meta"), dict) else {}
+        user_ocid = _s(user_obj.get("ocid") or user_row.get("ocid"))
+        out["csk_id"] = _s(out.get("id"))
+        out["key_name"] = _s(out.get("display_name") or out.get("description")) or "customer-secret-key"
+        out["access_key"] = _s(out.get("access_key"))  # public key ID; secret is never returned on list
+        out["status"] = _s(out.get("status"))
+        out["owner"] = _s(user_obj.get("display") or user_row.get("user_name") or user_row.get("display_name"))
+        out["user_ocid"] = user_ocid
+        out["domain_ocid"] = _s(out.get("domain_ocid") or dom.get("id"))
+        out["compartment_id"] = _s(
+            out.get("compartment_id") or dom.get("compartment_id") or getattr(self.session, "compartment_id", "")
+        )
+        out["created"] = _s(meta.get("created"))
+        out["last_modified"] = _s(meta.get("last_modified"))
+        out["source"] = "identity_domains:list_customer_secret_keys"
+        return out
+
+    # -------------------------------------------------------------------------
     # Identity Domain grants
     # -------------------------------------------------------------------------
     def _run_idd_grants(self, user_args):
@@ -2409,6 +2629,163 @@ class IdentityResourceSuite(ResourceBase):
         print(f"\n[*] enum_idd_password_policies complete. Domains: {len(domains)} | PasswordPolicies: {total}")
         return {"ok": True, "password_policies": int(total), "saved": True}
 
+    # -------------------------------------------------------------------------
+    # Identity Domain external Identity Providers (inbound SAML/OIDC federation)
+    # -------------------------------------------------------------------------
+    def _run_idd_identity_providers(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain external Identity Providers (SCIM IdentityProvider).",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_identity_providers().")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; use --all-saved-domains or select a compartment.{UtilityTools.RESET}")
+            return {"ok": False, "identity_providers": 0}
+
+        _comp, domains, _domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "identity_providers": 0}
+
+        attrs = args.attributes or None
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(dom.get("compartment_id") or dom.get("compartmentId") or compartment_id)
+            if not dom_url:
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            try:
+                rows = [r for r in (ops.list_identity_providers(attributes=attrs) or []) if isinstance(r, dict)]
+            except Exception:
+                try:
+                    rows = [r for r in (ops.list_identity_providers(attributes=None) or []) if isinstance(r, dict)]
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_identity_providers: list failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                    continue
+            if not rows:
+                continue
+
+            total += len(rows)
+            for row in rows:
+                ops.apply_domain_context(
+                    row, domain_id=dom_id, domain_name=dom_name, domain_url=dom_url, compartment_id=dom_compartment_id,
+                )
+            try:
+                ops.save_idd_identity_providers(identity_providers=rows, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_identity_providers: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] Identity Providers for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                rows,
+                ["id", "partner_name", "enabled", "idp_sso_url", "name_id_format", "metadata"],
+                sort_key="partner_name",
+                title="Identityclient - Idd Identity Providers",
+            )
+
+        print(f"\n[*] enum_idd_identity_providers complete. Domains: {len(domains)} | IdentityProviders: {total}")
+        return {"ok": True, "identity_providers": int(total), "saved": True}
+
+    # -------------------------------------------------------------------------
+    # Identity Domain Identity Propagation Trusts (workload OIDC/JWT token exchange)
+    # -------------------------------------------------------------------------
+    def _run_idd_identity_propagation_trusts(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain Identity Propagation Trusts (SCIM IdentityPropagationTrust).",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_identity_propagation_trusts().")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; use --all-saved-domains or select a compartment.{UtilityTools.RESET}")
+            return {"ok": False, "identity_propagation_trusts": 0}
+
+        _comp, domains, _domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "identity_propagation_trusts": 0}
+
+        attrs = args.attributes or None
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(dom.get("compartment_id") or dom.get("compartmentId") or compartment_id)
+            if not dom_url:
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            try:
+                rows = [r for r in (ops.list_identity_propagation_trusts(attributes=attrs) or []) if isinstance(r, dict)]
+            except Exception:
+                try:
+                    rows = [r for r in (ops.list_identity_propagation_trusts(attributes=None) or []) if isinstance(r, dict)]
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_identity_propagation_trusts: list failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                    continue
+            if not rows:
+                continue
+
+            total += len(rows)
+            for row in rows:
+                ops.apply_domain_context(
+                    row, domain_id=dom_id, domain_name=dom_name, domain_url=dom_url, compartment_id=dom_compartment_id,
+                )
+                # Surface the over-broad-trust signal: no client_claim_values restriction.
+                row["unrestricted_client_claim"] = ipt_unrestricted_client_claim(row)
+            try:
+                ops.save_idd_identity_propagation_trusts(trusts=rows, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_identity_propagation_trusts: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] Identity Propagation Trusts for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                rows,
+                ["name", "type", "issuer", "subject_claim_name", "client_claim_name",
+                 "unrestricted_client_claim", "allow_impersonation", "active"],
+                sort_key="name",
+                title="Identityclient - Idd Identity Propagation Trusts",
+            )
+
+        print(f"\n[*] enum_idd_identity_propagation_trusts complete. Domains: {len(domains)} | Trusts: {total}")
+        return {"ok": True, "identity_propagation_trusts": int(total), "saved": True}
+
     def _run_idd_mfa_settings(self, user_args):
         parser = argparse.ArgumentParser(
             description="Enumerate Identity Domain MFA / Authentication Factor Settings (SCIM).",
@@ -2580,6 +2957,45 @@ class IdentityIddApiKeysResource(IdentityResourceSuite):
 class IdentityIddAuthTokensResource(IdentityResourceSuite):
     def list(self, *, user_args):
         return self._run_idd_auth_tokens(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddCustomerSecretKeysResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_customer_secret_keys(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddIdentityProvidersResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_identity_providers(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddIdentityPropagationTrustsResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_identity_propagation_trusts(user_args)
 
     def get(self, *, resource_id: str):
         _ = resource_id

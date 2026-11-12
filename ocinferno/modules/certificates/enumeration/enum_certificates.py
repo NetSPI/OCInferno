@@ -8,6 +8,7 @@ from ocinferno.modules.certificates.utilities.helpers import (
     CertificatesResource,
 )
 
+
 def _certificate_bundles_download(session, args, resource):
     """Factory: export each certificate's PEM bundle (leaf + chain + private key when
     exportable) via the data-plane client. Written under

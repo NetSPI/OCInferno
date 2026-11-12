@@ -17,15 +17,21 @@ the shared ``DYNAMIC_GROUP_RESOURCE_TYPES`` set.
 from datetime import datetime, timezone
 
 from ocinferno.modules.opengraph.utilities.helpers import (
-    build_edge_properties as _build_edge_properties,
     EDGE_CATEGORY_GROUP_MEMBERSHIP,
 )
-from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
+from ocinferno.modules.opengraph.utilities.helpers import (
+    build_edge_properties as _build_edge_properties,
+)
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     EDGE_TYPE_OCI_INSTALL_KEY_CAN_JOIN_DG as EDGE_INSTALL_KEY_CAN_JOIN_DG,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_DYNAMIC_GROUP as DYNAMIC_GROUP_NODE,
+)
+from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_MANAGEMENT_AGENT_INSTALL_KEY as INSTALL_KEY_NODE,
 )
+from ocinferno.modules.opengraph.utilities.helpers.context import _dlog
 from ocinferno.modules.opengraph.utilities.helpers.graph_utils import emit_edge as _emit_edge_shared
 from ocinferno.modules.opengraph.utilities.helpers.matching_rules_engine import (
     DynamicGroupPermissionLocationMatcher,

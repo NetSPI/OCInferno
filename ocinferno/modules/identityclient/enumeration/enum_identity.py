@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from ocinferno.core.utils.service_runtime import (
+    append_cached_component_counts,
+    parse_wrapper_args,
+    resolve_selected_components,
+)
 from ocinferno.modules.identityclient.utilities.helpers import (
     IdentityDomainsResource,
     IdentityIamResource,
@@ -8,17 +13,14 @@ from ocinferno.modules.identityclient.utilities.helpers import (
     IdentityIddAppRolesResource,
     IdentityIddAppsResource,
     IdentityIddAuthTokensResource,
+    IdentityIddCustomerSecretKeysResource,
+    IdentityIddIdentityProvidersResource,
+    IdentityIddIdentityPropagationTrustsResource,
     IdentityIddGrantsResource,
     IdentityIddMfaSettingsResource,
     IdentityIddPasswordPoliciesResource,
     IdentityPrincipalsResource,
 )
-from ocinferno.core.utils.service_runtime import (
-    append_cached_component_counts,
-    parse_wrapper_args,
-    resolve_selected_components,
-)
-
 
 COMPONENTS = [
     ("list_domains", "list_domains", "Enumerate identity domains from OCI API"),
@@ -28,6 +30,9 @@ COMPONENTS = [
     ("idd_app_roles", "idd_app_roles", "Enumerate identity domain app roles"),
     ("idd_api_keys", "idd_api_keys", "Enumerate identity domain API keys"),
     ("idd_auth_tokens", "idd_auth_tokens", "Enumerate identity domain auth tokens"),
+    ("idd_customer_secret_keys", "idd_customer_secret_keys", "Enumerate identity domain Customer Secret Keys (S3-compat)"),
+    ("idd_identity_providers", "idd_identity_providers", "Enumerate identity domain external Identity Providers (inbound SAML/OIDC federation)"),
+    ("idd_identity_propagation_trusts", "idd_identity_propagation_trusts", "Enumerate identity domain Identity Propagation Trusts (workload OIDC/JWT token exchange, e.g. GitHub Actions)"),
     ("idd_grants", "idd_grants", "Enumerate identity domain grants"),
     ("idd_password_policies", "idd_password_policies", "Enumerate identity domain password policies"),
     ("idd_mfa_settings", "idd_mfa_settings", "Enumerate identity domain MFA / authentication factor settings"),
@@ -42,6 +47,9 @@ CACHE_TABLES = {
     "idd_app_roles": ("identity_domain_app_roles", None),
     "idd_api_keys": ("identity_domain_user_api_keys", None),
     "idd_auth_tokens": ("identity_domain_user_auth_tokens", None),
+    "idd_customer_secret_keys": ("identity_domain_user_customer_secret_keys", None),
+    "idd_identity_providers": ("identity_domain_identity_providers", None),
+    "idd_identity_propagation_trusts": ("identity_domain_identity_propagation_trusts", None),
     "idd_grants": ("identity_domain_grants", None),
     "idd_password_policies": ("identity_domain_password_policies", None),
     "idd_mfa_settings": ("identity_domain_authentication_factor_settings", None),
@@ -99,6 +107,9 @@ def run_module(user_args, session):
         "idd_app_roles": IdentityIddAppRolesResource(session=session),
         "idd_api_keys": IdentityIddApiKeysResource(session=session),
         "idd_auth_tokens": IdentityIddAuthTokensResource(session=session),
+        "idd_customer_secret_keys": IdentityIddCustomerSecretKeysResource(session=session),
+        "idd_identity_providers": IdentityIddIdentityProvidersResource(session=session),
+        "idd_identity_propagation_trusts": IdentityIddIdentityPropagationTrustsResource(session=session),
         "idd_grants": IdentityIddGrantsResource(session=session),
         "idd_password_policies": IdentityIddPasswordPoliciesResource(session=session),
         "idd_mfa_settings": IdentityIddMfaSettingsResource(session=session),

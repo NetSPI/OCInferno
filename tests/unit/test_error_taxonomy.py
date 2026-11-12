@@ -24,10 +24,9 @@ def _install_oci_stub() -> None:
 
 _install_oci_stub()
 
-from ocinferno.cli.module_actions import _execute_module_for_target
 from ocinferno.cli import module_actions
-from ocinferno.core.contracts import ConfigError, ErrorCode
-from ocinferno.core.contracts import OperationResult
+from ocinferno.cli.module_actions import _execute_module_for_target
+from ocinferno.core.contracts import ConfigError, ErrorCode, OperationResult
 
 
 class _FakeSession:
