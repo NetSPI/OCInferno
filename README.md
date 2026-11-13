@@ -81,6 +81,10 @@ privilege-escalation paths. It is the OCI sibling of
     app-role/grant relationships.
   - Inheritance-aware modeling (`--expand-inherited`) and conditional evaluation
     (`--cond-eval`) to improve graph accuracy.
+  - **Text-based attack-path analysis** (`process_og_attack_paths`): find
+    privilege-escalation paths directly from the exported OpenGraph JSON in the
+    terminal — no BloodHound needed — for large graphs, scripting, or air-gapped
+    review. See the wiki page "OpenGraph - Attack-Path Analysis".
 
 ## Documentation
 
@@ -277,6 +281,31 @@ modules run process_og_node_color_images --auth-mode signature \
   <img src="./images/BLOODHOUND_UPLOAD.png" alt="BloodHound upload workflow" />
 </p>
 <p align="center" style="margin: 0.15em 0 1em 0;"><em>Figure 3. Uploading OpenGraph JSON into BloodHound CE.</em></p>
+
+### Text-Based Attack Paths (No BloodHound)
+
+For large graphs, scripting, or environments without BloodHound, analyze the same
+exported JSON in the terminal with `process_og_attack_paths` — a PMapper-style text
+pathfinder that walks from every principal to every privilege-escalation destination.
+
+```text
+# Default: one shortest path per reachable principal to any priv-esc destination
+modules run process_og_attack_paths --graph-json <export>/oracle_cloud_hound.json
+
+# Only paths to OCI_MANAGE destinations, machine-readable, written to a file
+modules run process_og_attack_paths --graph-json <export>/oracle_cloud_hound.json \
+    --to-manage --no-direct --json --output manage_paths.json
+
+# Summary counts only
+modules run process_og_attack_paths --graph-json <export>/oracle_cloud_hound.json --summary
+```
+
+Target selection (`--to-manage` / `--to-iam` / `--to-rpst` / `--to-kind` / `--to-node`),
+search modes (shortest vs `--all-paths`), source filters (`--from`,
+`--exclude-service-agents`, `--no-direct`), and output formats (`--json`, `--summary`,
+`--output`) are documented on the wiki page
+**OpenGraph - Attack-Path Analysis**. `--graph-json` accepts a single JSON file or a
+split-JSON parts directory.
 
 ### Add Your Own Edges
 
