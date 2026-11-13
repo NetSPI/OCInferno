@@ -16,6 +16,7 @@ from ocinferno.modules.core.utilities.helpers import (
     InternetGatewaysResource,
     NatGatewaysResource,
     NetworkSecurityGroupsResource,
+    NetworkSecurityGroupSecurityRulesResource,
     PrivateIpsResource,
     PublicIpsResource,
     RouteTablesResource,
@@ -35,6 +36,7 @@ def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--route-tables", dest="route_tables", action="store_true", help="Enumerate route tables")
     parser.add_argument("--security-lists", dest="security_lists", action="store_true", help="Enumerate security lists")
     parser.add_argument("--nsgs", dest="network_security_groups", action="store_true", help="Enumerate network security groups")
+    parser.add_argument("--nsg-rules", dest="nsg_security_rules", action="store_true", help="Enumerate NSG security rules (ingress/egress) per NSG")
     parser.add_argument("--internet-gateways", dest="internet_gateways", action="store_true", help="Enumerate internet gateways")
     parser.add_argument("--nat-gateways", dest="nat_gateways", action="store_true", help="Enumerate NAT gateways")
     parser.add_argument("--service-gateways", dest="service_gateways", action="store_true", help="Enumerate service gateways")
@@ -71,6 +73,7 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "route_tables",
             "security_lists",
             "network_security_groups",
+            "nsg_security_rules",
             "internet_gateways",
             "nat_gateways",
             "service_gateways",
@@ -95,6 +98,12 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "key": "network_security_groups",
             "resource": NetworkSecurityGroupsResource(session),
             "cache_table": "virtual_network_network_security_groups",
+            "list_kwargs": {"vcn_id": vcn_id},
+        },
+        {
+            "key": "nsg_security_rules",
+            "resource": NetworkSecurityGroupSecurityRulesResource(session),
+            "cache_table": "virtual_network_nsg_security_rules",
             "list_kwargs": {"vcn_id": vcn_id},
         },
         {

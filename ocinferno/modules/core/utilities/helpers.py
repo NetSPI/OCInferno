@@ -23,7 +23,7 @@ import oci
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.resource import OciListResource
 from ocinferno.core.utils.selection_helpers import _s
-from ocinferno.core.utils.service_runtime import _init_client
+from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 # =============================================================================
 # Shared: forward an optional list-scope kwarg only when it's truthy
@@ -166,6 +166,70 @@ class NetworkSecurityGroupsResource(_OptionalScopeKwargMixin, OciListResource):
     GET_ID_PARAM = "network_security_group_id"
     COLUMNS = ["id", "display_name", "lifecycle_state", "vcn_id"]
     SECTION_TITLE = "Network Security Groups (NSGs)"
+
+
+class NetworkSecurityGroupSecurityRulesResource(ResourceBase):
+    """NSG security rules (ingress/egress) — a per-NSG sub-resource fetched via
+    list_network_security_group_security_rules(network_security_group_id). Unlike
+    security lists (whose rules are inline on the list object), NSG rules require a
+    separate call per NSG. NSG ids are resolved from the enumerated/cached NSGs for
+    the compartment, with a live list fallback."""
+
+    TABLE_NAME = "virtual_network_nsg_security_rules"
+    SECTION_TITLE = "NSG Security Rules"
+    COLUMNS = [
+        "id", "network_security_group_id", "direction", "protocol",
+        "source", "source_type", "destination", "destination_type",
+        "is_stateless", "is_valid", "tcp_options", "udp_options", "icmp_options",
+        "description", "compartment_id",
+    ]
+
+    def __init__(self, session, region: Optional[str] = None):
+        self.session = session
+        self.client = _init_client(
+            oci.core.VirtualNetworkClient, session=session, service_name="Virtual Network", region=region,
+        )
+
+    def _resolve_nsg_ids(self, compartment_id: str, vcn_id: Optional[str] = None) -> List[str]:
+        rows = self.session.get_resource_fields(
+            "virtual_network_network_security_groups",
+            where_conditions={"compartment_id": compartment_id},
+        ) or []
+        ids = [r.get("id") for r in rows if isinstance(r, dict) and r.get("id")]
+        if ids:
+            return ids
+        # Live fallback: no NSGs cached for this compartment yet.
+        try:
+            kwargs: Dict[str, Any] = {"compartment_id": compartment_id}
+            if vcn_id:
+                kwargs["vcn_id"] = vcn_id
+            resp = oci.pagination.list_call_get_all_results(self.client.list_network_security_groups, **kwargs)
+            return [n.id for n in (resp.data or []) if getattr(n, "id", None)]
+        except Exception:
+            return []
+
+    def list(self, *, compartment_id: str, vcn_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for nsg_id in self._resolve_nsg_ids(compartment_id, vcn_id):
+            try:
+                resp = oci.pagination.list_call_get_all_results(
+                    self.client.list_network_security_group_security_rules,
+                    network_security_group_id=nsg_id,
+                )
+                rules = oci.util.to_dict(resp.data) or []
+            except Exception:
+                continue
+            for r in rules:
+                if not isinstance(r, dict):
+                    continue
+                r["network_security_group_id"] = nsg_id
+                r.setdefault("compartment_id", compartment_id)
+                out.append(r)
+        return out
+
+    def get(self, *, resource_id: str) -> Dict[str, Any]:
+        _ = resource_id
+        return {}
 
 
 class InternetGatewaysResource(_OptionalScopeKwargMixin, OciListResource):

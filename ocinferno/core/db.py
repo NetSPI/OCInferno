@@ -116,6 +116,7 @@ class DataController:
         "virtual_network_security_lists": [("ix_vnsl_ws_comp",     ("workspace_id", "compartment_id"))],
         "virtual_network_subnets":        [("ix_vnsn_ws_comp",     ("workspace_id", "compartment_id"))],
         "virtual_network_route_tables":   [("ix_vnrt_ws_comp",     ("workspace_id", "compartment_id"))],
+        "virtual_network_nsg_security_rules": [("ix_vn_nsg_rules_ws_comp", ("workspace_id", "compartment_id"))],
         "logging_logs":               [("ix_logging_logs_ws_lc",   ("workspace_id", "lifecycle_state"))],
         "identity_user_api_keys":     [("ix_iam_api_keys_ws_lc",   ("workspace_id", "lifecycle_state"))],
     }

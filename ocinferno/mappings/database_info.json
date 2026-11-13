@@ -6086,6 +6086,30 @@
         "id",
         "domain_ocid"
       ]
+    },
+    {
+      "table_name": "virtual_network_nsg_security_rules",
+      "columns": [
+        "id",
+        "network_security_group_id",
+        "direction",
+        "protocol",
+        "source",
+        "source_type",
+        "destination",
+        "destination_type",
+        "is_stateless",
+        "is_valid",
+        "tcp_options",
+        "udp_options",
+        "icmp_options",
+        "description",
+        "compartment_id"
+      ],
+      "primary_keys": [
+        "id",
+        "network_security_group_id"
+      ]
     }
   ]
 }
