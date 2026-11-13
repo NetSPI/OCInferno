@@ -8,8 +8,8 @@ from ocinferno.modules.bds.utilities.helpers import (
 
 
 def _bootstrap_download(session, args, resource):
-    """Download each cluster's bootstrap script content (user-supplied node-init code
-    that may carry secrets) from its bootstrap_script_url. Populated on --get."""
+    """Download each cluster's bootstrap script content from its bootstrap_script_url.
+    Populated on --get."""
     def _dl(rows):
         from ocinferno.core.utils.download_budget import DownloadBudget
         from ocinferno.core.utils.module_helpers import download_url_to_file

@@ -50,7 +50,7 @@ _CONFIG_EXPAND_COLS = re.compile(
     r"job_environment_configuration_details|"  # DS jobs: CONTAINER type env/image
     r"job_infrastructure_configuration_details|"  # DS jobs: subnet_id, shape
     r"notebook_session_config_details|"
-    r"freeform_tags|defined_tags|"          # user-supplied tags: surface any host/URL/IP values
+    r"freeform_tags|defined_tags|"          # tags (key/value)
     r"build_pipeline_parameters|deploy_pipeline_parameters)$",
     re.I,
 )

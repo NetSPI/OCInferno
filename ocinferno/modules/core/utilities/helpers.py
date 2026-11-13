@@ -433,9 +433,7 @@ class InstanceConfigurationsResource(OciListResource):
     LIST_METHOD = "list_instance_configurations"
     GET_METHOD = "get_instance_configuration"
     GET_ID_PARAM = "instance_configuration_id"
-    # instance_details holds launch_details.metadata.user_data (cloud-init) for the
-    # pool template — captured here so a scaled-to-zero pool's user-data is still
-    # reviewable even when no live instance exists. Populated on --get.
+    # instance_details includes launch_details.metadata (populated on --get).
     COLUMNS = ["id", "display_name", "lifecycle_state", "time_created", "instance_details"]
 
 
@@ -495,9 +493,7 @@ class ComputeInstancesResource(OciListResource):
     LIST_METHOD = "list_instances"
     GET_METHOD = "get_instance"
     GET_ID_PARAM = "instance_id"
-    # instance_options carries are_legacy_imds_endpoints_disabled: when False, IMDSv1
-    # is still reachable, so any SSRF/code-exec on the host can mint the instance
-    # principal's token. Surfaced so an operator can spot IMDSv1-enabled hosts.
+    # instance_options includes are_legacy_imds_endpoints_disabled.
     COLUMNS = ["id", "display_name", "lifecycle_state", "shape", "availability_domain", "instance_options"]
 
     # NOTE (behavior change / improvement): the pre-migration ``list_instances``

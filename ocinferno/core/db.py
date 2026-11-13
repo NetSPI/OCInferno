@@ -533,7 +533,7 @@ class DataController:
         if isinstance(value, (datetime, date)):
             return value.isoformat()
         if isinstance(value, bool):
-            return 1 if encode_bools_as_int else ("true" if value else "false")
+            return (1 if value else 0) if encode_bools_as_int else ("true" if value else "false")
         return str(value)
 
     # -------------------------------------------------------------------------

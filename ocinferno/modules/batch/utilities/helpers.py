@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """OCI Batch (BatchComputing) resources.
 
-Batch tasks/jobs carry user-supplied container config — environment_variables,
-command, and arguments — returned in plaintext on read (no is_secret masking),
-the same credential-bearing surface as Functions and Container Instances.
+Batch tasks/jobs carry container config: environment_variables, command, and arguments.
 """
 from __future__ import annotations
 

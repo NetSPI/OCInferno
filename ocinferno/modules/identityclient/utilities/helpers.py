@@ -64,10 +64,8 @@ TABLE_IDD_IDENTITY_PROPAGATION_TRUSTS = "identity_domain_identity_propagation_tr
 
 
 def ipt_unrestricted_client_claim(trust_row: dict) -> str:
-    """Return 'yes' if an Identity Propagation Trust places NO client_claim_values
-    restriction on the external issuer — i.e. it trusts ANY principal from that issuer
-    (e.g. any GitHub repo under token.actions.githubusercontent.com), the over-broad
-    'confused deputy' federation misconfiguration. 'no' when the claim is restricted."""
+    """Return 'yes' if the trust sets no client_claim_values (so it accepts any
+    principal from the issuer), else 'no'."""
     if not isinstance(trust_row, dict):
         return "no"
     ccv = trust_row.get("client_claim_values")
@@ -567,10 +565,8 @@ class IdentityDomainResourceClient:
         return {"saved": saved, "table": TABLE_IDD_IDENTITY_PROVIDERS}
 
     def list_identity_propagation_trusts(self, *, attributes: str | None = None) -> list[dict[str, Any]]:
-        """Returns SCIM IdentityPropagationTrust resources — external OIDC/JWT token-exchange
-        trusts (the GitHub-Actions / Kubernetes / SPIFFE workload-federation surface). The
-        issuer + client_claim_values + impersonation rules reveal over-broad 'trust any repo'
-        misconfigurations and which OCI identity an external token is allowed to become."""
+        """Returns SCIM IdentityPropagationTrust resources (external OIDC/JWT token-exchange
+        trusts), including issuer, client_claim_values, and impersonation mappings."""
         kwargs: dict[str, Any] = {}
         if attributes is not None:
             kwargs["attributes"] = attributes
@@ -689,6 +685,37 @@ class IdentityDomainResourceClient:
         rows = self.identity_domain_client.list_customer_secret_keys(**kwargs)
         data = oci.util.to_dict(rows.data)
         return data.get("resources", []) or []
+
+    def list_user_db_credentials(
+        self,
+        *,
+        user_id: str | None = None,
+        user_ocid: str | None = None,
+        attributes: str | None = None,
+        attribute_sets: list[str] | None = None,
+    ):
+        """List a user's DB credentials (database passwords). The SCIM list returns
+        metadata only (created/last_set_date/status/expiry) — db_password is write-only."""
+        kwargs = {}
+        attrs = (attributes or "").strip()
+        if attrs:
+            kwargs["attributes"] = attrs
+        if attribute_sets:
+            kwargs["attribute_sets"] = [str(x).strip() for x in attribute_sets if str(x).strip()]
+
+        if user_ocid:
+            kwargs["filter"] = f'user.ocid eq "{user_ocid}"'
+        elif user_id:
+            kwargs["filter"] = f'user.value eq "{user_id}"'
+        else:
+            raise ValueError('list_user_db_credentials requires user_id or user_ocid (SCIM filter: user.value/user.ocid).')
+
+        rows = self.identity_domain_client.list_user_db_credentials(**kwargs)
+        data = oci.util.to_dict(rows.data)
+        return data.get("resources", []) or []
+
+    def save_idd_db_credentials(self, *, db_credentials: list[dict[str, Any]]) -> None:
+        self.session.save_resources(db_credentials or [], TABLE_IDD_USER_DB_CREDENTIALS)
 
     def save_idd_customer_secret_keys(self, *, customer_secret_keys: list[dict[str, Any]]) -> None:
         self.session.save_resources(customer_secret_keys or [], TABLE_IDD_USER_CUSTOMER_SECRET_KEYS)
@@ -1394,6 +1421,8 @@ class IdentityResourceSuite(ResourceBase):
             or dom.get("compartmentId")
             or getattr(self.session, "compartment_id", "")
         )
+        # meta.created is the token creation date; created_at_utc below is enum time.
+        out["created"] = _s((out.get("meta") or {}).get("created"))
         if not _s(out.get("created_at_utc")):
             out["created_at_utc"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
         out["updated_at_utc"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
@@ -2134,6 +2163,7 @@ class IdentityResourceSuite(ResourceBase):
                         domain_url=dom_url,
                         compartment_id=dom_compartment_id,
                     )
+                    row["created"] = _s((row.get("meta") or {}).get("created"))
                 keys.extend(rows)
                 total += len(rows)
                 if rows:
@@ -2421,6 +2451,128 @@ class IdentityResourceSuite(ResourceBase):
         out["created"] = _s(meta.get("created"))
         out["last_modified"] = _s(meta.get("last_modified"))
         out["source"] = "identity_domains:list_customer_secret_keys"
+        return out
+
+    # -------------------------------------------------------------------------
+    # Identity Domain DB credentials (per-user database passwords)
+    # -------------------------------------------------------------------------
+    def _run_idd_db_credentials(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain user DB credentials (SCIM UserDbCredential) for saved Identity Domains.",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_user_db_credentials().")
+        parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; cannot enumerate IDD DB credentials.{UtilityTools.RESET}")
+            return {"ok": False, "db_credentials": 0}
+
+        _comp, domains, _domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "db_credentials": 0}
+
+        attrs = args.attributes or None
+        attribute_sets = parse_csv_args(args.attribute_sets) or None
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            if not dom_url:
+                continue
+
+            users = self.session.get_resource_fields(TABLE_IDD_USERS, where_conditions={"domain_ocid": dom_id}) or []
+            users = [u for u in users if isinstance(u, dict)]
+            if not users:
+                UtilityTools.dlog(self.debug, "enum_idd_db_credentials: no cached users for domain", domain_id=dom_id)
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            creds: list[dict[str, Any]] = []
+            for user in users:
+                try:
+                    rows = [
+                        r for r in (
+                            ops.list_user_db_credentials(
+                                user_ocid=user.get("ocid"),
+                                attributes=attrs,
+                                attribute_sets=attribute_sets,
+                            ) or []
+                        ) if isinstance(r, dict)
+                    ]
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_db_credentials: list_user_db_credentials failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                    continue
+                for row in rows:
+                    creds.append(self._normalize_db_credential_row(row, user_row=user, dom=dom))
+                total += len(rows)
+
+            # Dedupe on stable dbcred_id.
+            deduped: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            for c in creds:
+                cid = _s(c.get("dbcred_id"))
+                if not cid or cid in seen:
+                    continue
+                seen.add(cid)
+                deduped.append(c)
+            creds = deduped
+
+            if creds:
+                try:
+                    ops.save_idd_db_credentials(db_credentials=creds)
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_db_credentials: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] DB Credentials for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                creds,
+                ["owner", "domain_ocid", "name", "status", "created", "last_set_date", "expires_on", "source"],
+                sort_key="owner",
+                title="Identityclient - Idd DB Credentials",
+            )
+
+        print(f"\n[*] enum_idd_db_credentials complete. Domains: {len(domains)} | DbCredentials: {total}")
+        return {"ok": True, "db_credentials": int(total), "saved": True}
+
+    def _normalize_db_credential_row(self, row: dict[str, Any], *, user_row: dict[str, Any], dom: dict[str, Any]) -> dict[str, Any]:
+        out = dict(row or {})
+        user_obj = out.get("user") if isinstance(out.get("user"), dict) else {}
+        meta = out.get("meta") if isinstance(out.get("meta"), dict) else {}
+        user_ocid = _s(user_obj.get("ocid") or user_row.get("ocid"))
+        out["dbcred_id"] = _s(out.get("id"))
+        out["name"] = _s(out.get("name") or out.get("description")) or "db-credential"
+        out["status"] = _s(out.get("status"))
+        out["owner"] = _s(user_obj.get("display") or user_row.get("user_name") or user_row.get("display_name"))
+        out["user_ocid"] = user_ocid
+        out["domain_ocid"] = _s(out.get("domain_ocid") or dom.get("id"))
+        out["compartment_id"] = _s(
+            out.get("compartment_id") or dom.get("compartment_id") or getattr(self.session, "compartment_id", "")
+        )
+        out["created"] = _s(meta.get("created"))
+        out["last_modified"] = _s(meta.get("last_modified"))
+        out["last_set_date"] = _s(out.get("last_set_date"))
+        out["expires_on"] = _s(out.get("expires_on"))
+        out["expired"] = out.get("expired")
+        out["source"] = "identity_domains:list_user_db_credentials"
         return out
 
     # -------------------------------------------------------------------------
@@ -2767,7 +2919,6 @@ class IdentityResourceSuite(ResourceBase):
                 ops.apply_domain_context(
                     row, domain_id=dom_id, domain_name=dom_name, domain_url=dom_url, compartment_id=dom_compartment_id,
                 )
-                # Surface the over-broad-trust signal: no client_claim_values restriction.
                 row["unrestricted_client_claim"] = ipt_unrestricted_client_claim(row)
             try:
                 ops.save_idd_identity_propagation_trusts(trusts=rows, compartment_id=dom_compartment_id)
@@ -2970,6 +3121,19 @@ class IdentityIddAuthTokensResource(IdentityResourceSuite):
 class IdentityIddCustomerSecretKeysResource(IdentityResourceSuite):
     def list(self, *, user_args):
         return self._run_idd_customer_secret_keys(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddDbCredentialsResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_db_credentials(user_args)
 
     def get(self, *, resource_id: str):
         _ = resource_id
