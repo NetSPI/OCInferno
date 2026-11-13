@@ -801,6 +801,19 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         return [p.strip() for p in str(s).split(",") if p.strip()]
 
     # Path builders now delegate to core/output_paths.py (extracted; same behavior).
+    def compartment_folder_label(self, compartment_id: str | None) -> str | None:
+        """Friendly folder label for a compartment OCID: `<NAME>_<last4>` when the name is
+        known (from the compartments snapshot), else `<ocid-type>_<last4>` (e.g.
+        `tenancy_sfaa`). Keeps output folders readable instead of full OCIDs."""
+        if not compartment_id:
+            return None
+        name = None
+        for c in (self.global_compartment_list or []):
+            if c.get("compartment_id") == compartment_id:
+                name = c.get("name")
+                break
+        return _output_paths.friendly_component(name, compartment_id)
+
     def get_download_save_path(
         self,
         *,
@@ -814,6 +827,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         return _output_paths.download_save_path(
             self.workspace_id, self.workspace_name,
             service_name=service_name, filename=filename, compartment_id=compartment_id,
+            compartment_label=self.compartment_folder_label(compartment_id),
             resource_name=resource_name, subdirs=subdirs, mkdir=mkdir,
         )
 
@@ -832,6 +846,7 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         return _output_paths.export_save_path(
             self.workspace_id, self.workspace_name,
             service_name=service_name, filename=filename, compartment_id=compartment_id,
+            compartment_label=self.compartment_folder_label(compartment_id),
             subdirs=subdirs, mkdir=mkdir,
         )
 
@@ -846,10 +861,12 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
         target: str = "export",
         mkdir: bool = True,
     ) -> Path:
+        eff_compartment = compartment_id if compartment_id is not None else getattr(self, "compartment_id", None)
         return _output_paths.resolve_output_path(
             self.workspace_id, self.workspace_name,
             requested_path=requested_path, service_name=service_name, filename=filename,
             compartment_id=compartment_id, current_compartment=getattr(self, "compartment_id", None),
+            compartment_label=self.compartment_folder_label(eff_compartment),
             subdirs=subdirs, target=target, mkdir=mkdir,
         )
 

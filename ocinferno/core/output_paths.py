@@ -61,6 +61,38 @@ def compact_compartment_path_component(x: str) -> str:
     return f"{head}__{tail}__{digest}"
 
 
+_OCID_RE = re.compile(r"^ocid1\.([a-z0-9]+)\.", re.IGNORECASE)
+
+
+def _ocid_tail(ocid: str, last: int = 4) -> str:
+    """Last `last` alphanumeric chars of an OCID (OCIDs end in the unique part)."""
+    alnum = re.sub(r"[^A-Za-z0-9]", "", str(ocid or ""))
+    return alnum[-last:] if alnum else ""
+
+
+def friendly_component(name: Optional[str], ocid: str, *, last: int = 4, max_name: int = 48) -> str:
+    """Readable folder name: `<SIMPLE_NAME>_<last4-of-ocid>` when a name is known,
+    else `<ocid-type>_<last4>` (e.g. `tenancy_sfaa`, `ormstack_xf6a`). Falls back to the
+    compacted OCID if the value is not an OCID and has no name."""
+    tail = _ocid_tail(ocid, last)
+    nm = safe_path_component(name or "")
+    if nm:
+        nm = nm[:max_name]
+        return f"{nm}_{tail}" if tail else nm
+    m = _OCID_RE.match(str(ocid or ""))
+    if m:
+        return f"{m.group(1)}_{tail}" if tail else m.group(1)
+    return compact_compartment_path_component(ocid)
+
+
+def shorten_ocid_path_component(x: str, *, last: int = 4) -> str:
+    """Sanitize a path component, collapsing a bare OCID to `<type>_<last4>`."""
+    s = str(x or "")
+    if _OCID_RE.match(s):
+        return friendly_component(None, s, last=last)
+    return safe_path_component(s)
+
+
 def default_output_base_root() -> Path:
     """Base output directory: <cwd>/ocinferno_output."""
     return Path.cwd() / OUTPUT_ROOT_DIR_NAME
@@ -86,20 +118,24 @@ def download_save_path(
     service_name: str,
     filename: str,
     compartment_id: str,
+    compartment_label: Optional[str] = None,
     resource_name: Optional[str] = None,
     subdirs: Optional[List[str]] = None,
     mkdir: bool = True,
 ) -> Path:
-    """<root>/<workspace>/downloads/<service>/<compartment>/<subdirs...>/<filename>."""
-    compartment_dir = compact_compartment_path_component(compartment_id)
+    """<root>/<workspace>/downloads/<service>/<compartment>/<subdirs...>/<filename>.
+
+    `compartment_label` (e.g. `NAME_last4`) replaces the raw-OCID compartment folder
+    when the caller can resolve a friendly name."""
+    compartment_dir = safe_path_component(compartment_label) if compartment_label else compact_compartment_path_component(compartment_id)
     parts = [
         workspace_output_root(workspace_id, workspace_name, mkdir=mkdir),
         OUTPUT_DIR_NAMES["downloads"],
         safe_path_component(service_name),
-        compartment_dir,
+        compartment_dir or compact_compartment_path_component(compartment_id),
     ]
     for raw_part in (subdirs or []):
-        cleaned = safe_path_component(raw_part)
+        cleaned = shorten_ocid_path_component(raw_part)
         if cleaned:
             parts.append(cleaned)
 
@@ -126,11 +162,15 @@ def export_save_path(
     service_name: str,
     filename: str,
     compartment_id: Optional[str] = None,
+    compartment_label: Optional[str] = None,
     subdirs: Optional[List[str]] = None,
     mkdir: bool = True,
 ) -> Path:
     """<root>/<workspace>/exports/<service>/<compartment|global>/<subdirs...>/<filename>."""
-    comp = safe_path_component(compartment_id or "global")
+    if compartment_label:
+        comp = safe_path_component(compartment_label) or compact_compartment_path_component(compartment_id)
+    else:
+        comp = safe_path_component(compartment_id or "global")
     parts = [
         workspace_output_root(workspace_id, workspace_name, mkdir=mkdir),
         OUTPUT_DIR_NAMES["exports"],
@@ -138,7 +178,7 @@ def export_save_path(
         comp,
     ]
     for raw_part in (subdirs or []):
-        cleaned = safe_path_component(raw_part)
+        cleaned = shorten_ocid_path_component(raw_part)
         if cleaned:
             parts.append(cleaned)
 
@@ -157,6 +197,7 @@ def resolve_output_path(
     filename: str,
     compartment_id: Optional[str] = None,
     current_compartment: Optional[str] = None,
+    compartment_label: Optional[str] = None,
     subdirs: Optional[List[str]] = None,
     target: str = "export",
     mkdir: bool = True,
@@ -175,7 +216,7 @@ def resolve_output_path(
         return download_save_path(
             workspace_id, workspace_name,
             service_name=service_name, filename=filename, compartment_id=comp,
-            subdirs=subdirs, mkdir=mkdir,
+            compartment_label=compartment_label, subdirs=subdirs, mkdir=mkdir,
         )
 
     return export_save_path(
@@ -183,5 +224,5 @@ def resolve_output_path(
         service_name=service_name,
         filename=filename,
         compartment_id=compartment_id if compartment_id is not None else current_compartment,
-        subdirs=subdirs, mkdir=mkdir,
+        compartment_label=compartment_label, subdirs=subdirs, mkdir=mkdir,
     )
