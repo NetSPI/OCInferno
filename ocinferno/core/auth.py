@@ -398,13 +398,25 @@ class AuthMixin:
             print("[X] Missing key_file/key_content in config")
             return None
 
+        # OCI's from_file MERGES [DEFAULT] keys into every named profile, so a [DEFAULT]
+        # session profile's security_token_file leaks into named API-key profiles. Reading it
+        # must be best-effort (never fail importing an api-key profile just because a leaked
+        # DEFAULT token file is unreadable).
         try:
             security_token_content = (config.get("security_token_content") or "").strip() or _read(
                 security_token_file, "security_token"
             )
-        except Exception as e:
-            print(f"[X] Could not read security_token_file '{security_token_file}': {e}")
-            return None
+        except Exception:
+            security_token_content = ""
+
+        # A real API-key identity (user + fingerprint + key) must win the classification even
+        # when a security_token_file leaked in from [DEFAULT] -- this matches OCI CLI, which
+        # authenticates that profile with its api-key identity. Classifying it as session (and
+        # storing the leaked token) would build a SecurityTokenSigner on load and 401 every call.
+        user_v = (config.get("user") or "").strip()
+        fingerprint_v = (config.get("fingerprint") or "").strip()
+        is_api_key = bool(user_v and fingerprint_v and key_content)
+        is_session = bool(security_token_content) and not is_api_key
 
         serialized = {
             "user": config.get("user"),
@@ -418,18 +430,16 @@ class AuthMixin:
             serialized["profile_name"] = profile_name
         if filepath:
             serialized["file_location"] = filepath
-        if security_token_file:
-            serialized["security_token_file"] = str(security_token_file)
 
-        if security_token_content:
-            serialized.update(
-                {
-                    "security_token_content": security_token_content,
-                    "security_token_file": str(security_token_file or ""),
-                }
-            )
+        # Persist session-token material ONLY for a genuine session profile; never store a
+        # [DEFAULT]-leaked token on an api-key profile, or it re-triggers session auth on load.
+        if is_session:
+            serialized["security_token_content"] = security_token_content
+            serialized["security_token_file"] = str(security_token_file or "")
 
-        profile_type = f"Profile - Session - {profile_name}" if security_token_content else f"Profile - API Key - {profile_name}"
+        profile_type = (
+            f"Profile - Session - {profile_name}" if is_session else f"Profile - API Key - {profile_name}"
+        )
 
         self.data_master.insert_creds(self.workspace_id, credname, profile_type, json.dumps(serialized))
         print(f"{UtilityTools.BRIGHT_GREEN}[*] Credentials added: {credname}{UtilityTools.RESET}")
