@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from .model import edge_is_conditional
+
 if TYPE_CHECKING:
     from .model import AttackGraph
 
@@ -135,7 +137,7 @@ def _extract_edge_meta(props: dict) -> dict:
             inner = {}
     return {
         "is_priv_escalation": bool(inner.get("is_priv_escalation") or props.get("is_priv_escalation")),
-        "conditional": bool(inner.get("conditional") or props.get("conditional")),
+        "conditional": edge_is_conditional(props),
         "policy_ids": list(inner.get("resolved_policy") or []),
         "verb": str(inner.get("verb") or "").strip() or None,
         "resource_tokens": str(inner.get("resource_tokens") or "").strip() or None,

@@ -153,8 +153,12 @@ class AuthMixin:
             return None
         now = int(time.time())
 
-        # Rate-limit refresh attempts per session instance
-        last_ts = int(getattr(self, "_last_session_token_refresh_ts", 0) or 0)
+        # Rate-limit refresh attempts PER CREDENTIAL. A single per-session timestamp let a
+        # recent refresh of cred A rate-limit a *different* cred B within the window, so B's
+        # near-expiry token slipped through unrefreshed (and ensure_fresh_creds then skipped
+        # its expired-token AuthError). Key the throttle by credname.
+        _throttle = getattr(self, "_last_session_token_refresh_ts_by_cred", None)
+        last_ts = int((_throttle or {}).get(rec.credname, 0) or 0)
         if last_ts and (now - last_ts) < min_interval_seconds:
             return None
 
@@ -235,8 +239,10 @@ class AuthMixin:
         # Update in-memory record so caller uses the fresh token immediately
         rec.session_creds = json.dumps(stored)
 
-        # Update rate-limit timestamp
-        self._last_session_token_refresh_ts = now
+        # Update per-credential rate-limit timestamp
+        if getattr(self, "_last_session_token_refresh_ts_by_cred", None) is None:
+            self._last_session_token_refresh_ts_by_cred = {}
+        self._last_session_token_refresh_ts_by_cred[rec.credname] = now
 
         new_exp = _jwt_exp(new_token)
         if new_exp:
@@ -422,7 +428,8 @@ class AuthMixin:
             "user": config.get("user"),
             "fingerprint": config.get("fingerprint"),
             "tenancy": config.get("tenancy"),
-            "region": config.get("region"),
+            # OCI region ids are lowercase; normalize like the api-key/session-token paths do.
+            "region": (config.get("region") or "").strip().lower(),
             "key_content": key_content,
         }
 
@@ -477,8 +484,21 @@ class AuthMixin:
             print(f"[X] Profile '{cred}' missing key_content in DB")
             return -1
 
+        # Honor the classification recorded at add time (credtype / auth_type) instead of
+        # branching purely on token presence. This keeps an API-key cred on the api-key path
+        # even if a session token ever ends up on its blob (hand-edited row, future writer
+        # bug), preventing the session-signer-for-api-key 401 regression.
+        credtype = str(getattr(rec, "credtype", "") or "")
+        auth_type = str(stored.get("auth_type") or "")
+        if "API Key" in credtype or auth_type == "api_key":
+            use_session = False
+        elif "Session" in credtype or auth_type == "session_token":
+            use_session = True
+        else:
+            use_session = bool(token)
+
         # ---- Session-token profile ----
-        if token:
+        if use_session and token:
             try:
                 pass_phrase = stored.get("pass_phrase")
                 if isinstance(pass_phrase, str):

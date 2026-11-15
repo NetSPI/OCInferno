@@ -36,8 +36,7 @@ MEMBERSHIP_EDGE_KINDS = frozenset({
     "OCI_ANY_GROUP_MEMBER_OF",
     "OCI_ANY_USER_MEMBER_OF",
     "APP_ROLE_GRANTED",
-    "OCI_ROLE_OF_APP",
-    "OCI_IDD_GROUP_MEMBER",
+    "ROLE_IN_APPLICATION",
     "INSTALL_KEY_CAN_JOIN_DG",
 })
 
@@ -70,6 +69,24 @@ IAM_CONTROL_EDGE_KINDS = frozenset({
     "OCI_UPDATED_ACCESS_TO_ALL_RESOURCES",
     "IDD_CREATE_USER",
 })
+
+# Identity-domain admin app-roles. Unlike the edges above (where reaching the DESTINATION is
+# the goal), these edges run app-role -> administered user/group, so the privileged thing is
+# their SOURCE node -- the admin app-role itself (Identity Domain Administrator / User
+# Administrator / User Manager). A principal reaching that app-role (e.g. via APP_ROLE_GRANTED)
+# gains identity-domain admin, so these are targeted by SOURCE (see iter_admin_role_targets).
+IDD_ADMIN_ROLE_EDGE_KINDS = frozenset({
+    "IDD_IDENTITY_ADMIN_USER",
+    "IDD_USER_ADMIN",
+    "IDD_USER_MANAGER",
+    "IDD_ADD_SELF_TO_GROUP",
+})
+
+# Dynamic-group injection: a principal can make a resource a member of the DG -- by rewriting
+# the DG's matching rule (manage dynamic-groups). Like the *_CAN_JOIN_DG membership edges, the
+# DG the edge points at is the escalation endpoint (its grants are inherited), so these are
+# traversable and targeted (reaching the DG) under --to-any / --to-kind OCIDynamicGroup.
+DG_INJECTION_EDGE_KINDS = frozenset({"OCI_CAN_MODIFY_DG_RULES"})
 
 # RPST resource-creation edge kinds (can exec code as new resource principal)
 RPST_CREATE_EDGE_KINDS = frozenset({
@@ -116,6 +133,41 @@ DEFAULT_PRIV_EDGE_KINDS = (
     | RPST_CREATE_EDGE_KINDS
     | EXEC_EDGE_KINDS
 )
+
+
+def edge_is_conditional(props: dict) -> bool:
+    """True when an edge's IAM grant carries any ``where`` condition.
+
+    The graph builder records condition state inside ``edge_inner_properties``
+    (``has_unresolved_conditionals``, ``unresolved_statements``, and the full
+    ``resolved_statements`` text) rather than a flat top-level ``conditional`` flag.
+    Derive the flag here so ``--exclude-conditional`` and the ``[conditional]`` label
+    reflect conditions the builder actually captured -- whether it resolved them
+    (region/tag) or left them unresolved (time-based/dynamic).
+    """
+    if not isinstance(props, dict):
+        return False
+    inner = props.get("edge_inner_properties") or {}
+    if isinstance(inner, str):
+        try:
+            inner = json.loads(inner)
+        except Exception:
+            inner = {}
+    # Condition state may sit at the top level of properties or inside
+    # edge_inner_properties depending on the builder, so check both.
+    def _get(key):
+        return props.get(key) or (inner.get(key) if isinstance(inner, dict) else None)
+
+    if _get("conditional"):
+        return True
+    if _get("has_unresolved_conditionals") or _get("has_impossible_conditionals"):
+        return True
+    if _get("unresolved_statements") or _get("unresolved_statement_details"):
+        return True
+    for stmt in (_get("resolved_statements") or []):
+        if " where " in f" {str(stmt).lower()} ":
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +277,7 @@ class AttackGraph:
             props = dict(raw.get("properties") or {})
 
             # Skip conditional edges if requested
-            if exclude_conditional and props.get("conditional"):
+            if exclude_conditional and edge_is_conditional(props):
                 continue
 
             # Treat any *_CAN_JOIN_DG edge as a membership edge
@@ -299,3 +351,15 @@ class AttackGraph:
                 if dst not in seen:
                     seen.add(dst)
                     yield dst
+
+    def iter_admin_role_targets(
+        self, edge_kinds: frozenset[str] = IDD_ADMIN_ROLE_EDGE_KINDS
+    ) -> Iterator[str]:
+        """Yield SOURCE node IDs of identity-domain admin-role edges -- the privileged app-role
+        nodes. Reaching such a node (via APP_ROLE_GRANTED) is the escalation; it can administer
+        users/groups. Targeted by source because the edges point role -> administered principal."""
+        seen: set[str] = set()
+        for e in self.edges:
+            if e.kind in edge_kinds and e.src not in seen:
+                seen.add(e.src)
+                yield e.src

@@ -760,13 +760,23 @@ class DynamicGroupPermissionLocationMatcher:
         *,
         permission: str,
         location: str,
+        extra_resource_types: set[str] | None = None,
     ) -> List[Dict[str, Any]]:
         permission = str(permission or "").strip().upper()
         location = str(location or "").strip()
         if not permission or not location:
             return []
 
+        # Callers that know the exact DG resource.type for a hypothetical new resource (e.g.
+        # NEW_RPST_RESOURCE_SPECS) pass it explicitly. This is authoritative: it covers
+        # create-permissions absent from PERMISSION_MAPPING and resource-type spellings not
+        # aliased to the permission's token (e.g. COMPUTE_CONTAINER_INSTANCE_CREATE maps to
+        # 'compute-container-instances' while the DG rule uses 'computecontainerinstance').
         allowed_types = self._resource_types_for_permission(permission)
+        if extra_resource_types:
+            allowed_types = set(allowed_types) | {
+                str(t).strip().lower() for t in extra_resource_types if str(t).strip()
+            }
         scoped_evaluator = DynamicGroupRuleEvaluator(session=self.evaluator.session, debug=self.evaluator.debug)
         out: List[Dict[str, Any]] = []
 

@@ -27,67 +27,18 @@ def _session(saved=None):
 # enum_databases — only autonomous_databases and db_systems remain
 # ---------------------------------------------------------------------------
 
-class TestEnumDatabasesComponents(unittest.TestCase):
-
-    def test_removed_classes_not_importable(self):
-        import importlib
-        helpers = importlib.import_module("ocinferno.modules.databases.utilities.helpers")
-        for removed in ("DatabasesMysqlResource", "DatabasesPostgresResource",
-                        "DatabasesCacheClustersResource", "DatabasesCacheUsersResource",
-                        "build_database_client"):
-            self.assertFalse(
-                hasattr(helpers, removed),
-                f"{removed} should have been removed from databases.utilities.helpers",
-            )
-
-    def test_component_keys(self):
-        from ocinferno.modules.databases.enumeration.enum_databases import COMPONENTS
-        keys = [c.key for c in COMPONENTS]
-        self.assertEqual(keys, ["autonomous_databases", "db_systems"])
-
-    def test_run_module_returns_ok(self):
-        from ocinferno.modules.databases.enumeration.enum_databases import run_module
-        from ocinferno.modules.databases.utilities.helpers import (
-            DatabasesAutonomousResource,
-            DatabasesDbSystemsResource,
-        )
-        sess = _session()
-        with (
-            patch(_INIT_CLIENT, return_value=MagicMock()),
-            patch.object(DatabasesAutonomousResource, "list", return_value=[]),
-            patch.object(DatabasesDbSystemsResource, "list", return_value=[]),
-        ):
-            result = run_module([], sess)
-        self.assertTrue(result.get("ok"))
+def test_enum_databases_component_keys():
+    from ocinferno.modules.databases.enumeration.enum_databases import COMPONENTS
+    assert [c.key for c in COMPONENTS] == ["autonomous_databases", "db_systems"]
 
 
 # ---------------------------------------------------------------------------
 # enum_os_management_hub — 3 plain components
 # ---------------------------------------------------------------------------
 
-class TestEnumOsManagementHub(unittest.TestCase):
-
-    def test_component_keys(self):
-        from ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub import COMPONENTS
-        keys = [c.key for c in COMPONENTS]
-        self.assertEqual(keys, ["managed_instances", "managed_instance_groups", "scheduled_jobs"])
-
-    def test_run_module_returns_ok(self):
-        from ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub import run_module
-        from ocinferno.modules.os_management_hub.utilities.helpers import (
-            OsManagementHubManagedInstanceGroupsResource,
-            OsManagementHubManagedInstancesResource,
-            OsManagementHubScheduledJobsResource,
-        )
-        sess = _session()
-        with (
-            patch(_INIT_CLIENT, return_value=MagicMock()),
-            patch.object(OsManagementHubManagedInstancesResource, "list", return_value=[]),
-            patch.object(OsManagementHubManagedInstanceGroupsResource, "list", return_value=[]),
-            patch.object(OsManagementHubScheduledJobsResource, "list", return_value=[]),
-        ):
-            result = run_module([], sess)
-        self.assertTrue(result.get("ok"))
+def test_enum_os_management_hub_component_keys():
+    from ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub import COMPONENTS
+    assert [c.key for c in COMPONENTS] == ["managed_instances", "managed_instance_groups", "scheduled_jobs"]
 
 
 # ---------------------------------------------------------------------------

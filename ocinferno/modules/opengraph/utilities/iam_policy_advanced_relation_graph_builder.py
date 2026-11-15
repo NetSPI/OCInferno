@@ -141,6 +141,10 @@ EDGE_DYNAMIC_GROUP_MEMBER = EDGE_TYPE_OCI_DYNAMIC_GROUP_MEMBER
 EDGE_INSTANCE_CAN_JOIN_DG = "INSTANCE_CAN_JOIN_DG"
 EDGE_ADD_SELF_TO_GROUP = "OCI_ADD_SELF_TO_GROUP"
 EDGE_RUN_COMMAND = "OCI_RUN_COMMAND"
+EDGE_UPDATE_DYNAMIC_GROUP_RULES = "OCI_UPDATE_DYNAMIC_GROUP_RULES"
+# Derived: a principal who can update dynamic-group matching rules can rewrite any DG's rule
+# to match an attacker-controlled resource, making it a member and inheriting the DG's grants.
+EDGE_CAN_MODIFY_DG_RULES = "OCI_CAN_MODIFY_DG_RULES"
 EDGE_SCOPE_INCLUDES = "OCI_SPECIFIC_RESOURCE"
 EDGE_BELONGS_TO = "OCI_BELONGS_TO"
 NODE_DYNAMIC_GROUP = NODE_TYPE_OCI_DYNAMIC_GROUP
@@ -335,6 +339,7 @@ CAPABILITY_EDGE_TYPES = {
     EDGE_CREATE_INSTANCE_AGENT_COMMAND,
     EDGE_READ_RUN_INPUT,
     EDGE_READ_RUN_OUTPUT,
+    EDGE_UPDATE_DYNAMIC_GROUP_RULES,
 } | _NEW_RPST_RESOURCE_EDGE_TYPES | _GENERATE_RPST_EXISTING_EDGE_TYPES
 _KEEP_ORPHAN_NEW_SCOPE_EDGE_TYPES = {
     "IDD_CREATE_USER",
@@ -385,6 +390,9 @@ class _RelationState:
     group_scope: bool = False
     update_policy_scope: bool = False
     create_policy_scope: bool = False
+    update_dynamic_group_scope: bool = False
+    update_dynamic_group_resolved: list = field(default_factory=list)
+    update_dynamic_group_unresolved: list = field(default_factory=list)
     create_instance_scope: bool = False
     create_instance_has_instance_create: bool = False
     create_instance_has_vnic_prereqs: bool = False
@@ -709,6 +717,25 @@ def _upsert_relation_from_edge(
             if dst_type == NODE_GROUP and _s(dst):
                 cap.specific_groups.add(_s(dst))
 
+    elif et == EDGE_UPDATE_DYNAMIC_GROUP_RULES:
+        if token == "dynamic-groups":
+            cap.update_dynamic_group_scope = True
+            cap.update_dynamic_group_resolved = _merge_statement_entries(
+                list(cap.update_dynamic_group_resolved),
+                list(
+                    _json_list(edge_row.get("resolved_statement_details"))
+                    or _json_list(edge_row.get("resolved_statements"))
+                    or []
+                ),
+            )
+            cap.update_dynamic_group_unresolved = _merge_statement_entries(
+                list(cap.update_dynamic_group_unresolved),
+                list(
+                    _json_list(edge_row.get("unresolved_statement_details"))
+                    or _json_list(edge_row.get("unresolved_statements"))
+                    or []
+                ),
+            )
     elif et == EDGE_UPDATE_POLICY:
         if token == "policies" or dst_type == "OCIPolicy":
             cap.update_policy_scope = True
@@ -1922,6 +1949,7 @@ def _emit_new_rpst_resources_and_dg_edges(
                 candidate_dgs,
                 permission=spec.dg_permission,
                 location=loc,
+                extra_resource_types={spec.resource_type} if spec.resource_type else None,
             )
             emit_ctx.dg_rpst_create_matches_by_service_loc[cache_key] = {
                 _s(m.get("dynamic_group_id") or ""): m
@@ -2006,6 +2034,56 @@ def _emit_rpst_update_edges(
                 ),
                 **_base_edge_kwargs(cap),
             )
+
+
+def _emit_update_dynamic_group_rules_edges(
+    emit_ctx: _DerivedEmitContext,
+    *,
+    principal_id: str,
+    principal_type: str,
+    loc: str,
+    cap: _RelationState,
+):
+    """Gap-DG: a principal who can UPDATE dynamic-group matching rules (DYNAMIC_GROUP_UPDATE /
+    `manage dynamic-groups`) can rewrite any dynamic group's rule in this location to match an
+    attacker-controlled resource, making it a member and inheriting that DG's IAM grants.
+    Emit principal -> each DynamicGroup in `loc`; the DG's existing grant edges carry the
+    escalation. Exact-compartment match (DGs don't inherit) -- same convention as the other
+    DG-join derivations (a tenancy-wide grant whose loc isn't a DG's compartment won't match,
+    a known shared limitation)."""
+    if not cap.update_dynamic_group_scope:
+        return
+    loc_s = _s(loc)
+    if not loc_s:
+        return
+    for row in (emit_ctx.dynamic_group_rows or []):
+        if not isinstance(row, dict):
+            continue
+        if _s(row.get("compartment_id") or "") != loc_s:
+            continue
+        dg_id = _s(row.get("id") or "")
+        if not dg_id:
+            continue
+        _write_derived_edge(
+            emit_ctx,
+            source_id=principal_id,
+            source_type=principal_type,
+            destination_id=dg_id,
+            destination_type=NODE_DYNAMIC_GROUP,
+            edge_type=EDGE_CAN_MODIFY_DG_RULES,
+            description=(
+                "Derived from raw IAM edges: this principal can update dynamic-group matching "
+                "rules in this location, so it can rewrite this dynamic group's rule to match an "
+                "attacker-controlled resource -- joining the group and inheriting its IAM grants."
+            ),
+            resolved_statements=list(cap.update_dynamic_group_resolved or []),
+            unresolved_statements=list(cap.update_dynamic_group_unresolved or []),
+            has_unresolved_conditionals=cap.has_unresolved_conditionals,
+            has_impossible_conditionals=cap.has_impossible_conditionals,
+            has_inherited=cap.has_inherited,
+            has_direct=cap.has_direct,
+            extra_edge_inner_properties={"scope_location": loc_s},
+        )
 
 
 def _emit_add_self_to_group_edges(
@@ -3104,6 +3182,7 @@ def build_iam_policy_advanced_relation_edges_offline(*, session, ctx, debug=True
             _emit_new_rpst_resources_and_dg_edges,
             _emit_rpst_update_edges,
             _emit_add_self_to_group_edges,
+            _emit_update_dynamic_group_rules_edges,
             _emit_instance_agent_run_command_edges,
         ):
             emitter(

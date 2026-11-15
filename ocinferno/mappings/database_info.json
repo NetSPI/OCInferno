@@ -834,20 +834,21 @@
     {
       "table_name": "dns_private_resolvers",
       "columns": [
+        "id",
         "compartment_id",
-        "endpoint_type",
-        "forwarding_address",
-        "is_forwarding",
-        "is_listening",
+        "display_name",
+        "attached_vcn_id",
+        "default_view_id",
+        "is_protected",
         "lifecycle_state",
-        "listening_address",
-        "name",
         "time_created",
-        "time_updated"
+        "time_updated",
+        "freeform_tags",
+        "defined_tags",
+        "endpoints"
       ],
       "primary_keys": [
-        "compartment_id",
-        "name"
+        "id"
       ]
     },
     {
@@ -1180,7 +1181,8 @@
         "storage_tier",
         "time_created",
         "time_modified",
-        "compartment_id"
+        "compartment_id",
+        "region"
       ],
       "primary_keys": [
         "namespace",
@@ -2254,7 +2256,8 @@
         "replication_target_id",
         "source_details",
         "system_tags",
-        "time_created"
+        "time_created",
+        "region"
       ],
       "primary_keys": [
         "id"
@@ -2285,7 +2288,8 @@
         "subnet_id",
         "system_tags",
         "time_billing_cycle_end",
-        "time_created"
+        "time_created",
+        "region"
       ],
       "primary_keys": [
         "id"
@@ -2302,7 +2306,8 @@
         "max_fs_stat_bytes",
         "max_fs_stat_files",
         "time_created",
-        "vcn_id"
+        "vcn_id",
+        "region"
       ],
       "primary_keys": [
         "id"
@@ -2319,7 +2324,8 @@
         "lifecycle_state",
         "locks",
         "path",
-        "time_created"
+        "time_created",
+        "region"
       ],
       "primary_keys": [
         "id"
@@ -2343,7 +2349,8 @@
         "snapshot_time",
         "snapshot_type",
         "system_tags",
-        "time_created"
+        "time_created",
+        "region"
       ],
       "primary_keys": [
         "id"
@@ -2795,7 +2802,8 @@
         "id",
         "lifecycle_state",
         "time_created",
-        "vcn_id"
+        "vcn_id",
+        "network_details"
       ],
       "primary_keys": [
         "id"
@@ -3009,7 +3017,8 @@
         "status",
         "time_accepted",
         "time_finished",
-        "time_created"
+        "time_created",
+        "operation"
       ],
       "primary_keys": [
         "id"
@@ -3077,7 +3086,8 @@
         "time_created",
         "time_updated",
         "freeform_tags",
-        "defined_tags"
+        "defined_tags",
+        "name"
       ],
       "primary_keys": [
         "id"
@@ -3148,7 +3158,8 @@
         "lifecycle_state",
         "time_created",
         "time_started",
-        "time_finished"
+        "time_finished",
+        "time_accepted"
       ],
       "primary_keys": [
         "id"
@@ -3182,7 +3193,8 @@
         "lifecycle_state",
         "time_created",
         "time_started",
-        "time_finished"
+        "time_finished",
+        "time_accepted"
       ],
       "primary_keys": [
         "id"
@@ -3248,7 +3260,8 @@
         "time_created",
         "time_updated",
         "freeform_tags",
-        "defined_tags"
+        "defined_tags",
+        "name"
       ],
       "primary_keys": [
         "id"
@@ -3454,7 +3467,8 @@
         "time_created",
         "time_updated",
         "freeform_tags",
-        "defined_tags"
+        "defined_tags",
+        "target_vcn_id"
       ],
       "primary_keys": [
         "id"
@@ -3918,7 +3932,8 @@
         "vault_type",
         "wrappingkey_id",
         "defined_tags",
-        "freeform_tags"
+        "freeform_tags",
+        "time_created"
       ],
       "primary_keys": [
         "id"

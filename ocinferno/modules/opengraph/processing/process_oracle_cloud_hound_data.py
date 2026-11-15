@@ -797,6 +797,25 @@ def run_module(user_args, session):
 
     if args.reset:
         _clear_opengraph_tables(session, debug)
+    elif not args.export_only:
+        # Re-building over a populated opengraph table set without --reset yields a
+        # DEGRADED graph: the IAM base step re-emits nothing (rows already exist), so the
+        # in-memory relation entries come back empty and EVERY derived privilege-escalation
+        # edge (OCI_ADD_SELF_TO_GROUP, OCI_CAN_CREATE_POLICY, *_CAN_JOIN_DG, OCI_RUN_COMMAND,
+        # ...) silently disappears. Warn loudly and point at --reset.
+        try:
+            existing = len(session.get_resource_fields("opengraph_edges", columns=["source_id"]) or [])
+        except Exception:
+            existing = 0
+        if existing:
+            print(
+                f"\n[!] =================================== WARNING ===================================\n"
+                f"[!] opengraph tables already hold {existing} edge(s) and you did NOT pass --reset.\n"
+                f"[!] Re-building without --reset yields a DEGRADED graph: derived privilege-\n"
+                f"[!] escalation edges (add-self-to-group, can-create-policy, *_CAN_JOIN_DG,\n"
+                f"[!] run-command, ...) will be MISSING. Re-run with --reset for a complete graph.\n"
+                f"[!] ============================================================================\n"
+            )
 
     builder_stats = {}
     if not args.export_only:

@@ -18,6 +18,34 @@
       },
       {
         "end": {
+          "value": "ocid1.dynamicgroup.oc1..webservers"
+        },
+        "kind": "OCI_CAN_MODIFY_DG_RULES",
+        "properties": {
+          "description": "Derived from raw IAM edges: this principal can update dynamic-group matching rules in this location, so it can rewrite this dynamic group's rule to match an attacker-controlled resource -- joining the group and inheriting its IAM grants.",
+          "edge_category": "PERMISSION",
+          "has_direct": true,
+          "has_impossible_conditionals": false,
+          "has_inherited": false,
+          "has_unresolved_conditionals": false,
+          "is_priv_escalation": true,
+          "resolved_policy": [
+            "ocid1.policy.oc1..base_inherited_04_oci_manage"
+          ],
+          "resolved_statements": [
+            "Allow group SecurityAdmins to manage dynamic-groups in compartment RootTeam"
+          ],
+          "scope_location": "ocid1.compartment.oc1..root",
+          "unresolved_policy": [],
+          "unresolved_statement_details": [],
+          "unresolved_statements": []
+        },
+        "start": {
+          "value": "ocid1.group.oc1..securityadmins"
+        }
+      },
+      {
+        "end": {
           "value": "policy_stmt:ocid1.policy.oc1..base_inherited_04_oci_manage:0"
         },
         "kind": "OCI_POLICY_SUBJECT",

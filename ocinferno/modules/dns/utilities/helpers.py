@@ -91,4 +91,4 @@ class DnsPrivateResolversResource(OciListResource):
     LIST_METHOD = "list_resolvers"
     GET_METHOD = "get_resolver"
     GET_ID_PARAM = "resolver_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "time_created"]
+    COLUMNS = ["id", "display_name", "attached_vcn_id", "lifecycle_state", "time_created"]

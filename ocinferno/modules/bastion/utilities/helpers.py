@@ -31,4 +31,4 @@ class BastionSessionsResource(OciListResource):
     GET_METHOD = "get_session"
     GET_ID_PARAM = "session_id"
     LIST_SCOPE_KWARG = "bastion_id"
-    COLUMNS = ["id", "display_name", "bastion_id", "bastion_name", "lifecycle_state", "target_resource_details", "time_created"]
+    COLUMNS = ["id", "display_name", "bastion_id", "lifecycle_state", "target_resource_details", "time_created"]

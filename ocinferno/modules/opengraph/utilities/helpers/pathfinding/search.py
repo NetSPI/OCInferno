@@ -10,6 +10,7 @@ Two modes:
 from __future__ import annotations
 
 import heapq
+import itertools
 from collections import deque
 from typing import TYPE_CHECKING
 
@@ -147,20 +148,23 @@ def enumerate_paths(
     exc = excluded_nodes or set()
     h = reverse_distances(graph, target_ids, max_depth, excluded_nodes=exc)
 
-    # heap entries: (priority, path_so_far)
-    heap: list[tuple[int, list[str]]] = []
+    # heap entries: (priority, insertion_seq, path_so_far). The monotonic seq breaks
+    # priority ties by insertion order so heapq never compares the path lists (which is
+    # O(len) and couples ordering to node-id strings).
+    heap: list[tuple[int, int, list[str]]] = []
+    counter = itertools.count()
 
     for tid in target_ids:
         if tid in exc:
             continue
-        heapq.heappush(heap, (0, [tid]))
+        heapq.heappush(heap, (0, next(counter), [tid]))
 
     # Walk backwards from targets
     paths: list[list[str]] = []
     expansions = 0
 
     while heap and len(paths) < max_paths and expansions < max_expansions:
-        prio, path = heapq.heappop(heap)
+        prio, _seq, path = heapq.heappop(heap)
         expansions += 1
         cur = path[-1]  # we build path in reverse
 
@@ -188,6 +192,6 @@ def enumerate_paths(
                 continue
             new_path = path + [src]
             priority = len(new_path) + h[src]
-            heapq.heappush(heap, (priority, new_path))
+            heapq.heappush(heap, (priority, next(counter), new_path))
 
     return paths

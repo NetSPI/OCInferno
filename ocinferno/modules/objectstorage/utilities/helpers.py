@@ -397,8 +397,9 @@ class ObjectStorageObjectsResource:
         where = {}
         if compartment_id:
             where["compartment_id"] = compartment_id
-        if region:
-            where["region"] = region
+        # NOTE: object_storage_buckets has no `region` column, so filtering on it raised
+        # "no such column" and silently disabled the bucket cache (and printed an error every
+        # run). Scope by compartment only; the caller already resolves by namespace below.
         rows = session.get_resource_fields(table_name, where_conditions=where or None) or []
 
         ns = _s(namespace)

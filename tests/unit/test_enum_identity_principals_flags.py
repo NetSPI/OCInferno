@@ -33,13 +33,13 @@ def _install_oci_stub() -> None:
     if exc_mod is None:
         exc_mod = types.ModuleType("oci.exceptions")
         sys.modules["oci.exceptions"] = exc_mod
-    exc_mod.ServiceError = _FakeServiceError
+        exc_mod.ServiceError = _FakeServiceError
 
     pag_mod = sys.modules.get("oci.pagination")
     if pag_mod is None:
         pag_mod = types.ModuleType("oci.pagination")
         sys.modules["oci.pagination"] = pag_mod
-    pag_mod.list_call_get_all_results = lambda fn, **kwargs: types.SimpleNamespace(data=fn(**kwargs))
+        pag_mod.list_call_get_all_results = lambda fn, **kwargs: types.SimpleNamespace(data=fn(**kwargs))
 
     oci_mod.util = util_mod
     oci_mod.exceptions = exc_mod

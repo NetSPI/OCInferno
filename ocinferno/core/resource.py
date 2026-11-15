@@ -54,6 +54,10 @@ class OciListResource(ResourceBase):
 
     def __init__(self, session, region: Optional[str] = None) -> None:
         self.session = session
+        # Remember the region this resource is pinned to so nested enumerations can build
+        # their PARENT resource in the same region (otherwise a --regions run lists parents
+        # from the session default region and matches children against the wrong region).
+        self.region = region
         self.client = self._build_client(session, region)
 
     def _build_client(self, session, region: Optional[str] = None):

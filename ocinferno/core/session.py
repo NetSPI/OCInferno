@@ -1018,8 +1018,11 @@ class SessionUtility(WorkspaceConfigMixin, AuthMixin):
             print("[X] Missing credname")
             return False
 
+        # load_stored_creds returns 1 on success, -1 on load failure, None on unknown cred.
+        # `not -1` is False, so `if not ok` would treat a FAILURE as success -- leaving the
+        # old identity active while the caller believes the swap worked. Require success.
         ok = self.load_stored_creds(credname, force_refresh=force_refresh)
-        if not ok:
+        if ok != 1:
             return False
 
         if tenant_id:

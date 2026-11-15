@@ -277,7 +277,7 @@ _TARGET_COLUMN_HANDLER_SPECS = {
     },
     "target.secret.name": {
         "token": "secrets",
-        "col": "name",
+        "col": "secret_name",
         "applicable": {"vaults", "secrets", "keys"},
         "allow_patterns": True,
         "allow_in": True,
@@ -452,7 +452,7 @@ _TARGET_COLUMN_HANDLER_SPECS = {
         "missing_is_match_for_neq": True,
     },
     "target.dns-record.type": {
-        "token": "dns-zone-records",
+        "token": "dns-records",
         "col": "rtype",
         "applicable": {"dns-zone-records", "dns-records"},
         "allow_patterns": False,
@@ -460,7 +460,7 @@ _TARGET_COLUMN_HANDLER_SPECS = {
         "missing_is_match_for_neq": True,
     },
     "target.dns-domain.name": {
-        "token": "dns-zone-records",
+        "token": "dns-records",
         "col": "domain",
         "applicable": {"dns-zone-records", "dns-records"},
         "allow_patterns": False,

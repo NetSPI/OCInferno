@@ -1082,6 +1082,26 @@ class DataController:
                 except Exception:
                     pass
 
+            # One-off migration: dns_private_resolvers originally carried resolver-ENDPOINT
+            # columns with PK (compartment_id, name), but the module enumerates RESOLVERS
+            # (keyed by id). The old table saved resolvers with NULL id/name; the correct PK
+            # is (id). CREATE TABLE IF NOT EXISTS can't change a PK, so drop the stale table
+            # (its rows were unusable junk) to let it recreate with the id PK.
+            if table_name == "dns_private_resolvers":
+                try:
+                    cur.execute('PRAGMA table_info("dns_private_resolvers")')
+                    info = cur.fetchall() or []
+                    pk_cols = set()
+                    for r in info:
+                        nm = str(r["name"]) if isinstance(r, sqlite3.Row) else str(r[1])
+                        pk_flag = r["pk"] if isinstance(r, sqlite3.Row) else r[5]
+                        if pk_flag:
+                            pk_cols.add(nm)
+                    if info and pk_cols != {"id"}:
+                        cur.execute('DROP TABLE "dns_private_resolvers"')
+                except Exception:
+                    pass
+
             # workspace_id FK -> workspace_index(id) ON DELETE CASCADE so a workspace
             # delete removes all of its service rows.
             create_stmt = f'''
@@ -1270,8 +1290,19 @@ class DataController:
 
             if non_pk:
                 if on_conflict == "update":
-                    set_clause = ", ".join([f'"{c}"=excluded."{c}"' for c in non_pk])
-                    where_clause = " OR ".join([f'excluded."{c}" IS NOT "{table_name}"."{c}"' for c in non_pk])
+                    # Bind the UNION of all batch rows' columns, so a row that simply LACKS a
+                    # column binds NULL for it. Use COALESCE(excluded, existing) so an absent
+                    # (NULL) incoming value preserves the stored value instead of wiping it --
+                    # e.g. a partial --get re-enum where row S carries field X but row R doesn't
+                    # must not NULL out R's previously-enriched X. (Matches single-row save,
+                    # which only ever sets a row's own present columns.) A real non-null
+                    # incoming value still overwrites.
+                    set_clause = ", ".join(
+                        [f'"{c}"=COALESCE(excluded."{c}", "{table_name}"."{c}")' for c in non_pk]
+                    )
+                    where_clause = " OR ".join(
+                        [f'COALESCE(excluded."{c}", "{table_name}"."{c}") IS NOT "{table_name}"."{c}"' for c in non_pk]
+                    )
 
                     sql = (
                         f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders}) '

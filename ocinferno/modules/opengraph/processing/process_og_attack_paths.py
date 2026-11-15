@@ -24,6 +24,7 @@ from pathlib import Path
 from ocinferno.modules.opengraph.utilities.helpers.pathfinding.model import (
     _JOIN_DG_SUFFIX,
     DEFAULT_PRIV_EDGE_KINDS,
+    DG_INJECTION_EDGE_KINDS,
     IAM_CONTROL_EDGE_KINDS,
     MANAGE_EDGE_KIND,
     RPST_CREATE_EDGE_KINDS,
@@ -203,8 +204,8 @@ def _resolve_targets(
     target_edge_kinds: frozenset[str] = frozenset()
 
     if args.to_any:
-        # Every capability edge destination
-        all_cap = DEFAULT_PRIV_EDGE_KINDS | frozenset({
+        # Every capability edge destination, plus DG-injection edges (reaching the DG).
+        all_cap = DEFAULT_PRIV_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
             e.kind for e in graph.edges
             if e.kind.endswith(_JOIN_DG_SUFFIX)
         })
@@ -224,6 +225,13 @@ def _resolve_targets(
 
     # Collect from edges
     targets: set[str] = set(graph.iter_priv_targets(target_edge_kinds))
+
+    # Identity-domain admin app-roles are privesc by their SOURCE node (the app-role itself),
+    # not their destination. Include them when targeting IAM-control capabilities (default,
+    # --to-iam) or everything (--to-any) so default analysis surfaces identity-domain admin
+    # escalation (which modern IDD tenancies rely on).
+    if args.to_any or args.to_iam or not any_explicit:
+        targets |= set(graph.iter_admin_role_targets())
 
     # Add explicitly named nodes
     for nid in args.to_node:

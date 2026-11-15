@@ -137,7 +137,11 @@ def nested_list_fn(
                 if manual:
                     parent_ids = _split_ids(manual)
                 else:
-                    parents = parent_resource_cls(session).list(compartment_id=compartment_id) or []
+                    # Build the parent in the SAME region as the (region-pinned) child, so a
+                    # --regions run lists parents from that region, not the session default.
+                    parents = parent_resource_cls(
+                        session, region=getattr(resource, "region", None)
+                    ).list(compartment_id=compartment_id) or []
                     parent_ids = [p.get(parent_id_column) for p in parents
                                   if isinstance(p, dict) and p.get(parent_id_column)]
             rows = []
@@ -149,7 +153,13 @@ def nested_list_fn(
                         # Parent-id is the sole scope; child's LIST_SCOPE_KWARG == parent_id_field
                         # remaps this positional arg onto the parent kwarg.
                         listed = resource.list(compartment_id=pid) or []
-                except Exception:
+                except Exception as e:
+                    UtilityTools.dlog(
+                        bool(getattr(session, "debug", False) or getattr(session, "individual_run_debug", False)),
+                        "nested_list_fn: child list failed for parent; skipping",
+                        table=getattr(resource, "TABLE_NAME", ""), parent_id=pid,
+                        err=f"{type(e).__name__}: {e}",
+                    )
                     continue
                 for row in listed:
                     if isinstance(row, dict):

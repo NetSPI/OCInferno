@@ -1058,7 +1058,9 @@ class CommandProcessor:
                 or str(picked.get("name") or "").strip()
                 or str(credname)
             )
-            self.session.set_active_creds(target_credname)
+            if not self.session.set_active_creds(target_credname):
+                print(f"{UtilityTools.RED}[X] Failed to activate '{target_credname}'; active credential unchanged.{UtilityTools.RESET}")
+                return None
             print(f"{UtilityTools.GREEN}[*] Active credentials set to: {target_credname}{UtilityTools.RESET}")
             return picked
 
@@ -1082,7 +1084,9 @@ class CommandProcessor:
             return None
 
         target_credname = str(selected.get("credname") or "").strip()
-        self.session.set_active_creds(target_credname)
+        if not self.session.set_active_creds(target_credname):
+            print(f"{UtilityTools.RED}[X] Failed to activate '{target_credname}'; active credential unchanged.{UtilityTools.RESET}")
+            return None
         print(f"{UtilityTools.GREEN}[*] Active credentials set to: {target_credname}{UtilityTools.RESET}")
         return selected["cred"]
 

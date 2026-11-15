@@ -213,3 +213,25 @@ class TestSessionExplicitApiKeyAndSessionToken(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_default_api_log_path_does_not_create_output_dirs():
+    import tempfile
+    from pathlib import Path
+
+    original_cwd = Path.cwd()
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            os.chdir(td)
+
+            session = SessionUtility.__new__(SessionUtility)
+            session.workspace_id = 1
+            session.workspace_name = "TEST"
+
+            expected = Path(td) / "ocinferno_output" / "1_TEST" / "tool_logs" / "telemetry_api.log"
+            resolved = Path(session._default_api_log_path())
+
+            assert resolved == expected
+            assert not (Path(td) / "ocinferno_output").exists()
+    finally:
+        os.chdir(original_cwd)

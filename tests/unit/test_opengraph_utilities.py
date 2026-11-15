@@ -1,6 +1,5 @@
 """Utility-level OpenGraph tests: context membership loading, matching-rules engine,
-bundle rule matching, and graph JSON export/split. Each covers a pure helper with no
-DB or graph-builder wiring."""
+bundle rule matching, graph model semantics, and graph JSON export/split."""
 from __future__ import annotations
 
 import json
@@ -190,3 +189,26 @@ def test_split_single_part_when_small():
     tmp = pathlib.Path(tempfile.mkdtemp())
     res = write_split_outputs(tmp / "g.json", _graph_payload(), max_size_mb=90.0)
     assert res["part_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Graph model semantics: IDD admin-role target resolution
+# ---------------------------------------------------------------------------
+from ocinferno.modules.opengraph.utilities.helpers.pathfinding.model import AttackGraph
+
+
+def test_idd_admin_role_targeted_by_source():
+    # attacker --APP_ROLE_GRANTED--> admin app-role --IDD_IDENTITY_ADMIN_USER--> victim user.
+    # The app-role (the SOURCE of the admin edge) is the privesc target, not the victim:
+    # gaining access to the app-role grants identity-domain admin over the victim.
+    nodes = [
+        {"id": "user:att", "kinds": ["OCIUser", "OCIPrincipal"], "properties": {"name": "att"}},
+        {"id": "approle:admin", "kinds": ["OCIIDDAppRole"], "properties": {"name": "Identity Domain Administrator"}},
+        {"id": "user:victim", "kinds": ["OCIUser", "OCIPrincipal"], "properties": {"name": "victim"}},
+    ]
+    edges = [
+        {"start": {"value": "user:att"}, "end": {"value": "approle:admin"}, "kind": "APP_ROLE_GRANTED", "properties": {}},
+        {"start": {"value": "approle:admin"}, "end": {"value": "user:victim"}, "kind": "IDD_IDENTITY_ADMIN_USER", "properties": {}},
+    ]
+    g = AttackGraph._build(nodes, edges, include_containment=False, exclude_conditional=False, debug=False)
+    assert list(g.iter_admin_role_targets()) == ["approle:admin"]

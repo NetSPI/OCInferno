@@ -4,6 +4,8 @@ import importlib
 import sys
 import types
 
+import pytest
+
 
 class _LocalServiceError(Exception):
     def __init__(
@@ -23,7 +25,11 @@ class _LocalServiceError(Exception):
         self.request_endpoint = request_endpoint
 
 
+_original_service_error = None
+
+
 def _install_oci_stub() -> None:
+    global _original_service_error
     oci_mod = sys.modules.get("oci")
     if oci_mod is None:
         oci_mod = types.ModuleType("oci")
@@ -39,8 +45,8 @@ def _install_oci_stub() -> None:
     if exc_mod is None:
         exc_mod = types.ModuleType("oci.exceptions")
         sys.modules["oci.exceptions"] = exc_mod
-    # Force deterministic exception type for this test module even when real OCI
-    # SDK modules were imported earlier in the same test process.
+    # Save the original before overwriting so the restore fixture can undo this.
+    _original_service_error = getattr(exc_mod, "ServiceError", None)
     exc_mod.ServiceError = _LocalServiceError
 
     oci_mod.util = util_mod
@@ -54,6 +60,21 @@ import ocinferno.modules.objectstorage.utilities.helpers as objectstorage_helper
 objectstorage_helpers = importlib.reload(objectstorage_helpers)
 
 from ocinferno.modules.objectstorage.utilities.helpers import ObjectStorageNamespacesResource
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _restore_oci_service_error():
+    """Restore oci.exceptions.ServiceError after all tests in this module run.
+
+    _install_oci_stub() intentionally overwrites ServiceError with _LocalServiceError
+    so that the reloaded objectstorage_helpers catches it correctly. This fixture
+    undoes that overwrite after the module's tests complete, so other test files
+    that run later see the real (or absent) class.
+    """
+    yield
+    exc_mod = sys.modules.get("oci.exceptions")
+    if exc_mod is not None and _original_service_error is not None:
+        exc_mod.ServiceError = _original_service_error
 
 
 class _Response:
