@@ -151,6 +151,15 @@ Examples:
         help="Exclude trivial paths where the principal directly holds the target edge.",
     )
     sg.add_argument(
+        "--no-group-hop", action="store_true", default=False,
+        help=(
+            "Exclude paths where the principal reaches the target purely via "
+            "group/DG membership (User→Group→priv). Keeps paths that traverse "
+            "other node types on the way. Combine with --no-direct to hide all "
+            "trivial-access results."
+        ),
+    )
+    sg.add_argument(
         "--exclude-node", metavar="SUBSTR", action="append", default=[],
         help="Exclude paths that include nodes matching this substring. Repeatable.",
     )
@@ -332,6 +341,7 @@ def run_module(user_args: list[str], session) -> dict:
             excluded_nodes=excluded,
             exclude_service_agents=args.exclude_service_agents,
             no_direct=args.no_direct,
+            no_group_hop=args.no_group_hop,
         )
         truncated = len(paths) >= args.max_paths
     else:
@@ -345,6 +355,7 @@ def run_module(user_args: list[str], session) -> dict:
             excluded_nodes=excluded,
             exclude_service_agents=args.exclude_service_agents,
             no_direct=args.no_direct,
+            no_group_hop=args.no_group_hop,
         )
         truncated = False
 

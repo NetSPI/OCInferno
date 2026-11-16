@@ -1,14 +1,11 @@
-"""Unit tests for OpenGraph pathfinding conditional handling.
-
-Covers the edge_is_conditional derivation (the fix that connects the graph builder's
-rich condition data -- has_unresolved_conditionals / unresolved_statements /
-resolved_statements with a `where` clause -- to the pathfinder's --exclude-conditional
-and the [conditional] label, which previously keyed only on a flat `conditional` flag
-that no builder ever set).
-"""
+"""Unit tests for OpenGraph pathfinding conditional handling and --no-group-hop filter."""
 from ocinferno.modules.opengraph.utilities.helpers.pathfinding.model import (
     AttackGraph,
     edge_is_conditional,
+)
+from ocinferno.modules.opengraph.utilities.helpers.pathfinding.search import (
+    _is_group_hop_only,
+    shortest_paths,
 )
 
 _COND_STMT = "Allow group g to manage policies in tenancy where request.region = 'us-phoenix-1'"
@@ -60,3 +57,72 @@ def test_exclude_conditional_drops_conditional_edge():
     # --exclude-conditional: the where-clause edge is skipped entirely.
     g_drop = _graph(exclude_conditional=True)
     assert not (g_drop.adj.get("user:a") or [])
+
+
+# ---------------------------------------------------------------------------
+# --no-group-hop: filter User→Group→priv paths
+# ---------------------------------------------------------------------------
+
+def _group_hop_graph():
+    """Graph with:
+      user:att  --(OCI_GROUP_MEMBER)-->  group:admins  --(OCI_MANAGE)-->  resource:target
+      user:att  --(OCI_MANAGE)-->  resource:direct   (direct, no group hop)
+    """
+    nodes = [
+        {"id": "user:att",        "kinds": ["OCIUser", "OCIPrincipal"],  "properties": {"name": "att"}},
+        {"id": "group:admins",    "kinds": ["OCIGroup", "OCIResource"],   "properties": {"name": "admins"}},
+        {"id": "resource:target", "kinds": ["OCIResource"],              "properties": {"name": "target"}},
+        {"id": "resource:direct", "kinds": ["OCIResource"],              "properties": {"name": "direct"}},
+    ]
+    edges = [
+        {"start": {"value": "user:att"},     "end": {"value": "group:admins"},    "kind": "OCI_GROUP_MEMBER", "properties": {}},
+        {"start": {"value": "group:admins"}, "end": {"value": "resource:target"}, "kind": "OCI_MANAGE",       "properties": {}},
+        {"start": {"value": "user:att"},     "end": {"value": "resource:direct"}, "kind": "OCI_MANAGE",       "properties": {}},
+    ]
+    return AttackGraph._build(nodes, edges, include_containment=False, exclude_conditional=False, debug=False)
+
+
+def test_is_group_hop_only_true_for_single_group_hop():
+    g = _group_hop_graph()
+    assert _is_group_hop_only(g, ["user:att", "group:admins", "resource:target"]) is True
+
+
+def test_is_group_hop_only_false_for_direct():
+    g = _group_hop_graph()
+    assert _is_group_hop_only(g, ["user:att", "resource:direct"]) is False
+
+
+def test_is_group_hop_only_false_for_non_group_intermediate():
+    g = _group_hop_graph()
+    # intermediate is a plain resource, not a group
+    assert _is_group_hop_only(g, ["user:att", "resource:target", "resource:direct"]) is False
+
+
+def test_no_group_hop_removes_user_via_group_path():
+    # user:att reaches resource:target ONLY via group:admins (a group hop).
+    # Without --no-group-hop the user path is present; with it, only the group
+    # itself (which has a direct path as source) survives.
+    g = _group_hop_graph()
+    targets = {"resource:target"}
+    all_paths = shortest_paths(g, targets, no_direct=False, no_group_hop=False)
+    # user:att path should exist in unfiltered results
+    assert any(p[0] == "user:att" and p[-1] == "resource:target" for p in all_paths)
+    filtered = shortest_paths(g, targets, no_direct=False, no_group_hop=True)
+    # user:att path is gone (group hop); group:admins direct path survives
+    assert not any(p[0] == "user:att" and p[-1] == "resource:target" for p in filtered)
+
+
+def test_no_group_hop_keeps_direct_path():
+    # user:att reaches resource:direct directly — not a group hop, should survive.
+    g = _group_hop_graph()
+    targets = {"resource:direct"}
+    paths = shortest_paths(g, targets, no_direct=False, no_group_hop=True)
+    assert any(p[-1] == "resource:direct" for p in paths)
+
+
+def test_no_group_hop_with_no_direct_removes_both_trivial_user_paths():
+    g = _group_hop_graph()
+    # With both flags, user:att should not appear in any path.
+    for targets in ({"resource:target"}, {"resource:direct"}):
+        paths = shortest_paths(g, targets, no_direct=True, no_group_hop=True)
+        assert not any(p[0] == "user:att" for p in paths)

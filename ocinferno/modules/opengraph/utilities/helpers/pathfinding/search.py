@@ -17,6 +17,28 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .model import AttackGraph
 
+from .model import GROUP_NODE_KINDS
+
+# ---------------------------------------------------------------------------
+
+
+def _is_group_hop_only(graph: "AttackGraph", path: list[str]) -> bool:
+    """True when every intermediate node in ``path`` (i.e. everything except the
+    source and the final target) is a group / dynamic-group / app-role node.
+
+    This matches the pattern: User → Group → priv-target (1 group hop), and
+    also the nested case: User → Group1 → Group2 → priv-target (2 group hops).
+    Paths with length < 3 (direct or single-node) are never group-hop-only.
+    """
+    if len(path) < 3:
+        return False
+    for node_id in path[1:-1]:
+        node = graph.nodes.get(node_id) or {}
+        kinds = set(node.get("kinds") or [])
+        if not kinds.intersection(GROUP_NODE_KINDS):
+            return False
+    return True
+
 # ---------------------------------------------------------------------------
 
 def reverse_distances(
@@ -62,6 +84,7 @@ def shortest_paths(
     excluded_nodes: set[str] | None = None,
     exclude_service_agents: bool = False,
     no_direct: bool = False,
+    no_group_hop: bool = False,
 ) -> list[list[str]]:
     """
     Multi-source reverse BFS from target_ids.  Returns one shortest path per
@@ -123,6 +146,8 @@ def shortest_paths(
         # "Direct" = principal already holds the binding (0 hops to target)
         if no_direct and len(path) <= 2 and path[-1] in target_ids:
             continue
+        if no_group_hop and _is_group_hop_only(graph, path):
+            continue
 
         paths.append(path)
 
@@ -140,6 +165,7 @@ def enumerate_paths(
     excluded_nodes: set[str] | None = None,
     exclude_service_agents: bool = False,
     no_direct: bool = False,
+    no_group_hop: bool = False,
 ) -> list[list[str]]:
     """
     Best-first enumeration of all simple paths from any principal to any target.
@@ -178,7 +204,10 @@ def enumerate_paths(
                     continue
             if no_direct and len(path) <= 2:
                 continue
-            paths.append(list(reversed(path)))
+            full_path = list(reversed(path))
+            if no_group_hop and _is_group_hop_only(graph, full_path):
+                continue
+            paths.append(full_path)
             continue
 
         if len(path) >= max_depth + 1:
