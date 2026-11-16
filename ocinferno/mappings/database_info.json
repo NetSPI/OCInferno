@@ -565,22 +565,22 @@
     {
       "table_name": "identity_domain_user_smtp_credentials",
       "columns": [
-        "compartment_ocid",
-        "db_password",
-        "delete_in_progress",
-        "description",
+        "smtp_id",
+        "owner",
+        "user_ocid",
         "domain_ocid",
+        "compartment_id",
+        "description",
+        "status",
+        "user_name",
+        "created",
+        "last_modified",
         "expires_on",
-        "ocid",
-        "password",
-        "tags",
-        "tenancy_ocid",
-        "user",
-        "user_name"
+        "source"
       ],
       "primary_keys": [
         "domain_ocid",
-        "ocid"
+        "smtp_id"
       ]
     },
     {

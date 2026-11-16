@@ -14,14 +14,25 @@ def _no_retry_list(client, method_name, scope_kwarg, compartment_id, **kwargs):
 
     WLMS endpoints are absent in many regions. Without this, the SDK's default
     circuit-breaker retries and the 60s read timeout combine into a multi-minute hang.
+
+    timeout is set on _base_client directly rather than passed as a kwarg because
+    newer OCI SDK generated methods do strict parameter validation and reject unknown
+    kwargs (ValueError: list_wls_domains got unknown kwargs ['timeout']).
     """
-    kwargs.setdefault("timeout", _WLMS_TIMEOUT)
-    return oci.pagination.list_call_get_all_results(
-        getattr(client, method_name),
-        **{scope_kwarg: compartment_id},
-        retry_strategy=oci.retry.NoneRetryStrategy(),
-        **kwargs,
-    )
+    base = getattr(client, "_base_client", None)
+    orig_timeout = getattr(base, "timeout", None) if base else None
+    if base is not None:
+        base.timeout = _WLMS_TIMEOUT
+    try:
+        return oci.pagination.list_call_get_all_results(
+            getattr(client, method_name),
+            **{scope_kwarg: compartment_id},
+            retry_strategy=oci.retry.NoneRetryStrategy(),
+            **kwargs,
+        )
+    finally:
+        if base is not None and orig_timeout is not None:
+            base.timeout = orig_timeout
 
 
 class WlmsWlsDomainsResource(OciListResource):

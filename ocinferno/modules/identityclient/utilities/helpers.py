@@ -721,6 +721,37 @@ class IdentityDomainResourceClient:
     def save_idd_customer_secret_keys(self, *, customer_secret_keys: list[dict[str, Any]]) -> None:
         self.session.save_resources(customer_secret_keys or [], TABLE_IDD_USER_CUSTOMER_SECRET_KEYS)
 
+    def list_smtp_credentials(
+        self,
+        *,
+        user_id: str | None = None,
+        user_ocid: str | None = None,
+        attributes: str | None = None,
+        attribute_sets: list[str] | None = None,
+    ):
+        """List a user's SMTP credentials. The SCIM list returns metadata only
+        (created/status/expiry) — the password is write-only and never returned."""
+        kwargs = {}
+        attrs = (attributes or "").strip()
+        if attrs:
+            kwargs["attributes"] = attrs
+        if attribute_sets:
+            kwargs["attribute_sets"] = [str(x).strip() for x in attribute_sets if str(x).strip()]
+
+        if user_ocid:
+            kwargs["filter"] = f'user.ocid eq "{user_ocid}"'
+        elif user_id:
+            kwargs["filter"] = f'user.value eq "{user_id}"'
+        else:
+            raise ValueError('list_smtp_credentials requires user_id or user_ocid (SCIM filter: user.value/user.ocid).')
+
+        rows = self.identity_domain_client.list_smtp_credentials(**kwargs)
+        data = oci.util.to_dict(rows.data)
+        return data.get("resources", []) or []
+
+    def save_idd_smtp_credentials(self, *, smtp_credentials: list[dict[str, Any]]) -> None:
+        self.session.save_resources(smtp_credentials or [], TABLE_IDD_USER_SMTP_CREDENTIALS)
+
 
 
 # =============================================================================
@@ -2560,6 +2591,124 @@ class IdentityResourceSuite(ResourceBase):
         return out
 
     # -------------------------------------------------------------------------
+    # Identity Domain SMTP credentials
+    # -------------------------------------------------------------------------
+    def _run_idd_smtp_credentials(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain user SMTP credentials for saved Identity Domains.",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_smtp_credentials().")
+        parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        parser.add_argument("--threads", dest="threads", type=int, default=1, help="Parallel workers for per-user fetch (default: 1 = sequential).")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; cannot enumerate IDD SMTP credentials.{UtilityTools.RESET}")
+            return {"ok": False, "smtp_credentials": 0}
+
+        _comp, domains, _domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "smtp_credentials": 0}
+
+        attrs = args.attributes or None
+        attribute_sets = parse_csv_args(args.attribute_sets) or None
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            if not dom_url:
+                continue
+
+            users = self.session.get_resource_fields(TABLE_IDD_USERS, where_conditions={"domain_ocid": dom_id}) or []
+            users = [u for u in users if isinstance(u, dict)]
+            if not users:
+                UtilityTools.dlog(self.debug, "enum_idd_smtp_credentials: no cached users for domain", domain_id=dom_id)
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            n_users = len(users)
+            print(f"[*] {dom_name or dom_id}: scanning SMTP credentials ({n_users} user(s))...", flush=True)
+
+            def _fetch_smtp_creds(user):
+                try:
+                    rows = [r for r in (ops.list_smtp_credentials(user_ocid=user.get("ocid"), attributes=attrs, attribute_sets=attribute_sets) or []) if isinstance(r, dict)]
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_smtp_credentials: list_smtp_credentials failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                    return []
+                return [self._normalize_smtp_credential_row(r, user_row=user, dom=dom) for r in rows]
+
+            results = parallel_map(users, _fetch_smtp_creds, threads=args.threads, show_progress=True, progress_label=f"smtp_credentials/{dom_name or dom_id}")
+            creds: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
+            total += len(creds)
+
+            # Dedupe on stable smtp_id.
+            deduped: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            for c in creds:
+                cid = _s(c.get("smtp_id"))
+                if not cid or cid in seen:
+                    continue
+                seen.add(cid)
+                deduped.append(c)
+            creds = deduped
+
+            if creds:
+                try:
+                    ops.save_idd_smtp_credentials(smtp_credentials=creds)
+                except Exception as e:
+                    UtilityTools.dlog(self.debug, "enum_idd_smtp_credentials: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] SMTP Credentials for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                creds,
+                ["owner", "domain_ocid", "user_name", "status", "created", "expires_on", "source"],
+                sort_key="owner",
+                title="Identityclient - Idd SMTP Credentials",
+            )
+
+        print(f"\n[*] enum_idd_smtp_credentials complete. Domains: {len(domains)} | SmtpCredentials: {total}")
+        return {"ok": True, "smtp_credentials": int(total), "saved": True}
+
+    def _normalize_smtp_credential_row(self, row: dict[str, Any], *, user_row: dict[str, Any], dom: dict[str, Any]) -> dict[str, Any]:
+        out = dict(row or {})
+        user_obj = out.get("user") if isinstance(out.get("user"), dict) else {}
+        meta = out.get("meta") if isinstance(out.get("meta"), dict) else {}
+        user_ocid = _s(user_obj.get("ocid") or user_row.get("ocid"))
+        out["smtp_id"] = _s(out.get("id"))
+        out["description"] = _s(out.get("description"))
+        out["status"] = _s(out.get("status"))
+        out["owner"] = _s(user_obj.get("display") or user_row.get("user_name") or user_row.get("display_name"))
+        out["user_name"] = _s(user_obj.get("name") or user_obj.get("display") or user_row.get("user_name") or user_row.get("display_name"))
+        out["user_ocid"] = user_ocid
+        out["domain_ocid"] = _s(out.get("domain_ocid") or dom.get("id"))
+        out["compartment_id"] = _s(
+            out.get("compartment_id") or dom.get("compartment_id") or getattr(self.session, "compartment_id", "")
+        )
+        out["created"] = _s(meta.get("created"))
+        out["last_modified"] = _s(meta.get("last_modified"))
+        out["expires_on"] = _s(out.get("expires_on"))
+        out["source"] = "identity_domains:list_smtp_credentials"
+        return out
+
+    # -------------------------------------------------------------------------
     # Identity Domain grants
     # -------------------------------------------------------------------------
     def _run_idd_grants(self, user_args):
@@ -3118,6 +3267,19 @@ class IdentityIddCustomerSecretKeysResource(IdentityResourceSuite):
 class IdentityIddDbCredentialsResource(IdentityResourceSuite):
     def list(self, *, user_args):
         return self._run_idd_db_credentials(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddSmtpCredentialsResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_smtp_credentials(user_args)
 
     def get(self, *, resource_id: str):
         _ = resource_id
