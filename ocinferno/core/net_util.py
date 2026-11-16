@@ -9,12 +9,13 @@ _DNS_TIMEOUT = 10.0
 _dns_pool = concurrent.futures.ThreadPoolExecutor(max_workers=8, thread_name_prefix="oci_dns")
 _real_getaddrinfo = socket.getaddrinfo
 
-# Hostnames confirmed unresolvable this process lifetime. After the first timeout
-# for a host, subsequent lookups return DnsTimeoutError instantly — no new thread
-# submitted, no 10 s wait. This matters in enum_all when N compartments in a
-# region all trigger the same unresolvable endpoint in parallel.
-_dns_failed: set[str] = set()
-_dns_failed_lock = threading.Lock()
+# Hostnames confirmed NXDOMAIN this process lifetime. Only genuine resolution
+# failures (socket.gaierror — host does not exist) are cached here, NOT
+# timeouts.  A timeout is transient; NXDOMAIN means the endpoint truly does
+# not exist in this region.  Caching timeouts caused valid endpoints to be
+# permanently skipped when the first DNS lookup happened to be slow.
+_dns_nxdomain: set[str] = set()
+_dns_nxdomain_lock = threading.Lock()
 
 
 class DnsTimeoutError(Exception):
@@ -31,24 +32,27 @@ class DnsTimeoutError(Exception):
 def _getaddrinfo_bounded(*args, **kwargs):
     host = args[0] if args else "?"
 
-    # Fast path: hostname already known to fail — return immediately.
-    with _dns_failed_lock:
-        if host in _dns_failed:
-            raise DnsTimeoutError(
-                f"DNS previously timed out for {host!r} — "
-                "the OCI endpoint may not exist in this region."
+    # Fast path: hostname confirmed NXDOMAIN this run — skip immediately.
+    with _dns_nxdomain_lock:
+        if host in _dns_nxdomain:
+            raise socket.gaierror(
+                f"DNS: {host!r} previously returned NXDOMAIN — "
+                "the OCI endpoint does not exist in this region."
             )
 
     future = _dns_pool.submit(_real_getaddrinfo, *args, **kwargs)
     try:
         return future.result(timeout=_DNS_TIMEOUT)
     except concurrent.futures.TimeoutError:
-        with _dns_failed_lock:
-            _dns_failed.add(host)
+        # Transient — do NOT cache. The host may resolve on the next attempt.
         raise DnsTimeoutError(
-            f"DNS timed out after {_DNS_TIMEOUT:.0f}s for {host!r} — "
-            "the OCI endpoint may not exist in this region."
+            f"DNS timed out after {_DNS_TIMEOUT:.0f}s for {host!r}"
         )
+    except socket.gaierror:
+        # Genuine NXDOMAIN — cache so parallel compartment scans skip instantly.
+        with _dns_nxdomain_lock:
+            _dns_nxdomain.add(host)
+        raise
 
 
 def install_dns_timeout() -> None:
