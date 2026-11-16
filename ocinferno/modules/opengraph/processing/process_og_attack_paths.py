@@ -143,10 +143,6 @@ Examples:
         help="Skip edges that require conditions to be met.",
     )
     sg.add_argument(
-        "--exclude-service-agents", action="store_true", default=False,
-        help="Exclude OCI service-agent principals as path sources.",
-    )
-    sg.add_argument(
         "--no-direct", action="store_true", default=False,
         help="Exclude trivial paths where the principal directly holds the target edge.",
     )
@@ -339,7 +335,6 @@ def run_module(user_args: list[str], session) -> dict:
             max_expansions=args.max_expansions,
             source_filter=source_filter,
             excluded_nodes=excluded,
-            exclude_service_agents=args.exclude_service_agents,
             no_direct=args.no_direct,
             no_default_admin_group_hop=args.no_default_admin_group_hop,
         )
@@ -353,7 +348,6 @@ def run_module(user_args: list[str], session) -> dict:
             max_depth=max_depth,
             source_filter=source_filter,
             excluded_nodes=excluded,
-            exclude_service_agents=args.exclude_service_agents,
             no_direct=args.no_direct,
             no_default_admin_group_hop=args.no_default_admin_group_hop,
         )

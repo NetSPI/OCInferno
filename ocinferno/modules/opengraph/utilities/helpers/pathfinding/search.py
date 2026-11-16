@@ -84,7 +84,6 @@ def shortest_paths(
     max_depth: int = 10,
     source_filter: set[str] | None = None,
     excluded_nodes: set[str] | None = None,
-    exclude_service_agents: bool = False,
     no_direct: bool = False,
     no_default_admin_group_hop: bool = False,
 ) -> list[list[str]]:
@@ -124,11 +123,6 @@ def shortest_paths(
             continue
         if exc and nid in exc:
             continue
-        if exclude_service_agents:
-            props = n.get("properties") or {}
-            if props.get("is_service_agent"):
-                continue
-
         # Reconstruct path
         path: list[str] = [nid]
         seen: set[str] = {nid}
@@ -165,7 +159,6 @@ def enumerate_paths(
     max_expansions: int = 400_000,
     source_filter: set[str] | None = None,
     excluded_nodes: set[str] | None = None,
-    exclude_service_agents: bool = False,
     no_direct: bool = False,
     no_default_admin_group_hop: bool = False,
 ) -> list[list[str]]:
@@ -200,10 +193,6 @@ def enumerate_paths(
         if graph.is_principal(cur):
             if source_filter and cur not in source_filter:
                 continue
-            if exclude_service_agents:
-                props = (graph.nodes.get(cur) or {}).get("properties") or {}
-                if props.get("is_service_agent"):
-                    continue
             if no_direct and len(path) <= 2:
                 continue
             full_path = list(reversed(path))
