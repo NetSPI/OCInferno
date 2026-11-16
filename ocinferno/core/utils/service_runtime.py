@@ -342,6 +342,10 @@ def parse_wrapper_args(
             help="Wall-clock cap in seconds per download unit (0 = unlimited).",
         )
     parser.add_argument(
+        "--threads", dest="threads", type=int, default=4,
+        help="Worker threads for inner fan-out (e.g. per-user IDD credential scans). Default: 4.",
+    )
+    parser.add_argument(
         "--wide", action="store_true",
         help="Print ALL columns in stdout tables (default shows a concise subset; full data is always saved).",
     )

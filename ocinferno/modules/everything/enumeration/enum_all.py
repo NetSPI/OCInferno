@@ -459,6 +459,13 @@ def _parse_args(user_args) -> argparse.Namespace:
 
     # ---- Parallelism + resume ----
     p.add_argument(
+        "--threads", dest="threads", type=int, default=4,
+        help=(
+            "Worker threads for per-module inner fan-out (e.g. per-user IDD credential scans). "
+            "Forwarded to every sub-module. Default: 4."
+        ),
+    )
+    p.add_argument(
         "--parallel-services", dest="parallel_services", type=int, default=1,
         help=(
             "Enumerate (compartment, service) units CONCURRENTLY with N workers "
@@ -774,6 +781,9 @@ def _module_args_with_download_plan(
     supported = _module_supported_flags(module_name)
     accepts_unknown = _module_accepts_unknown_args(module_name)
     out: List[str] = []
+    threads = getattr(args, "threads", None)
+    if threads is not None:
+        out.extend(["--threads", str(threads)])
     if args.get and (("--get" in supported) or accepts_unknown):
         out.append("--get")
     if download_all and (("--download" in supported) or accepts_unknown):

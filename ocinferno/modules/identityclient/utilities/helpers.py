@@ -20,6 +20,7 @@ from ocinferno.core.utils.selection_helpers import (
     paged_search_select,
     select_from_db_or_manual,
 )
+from ocinferno.core.utils.parallel import parallel_map
 from ocinferno.core.utils.service_runtime import ResourceBase, _init_client
 
 # =============================================================================
@@ -2100,6 +2101,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_api_keys().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2149,31 +2151,28 @@ class IdentityResourceSuite(ResourceBase):
                 continue
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
-            keys: list[dict[str, Any]] = []
             n_users = len(users)
             print(f"[*] {dom_name or dom_id}: scanning api keys ({n_users} user(s))...", flush=True)
-            for user in users:
+
+            def _fetch_api_keys(user):
                 try:
                     rows = [r for r in (ops.list_api_keys(user_ocid=user.get("ocid"), attributes=attrs) or []) if isinstance(r, dict)]
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_idd_api_keys: list_api_keys failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
-                    continue
+                    return []
                 for row in rows:
-                    ops.apply_domain_context(
-                        row,
-                        domain_id=dom_id,
-                        domain_name=dom_name,
-                        domain_url=dom_url,
-                        compartment_id=dom_compartment_id,
-                    )
+                    ops.apply_domain_context(row, domain_id=dom_id, domain_name=dom_name, domain_url=dom_url, compartment_id=dom_compartment_id)
                     row["created"] = _s((row.get("meta") or {}).get("created"))
-                keys.extend(rows)
-                total += len(rows)
                 if rows:
                     try:
                         ops.save_idd_api_keys(api_keys=rows)
                     except Exception as e:
                         UtilityTools.dlog(self.debug, "enum_idd_api_keys: save_idd_api_keys failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                return rows
+
+            results = parallel_map(users, _fetch_api_keys, threads=args.threads, show_progress=False)
+            keys: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
+            total += len(keys)
 
             for key in keys:
                 meta = key.get("meta") if isinstance(key.get("meta"), dict) else {}
@@ -2207,6 +2206,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_auth_tokens().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2258,34 +2258,20 @@ class IdentityResourceSuite(ResourceBase):
                 continue
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
-            tokens: list[dict[str, Any]] = []
             n_users = len(users)
             print(f"[*] {dom_name or dom_id}: scanning auth tokens ({n_users} user(s))...", flush=True)
-            for user in users:
+
+            def _fetch_auth_tokens(user):
                 try:
-                    rows = [
-                        r for r in (
-                            ops.list_auth_tokens(
-                                user_ocid=user.get("ocid"),
-                                attributes=attrs,
-                                attribute_sets=attribute_sets,
-                            ) or []
-                        ) if isinstance(r, dict)
-                    ]
+                    rows = [r for r in (ops.list_auth_tokens(user_ocid=user.get("ocid"), attributes=attrs, attribute_sets=attribute_sets) or []) if isinstance(r, dict)]
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_idd_auth_tokens: list_auth_tokens failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
-                    continue
+                    return []
+                return [self._normalize_auth_token_row(r, user_row=user, dom=dom, source="identity_domains:list_auth_tokens") for r in rows]
 
-                for row in rows:
-                    tokens.append(
-                        self._normalize_auth_token_row(
-                            row,
-                            user_row=user,
-                            dom=dom,
-                            source="identity_domains:list_auth_tokens",
-                        )
-                    )
-                total += len(rows)
+            results = parallel_map(users, _fetch_auth_tokens, threads=args.threads, show_progress=False)
+            tokens: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
+            total += len(tokens)
             # Dedupe on stable token_id.
             deduped: list[dict[str, Any]] = []
             seen: set[str] = set()
@@ -2350,6 +2336,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_customer_secret_keys().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2390,26 +2377,20 @@ class IdentityResourceSuite(ResourceBase):
                 continue
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
-            keys: list[dict[str, Any]] = []
             n_users = len(users)
             print(f"[*] {dom_name or dom_id}: scanning customer secret keys ({n_users} user(s))...", flush=True)
-            for user in users:
+
+            def _fetch_csks(user):
                 try:
-                    rows = [
-                        r for r in (
-                            ops.list_customer_secret_keys(
-                                user_ocid=user.get("ocid"),
-                                attributes=attrs,
-                                attribute_sets=attribute_sets,
-                            ) or []
-                        ) if isinstance(r, dict)
-                    ]
+                    rows = [r for r in (ops.list_customer_secret_keys(user_ocid=user.get("ocid"), attributes=attrs, attribute_sets=attribute_sets) or []) if isinstance(r, dict)]
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_idd_customer_secret_keys: list_customer_secret_keys failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
-                    continue
-                for row in rows:
-                    keys.append(self._normalize_customer_secret_key_row(row, user_row=user, dom=dom))
-                total += len(rows)
+                    return []
+                return [self._normalize_customer_secret_key_row(r, user_row=user, dom=dom) for r in rows]
+
+            results = parallel_map(users, _fetch_csks, threads=args.threads, show_progress=False)
+            keys: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
+            total += len(keys)
 
             # Dedupe on stable csk_id.
             deduped: list[dict[str, Any]] = []
@@ -2472,6 +2453,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_user_db_credentials().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2512,26 +2494,20 @@ class IdentityResourceSuite(ResourceBase):
                 continue
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
-            creds: list[dict[str, Any]] = []
             n_users = len(users)
             print(f"[*] {dom_name or dom_id}: scanning db credentials ({n_users} user(s))...", flush=True)
-            for user in users:
+
+            def _fetch_db_creds(user):
                 try:
-                    rows = [
-                        r for r in (
-                            ops.list_user_db_credentials(
-                                user_ocid=user.get("ocid"),
-                                attributes=attrs,
-                                attribute_sets=attribute_sets,
-                            ) or []
-                        ) if isinstance(r, dict)
-                    ]
+                    rows = [r for r in (ops.list_user_db_credentials(user_ocid=user.get("ocid"), attributes=attrs, attribute_sets=attribute_sets) or []) if isinstance(r, dict)]
                 except Exception as e:
                     UtilityTools.dlog(self.debug, "enum_idd_db_credentials: list_user_db_credentials failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
-                    continue
-                for row in rows:
-                    creds.append(self._normalize_db_credential_row(row, user_row=user, dom=dom))
-                total += len(rows)
+                    return []
+                return [self._normalize_db_credential_row(r, user_row=user, dom=dom) for r in rows]
+
+            results = parallel_map(users, _fetch_db_creds, threads=args.threads, show_progress=False)
+            creds: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
+            total += len(creds)
 
             # Dedupe on stable dbcred_id.
             deduped: list[dict[str, Any]] = []
