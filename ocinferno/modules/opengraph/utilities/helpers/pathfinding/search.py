@@ -23,21 +23,16 @@ from .model import GROUP_NODE_KINDS
 
 
 def _is_group_hop_only(graph: "AttackGraph", path: list[str]) -> bool:
-    """True when every intermediate node in ``path`` (i.e. everything except the
-    source and the final target) is a group / dynamic-group / app-role node.
-
-    This matches the pattern: User → Group → priv-target (1 group hop), and
-    also the nested case: User → Group1 → Group2 → priv-target (2 group hops).
-    Paths with length < 3 (direct or single-node) are never group-hop-only.
+    """True when ``path`` is exactly ``[source, group, target]`` — one group/DG/
+    app-role intermediate and nothing else.  Longer chains (User→Group1→Group2→
+    priv) are intentionally left through so only the trivial single-group-hop
+    case is suppressed by ``--no-group-hop``.
     """
-    if len(path) < 3:
+    if len(path) != 3:
         return False
-    for node_id in path[1:-1]:
-        node = graph.nodes.get(node_id) or {}
-        kinds = set(node.get("kinds") or [])
-        if not kinds.intersection(GROUP_NODE_KINDS):
-            return False
-    return True
+    node = graph.nodes.get(path[1]) or {}
+    kinds = set(node.get("kinds") or [])
+    return bool(kinds.intersection(GROUP_NODE_KINDS))
 
 # ---------------------------------------------------------------------------
 

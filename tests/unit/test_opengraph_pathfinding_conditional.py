@@ -98,6 +98,12 @@ def test_is_group_hop_only_false_for_non_group_intermediate():
     assert _is_group_hop_only(g, ["user:att", "resource:target", "resource:direct"]) is False
 
 
+def test_is_group_hop_only_false_for_nested_group_chain():
+    # User → Group1 → Group2 → target has len=4, NOT filtered by --no-group-hop
+    g = _group_hop_graph()
+    assert _is_group_hop_only(g, ["user:att", "group:admins", "group:admins", "resource:target"]) is False
+
+
 def test_no_group_hop_removes_user_via_group_path():
     # user:att reaches resource:target ONLY via group:admins (a group hop).
     # Without --no-group-hop the user path is present; with it, only the group

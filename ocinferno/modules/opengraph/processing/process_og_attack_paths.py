@@ -153,10 +153,9 @@ Examples:
     sg.add_argument(
         "--no-group-hop", action="store_true", default=False,
         help=(
-            "Exclude paths where the principal reaches the target purely via "
-            "group/DG membership (User→Group→priv). Keeps paths that traverse "
-            "other node types on the way. Combine with --no-direct to hide all "
-            "trivial-access results."
+            "Exclude single-group-hop paths: User→Group→priv. "
+            "Longer chains (User→Group1→Group2→priv) are kept. "
+            "Combine with --no-direct to hide all trivial-access results."
         ),
     )
     sg.add_argument(
