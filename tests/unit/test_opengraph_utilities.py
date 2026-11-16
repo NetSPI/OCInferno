@@ -210,5 +210,5 @@ def test_idd_admin_role_targeted_by_source():
         {"start": {"value": "user:att"}, "end": {"value": "approle:admin"}, "kind": "APP_ROLE_GRANTED", "properties": {}},
         {"start": {"value": "approle:admin"}, "end": {"value": "user:victim"}, "kind": "IDD_IDENTITY_ADMIN_USER", "properties": {}},
     ]
-    g = AttackGraph._build(nodes, edges, include_containment=False, exclude_conditional=False, debug=False)
+    g = AttackGraph._build(nodes, edges, exclude_conditional=False, debug=False)
     assert list(g.iter_admin_role_targets()) == ["approle:admin"]

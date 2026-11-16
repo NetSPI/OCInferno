@@ -51,7 +51,6 @@ GROUP_NODE_KINDS = frozenset({
 # OCI_POLICY_SUBJECT: principal → policy statement
 GRANT_EDGE_KIND = "OCI_POLICY_SUBJECT"
 
-# Structural scope/containment edges (skipped unless --include-containment)
 CONTAINMENT_EDGE_KINDS = frozenset({
     "OCI_SCOPE_MEMBER_OF",
     "FAMILY_INCLUDES",
@@ -208,7 +207,6 @@ class AttackGraph:
         cls,
         path: str | Path,
         *,
-        include_containment: bool = False,
         exclude_conditional: bool = False,
         debug: bool = False,
     ) -> "AttackGraph":
@@ -233,7 +231,6 @@ class AttackGraph:
         return cls._build(
             raw_nodes,
             raw_edges,
-            include_containment=include_containment,
             exclude_conditional=exclude_conditional,
             debug=debug,
         )
@@ -244,7 +241,6 @@ class AttackGraph:
         raw_nodes: list[dict],
         raw_edges: list[dict],
         *,
-        include_containment: bool,
         exclude_conditional: bool,
         debug: bool,
     ) -> "AttackGraph":
@@ -276,10 +272,6 @@ class AttackGraph:
             dst = str((raw.get("end") or {}).get("value") or "").strip()
             kind = str(raw.get("kind") or "").strip()
             if not (src and dst and kind):
-                continue
-
-            # Skip containment edges unless requested
-            if not include_containment and kind in CONTAINMENT_EDGE_KINDS:
                 continue
 
             props = dict(raw.get("properties") or {})

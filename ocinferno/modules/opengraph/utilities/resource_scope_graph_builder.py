@@ -947,7 +947,7 @@ def build_resource_scope_expansion_edges_offline(
 
             # Destination scope ID for the synthetic mapping above.
             any_user_scope_id = f"ANY_USER@{loc}" if loc else ""
-            
+
             if any_user_scope_id and any_user_scope_id in known_scope_ids:
                 _write_any_edge(
                     ctx,

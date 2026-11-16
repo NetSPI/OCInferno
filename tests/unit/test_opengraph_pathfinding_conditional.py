@@ -46,7 +46,7 @@ def _graph(exclude_conditional):
          "kind": "OCI_CAN_CREATE_POLICY",
          "properties": {"resolved_statements": [_COND_STMT]}},
     ]
-    return AttackGraph._build(nodes, edges, include_containment=False,
+    return AttackGraph._build(nodes, edges,
                              exclude_conditional=exclude_conditional, debug=False)
 
 
@@ -79,7 +79,7 @@ def _admin_group_hop_graph():
         {"start": {"value": "group:Administrators"}, "end": {"value": "resource:target"},      "kind": "OCI_MANAGE",       "properties": {}},
         {"start": {"value": "user:att"},             "end": {"value": "resource:direct"},      "kind": "OCI_MANAGE",       "properties": {}},
     ]
-    return AttackGraph._build(nodes, edges, include_containment=False, exclude_conditional=False, debug=False)
+    return AttackGraph._build(nodes, edges, exclude_conditional=False, debug=False)
 
 
 def _non_admin_group_hop_graph():
@@ -93,7 +93,7 @@ def _non_admin_group_hop_graph():
         {"start": {"value": "user:att"},          "end": {"value": "group:NetworkTeam"}, "kind": "OCI_GROUP_MEMBER", "properties": {}},
         {"start": {"value": "group:NetworkTeam"}, "end": {"value": "resource:target"},   "kind": "OCI_MANAGE",       "properties": {}},
     ]
-    return AttackGraph._build(nodes, edges, include_containment=False, exclude_conditional=False, debug=False)
+    return AttackGraph._build(nodes, edges, exclude_conditional=False, debug=False)
 
 
 def test_is_default_admin_group_hop_true_for_administrators():

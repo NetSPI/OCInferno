@@ -135,10 +135,6 @@ Examples:
         help="Search budget for --all-paths mode (default: 400,000 heap pops).",
     )
     sg.add_argument(
-        "--include-containment", action="store_true", default=False,
-        help="Follow scope/containment edges (OCI_SCOPE_MEMBER_OF, FAMILY_INCLUDES, etc.).",
-    )
-    sg.add_argument(
         "--exclude-conditional", action="store_true", default=False,
         help="Skip edges that require conditions to be met.",
     )
@@ -275,7 +271,6 @@ def run_module(user_args: list[str], session) -> dict:
 
     graph = AttackGraph.from_path(
         graph_path,
-        include_containment=args.include_containment,
         exclude_conditional=args.exclude_conditional,
         debug=args.debug,
     )
