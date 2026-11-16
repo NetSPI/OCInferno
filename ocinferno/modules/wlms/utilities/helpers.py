@@ -6,8 +6,16 @@ import oci
 from ocinferno.core.resource import OciListResource
 
 
+_WLMS_TIMEOUT = (5, 15)  # (connect, read) seconds — WLMS endpoint may be entirely absent in a region
+
+
 def _no_retry_list(client, method_name, scope_kwarg, compartment_id, **kwargs):
-    """Paginate with NoneRetryStrategy so an unavailable endpoint fails on the first attempt."""
+    """Paginate with NoneRetryStrategy and a short 15s read timeout.
+
+    WLMS endpoints are absent in many regions. Without this, the SDK's default
+    circuit-breaker retries and the 60s read timeout combine into a multi-minute hang.
+    """
+    kwargs.setdefault("timeout", _WLMS_TIMEOUT)
     return oci.pagination.list_call_get_all_results(
         getattr(client, method_name),
         **{scope_kwarg: compartment_id},

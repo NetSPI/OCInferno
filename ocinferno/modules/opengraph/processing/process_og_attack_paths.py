@@ -151,11 +151,12 @@ Examples:
         help="Exclude trivial paths where the principal directly holds the target edge.",
     )
     sg.add_argument(
-        "--no-group-hop", action="store_true", default=False,
+        "--no-default-admin-group-hop", action="store_true", default=False,
         help=(
-            "Exclude single-group-hop paths: User→Group→priv. "
+            "Exclude single-hop paths through the default Administrators group "
+            "(any group whose name contains 'administrator', case-insensitive). "
             "Longer chains (User→Group1→Group2→priv) are kept. "
-            "Combine with --no-direct to hide all trivial-access results."
+            "Targets the OCI built-in Administrators group in the Default identity domain."
         ),
     )
     sg.add_argument(
@@ -340,7 +341,7 @@ def run_module(user_args: list[str], session) -> dict:
             excluded_nodes=excluded,
             exclude_service_agents=args.exclude_service_agents,
             no_direct=args.no_direct,
-            no_group_hop=args.no_group_hop,
+            no_default_admin_group_hop=args.no_default_admin_group_hop,
         )
         truncated = len(paths) >= args.max_paths
     else:
@@ -354,7 +355,7 @@ def run_module(user_args: list[str], session) -> dict:
             excluded_nodes=excluded,
             exclude_service_agents=args.exclude_service_agents,
             no_direct=args.no_direct,
-            no_group_hop=args.no_group_hop,
+            no_default_admin_group_hop=args.no_default_admin_group_hop,
         )
         truncated = False
 

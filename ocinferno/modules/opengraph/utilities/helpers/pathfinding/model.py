@@ -40,8 +40,7 @@ MEMBERSHIP_EDGE_KINDS = frozenset({
     "INSTALL_KEY_CAN_JOIN_DG",
 })
 
-# Node kinds that represent groups / dynamic groups (used by --no-group-hop filter).
-# A path is a "group-hop-only" path when every intermediate node is one of these kinds.
+# Node kinds that represent groups / dynamic groups (used by --no-default-admin-group-hop filter).
 GROUP_NODE_KINDS = frozenset({
     "OCIGroup",
     "OCIDynamicGroup",

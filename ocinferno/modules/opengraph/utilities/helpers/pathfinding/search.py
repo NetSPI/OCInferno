@@ -22,17 +22,24 @@ from .model import GROUP_NODE_KINDS
 # ---------------------------------------------------------------------------
 
 
-def _is_group_hop_only(graph: "AttackGraph", path: list[str]) -> bool:
-    """True when ``path`` is exactly ``[source, group, target]`` — one group/DG/
-    app-role intermediate and nothing else.  Longer chains (User→Group1→Group2→
-    priv) are intentionally left through so only the trivial single-group-hop
-    case is suppressed by ``--no-group-hop``.
+def _is_default_admin_group_hop(graph: "AttackGraph", path: list[str]) -> bool:
+    """True when ``path`` is exactly ``[source, group, target]`` where the
+    intermediate node is a group/DG kind AND its name or id contains "admin"
+    (case-insensitive).
+
+    This targets the common OCI pattern where a user's only path to a high-priv
+    target is through an Administrators (or similarly-named admin) group.
+    Non-admin group paths (NetworkTeamGroup, AppDeployers, …) are left through.
     """
     if len(path) != 3:
         return False
     node = graph.nodes.get(path[1]) or {}
     kinds = set(node.get("kinds") or [])
-    return bool(kinds.intersection(GROUP_NODE_KINDS))
+    if not kinds.intersection(GROUP_NODE_KINDS):
+        return False
+    props = node.get("properties") or {}
+    name = str(props.get("name") or path[1]).lower()
+    return "administrator" in name
 
 # ---------------------------------------------------------------------------
 
@@ -79,7 +86,7 @@ def shortest_paths(
     excluded_nodes: set[str] | None = None,
     exclude_service_agents: bool = False,
     no_direct: bool = False,
-    no_group_hop: bool = False,
+    no_default_admin_group_hop: bool = False,
 ) -> list[list[str]]:
     """
     Multi-source reverse BFS from target_ids.  Returns one shortest path per
@@ -141,7 +148,7 @@ def shortest_paths(
         # "Direct" = principal already holds the binding (0 hops to target)
         if no_direct and len(path) <= 2 and path[-1] in target_ids:
             continue
-        if no_group_hop and _is_group_hop_only(graph, path):
+        if no_default_admin_group_hop and _is_default_admin_group_hop(graph, path):
             continue
 
         paths.append(path)
@@ -160,7 +167,7 @@ def enumerate_paths(
     excluded_nodes: set[str] | None = None,
     exclude_service_agents: bool = False,
     no_direct: bool = False,
-    no_group_hop: bool = False,
+    no_default_admin_group_hop: bool = False,
 ) -> list[list[str]]:
     """
     Best-first enumeration of all simple paths from any principal to any target.
@@ -200,7 +207,7 @@ def enumerate_paths(
             if no_direct and len(path) <= 2:
                 continue
             full_path = list(reversed(path))
-            if no_group_hop and _is_group_hop_only(graph, full_path):
+            if no_default_admin_group_hop and _is_default_admin_group_hop(graph, full_path):
                 continue
             paths.append(full_path)
             continue
