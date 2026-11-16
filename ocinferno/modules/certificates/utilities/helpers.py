@@ -29,7 +29,16 @@ class CertificatesResource(OciListResource):
         "key_algorithm",
         "signature_algorithm",
         "current_version_number",
+        "not_valid_after",
     ]
+
+    def _normalize_row(self, row):
+        # Lift validity.time_of_validity_not_after from current_version_summary (list)
+        # or current_version (get) up to the top level as not_valid_after.
+        cvs = row.get("current_version_summary") or row.get("current_version") or {}
+        validity = cvs.get("validity") or {}
+        row["not_valid_after"] = validity.get("time_of_validity_not_after")
+        return row
 
     def download_bundle(self, *, resource_id: str, out_path) -> bool:
         """Export a certificate's PEM bundle via the DATA-plane client.

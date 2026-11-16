@@ -110,6 +110,7 @@ _KIND_LABEL = {
     ni.KIND_URL: "URL",
     ni.KIND_FQDN: "FQDN",
     ni.KIND_NET_REF: "Net Ref",
+    ni.KIND_BACKEND: "Backend",
 }
 
 
@@ -121,14 +122,14 @@ def _print_inventory_report(records, summary) -> None:
     # Flatten all network-navigable identifiers into one scannable table.
     # Net refs (OCID subnet/VCN/NSG) are printed separately — they're pivoting
     # aids rather than "where do I go" identifiers.
-    navigable_kinds = {ni.KIND_IP, ni.KIND_CIDR, ni.KIND_URL, ni.KIND_FQDN}
+    navigable_kinds = {ni.KIND_IP, ni.KIND_CIDR, ni.KIND_URL, ni.KIND_FQDN, ni.KIND_BACKEND}
     navigable = [r for r in records if r["kind"] in navigable_kinds]
     net_refs  = [r for r in records if r["kind"] == ni.KIND_NET_REF]
 
     if navigable:
         # Sort public (internet-reachable) endpoints to the top — they're the most
         # actionable — then by service → kind → value.
-        kind_order = {ni.KIND_IP: 0, ni.KIND_FQDN: 1, ni.KIND_URL: 2, ni.KIND_CIDR: 3}
+        kind_order = {ni.KIND_IP: 0, ni.KIND_FQDN: 1, ni.KIND_URL: 2, ni.KIND_CIDR: 3, ni.KIND_BACKEND: 4}
         scope_rank = {"public": 0, "private": 1}
         navigable.sort(key=lambda r: (
             scope_rank.get(r.get("scope", ""), 2),

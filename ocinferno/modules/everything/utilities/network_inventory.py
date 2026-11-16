@@ -35,12 +35,16 @@ _URL_RE = re.compile(
 # FQDNs only from host-ish columns (keeps description/free-text noise out).
 _HOST_COL_RE = re.compile(
     r"fqdn|host|hostname|endpoint|dns|domain|url|address|_ip$|^ip_|scan_"
-    r"|server|target|proxy|backend|upstream|base_url|connect|remote",
+    r"|server|target|proxy|backend|upstream|base_url|connect|remote"
+    r"|^rdata|_rdata",   # DNS record data (A → IP, CNAME → FQDN)
     re.I,
 )
 
 # Reference-OCID columns worth surfacing for network pivoting (subnet/vcn/nsg).
 _NET_REF_COLS = re.compile(r"subnet_id|subnet_ids|vcn_id|network_security_group|nsg", re.I)
+
+# Columns in LB/NLB rows whose IPs/FQDNs are backend targets, not the LB's own addresses.
+_BACKEND_COL_RE = re.compile(r"^backend_sets$|^backends$|^backend_set_details$", re.I)
 
 # Config-like columns whose values are JSON dicts of name→value pairs.
 # When one of these holds a JSON dict we re-extract using each key as the column name.
@@ -60,8 +64,9 @@ KIND_CIDR = "cidr"
 KIND_URL = "url"
 KIND_FQDN = "fqdn"
 KIND_NET_REF = "net_ref"
+KIND_BACKEND = "backend_target"
 
-ALL_KINDS = (KIND_IP, KIND_CIDR, KIND_URL, KIND_FQDN, KIND_NET_REF)
+ALL_KINDS = (KIND_IP, KIND_CIDR, KIND_URL, KIND_FQDN, KIND_NET_REF, KIND_BACKEND)
 
 
 # --- service label mapping ---
@@ -161,6 +166,9 @@ _COL_FRIENDLY: Dict[str, str] = {
     "deploy_pipeline_parameters": "pipeline param",
     "network_endpoint_details": "network endpoint",
     "network_details": "network details",
+    "backend_sets": "backend target",
+    "backends": "backend target",
+    "rdata": "DNS record data",
 }
 
 
@@ -359,9 +367,14 @@ def _expand_config_dict(column: str, value: Any) -> List[Tuple[str, Any, str]]:
     return pairs if pairs else [(column, value, "")]
 
 
+_DNS_RECORD_TABLES = frozenset({"dns_zone_records"})
+_DNS_SCOPE_COLS = frozenset({"rdata", "domain"})
+
+
 def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     """Extract all network identifiers from one table's rows."""
     service = _service_label(table_name)
+    is_dns_records = table_name in _DNS_RECORD_TABLES
     records: List[Dict[str, str]] = []
     for row in rows or []:
         if not isinstance(row, dict):
@@ -369,6 +382,15 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
         rid = _resource_id(row)
         rname = _resource_name(row)
         comp = str(row.get("compartment_id") or "")
+        # For DNS zone records, derive navigable scope from the zone's own scope field.
+        # GLOBAL = internet-reachable (public), PRIVATE = VCN-internal (private).
+        dns_scope_override = ""
+        if is_dns_records:
+            zs = str(row.get("zone_scope") or "").upper()
+            if zs == "GLOBAL":
+                dns_scope_override = "public"
+            elif zs == "PRIVATE":
+                dns_scope_override = "private"
         for column, value in row.items():
             if column in ("workspace_id",):
                 continue
@@ -393,12 +415,21 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                             "column_name": column,
                         })
             else:
+                is_backend_col = bool(_BACKEND_COL_RE.match(column))
+                use_dns_scope = is_dns_records and column in _DNS_SCOPE_COLS and dns_scope_override
                 for hit in extract_from_value(column, value):
+                    # IPs/FQDNs from backend_sets columns are LB backend targets,
+                    # not the LB's own public address — flag them distinctly.
+                    kind = hit["kind"]
+                    if is_backend_col and kind in (KIND_IP, KIND_FQDN, KIND_CIDR):
+                        kind = KIND_BACKEND
+                    # DNS records: override scope from zone_scope (GLOBAL=public, PRIVATE=private).
+                    scope = dns_scope_override if use_dns_scope else hit.get("scope", "")
                     records.append({
-                        "kind": hit["kind"],
+                        "kind": kind,
                         "value": hit["value"],
                         "context": hit.get("context", column),
-                        "scope": hit.get("scope", ""),
+                        "scope": scope,
                         "source_table": table_name,
                         "service": service,
                         "resource_id": rid,

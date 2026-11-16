@@ -92,12 +92,14 @@ def run_module(user_args, session):
                 except Exception as err:
                     UtilityTools.dlog(debug, "list_rrsets failed", zone=target, err=f"{type(err).__name__}: {err}")
                     continue
+                zone_scope = zone.get("scope", "")
                 for row in listed:
                     if not isinstance(row, dict):
                         continue
                     row.setdefault("compartment_id", compartment_id)
                     row.setdefault("zone_id", zone_id)
                     row.setdefault("zone_name", zone_name)
+                    row.setdefault("zone_scope", zone_scope)
                     rows.append(row)
 
             if args.get:

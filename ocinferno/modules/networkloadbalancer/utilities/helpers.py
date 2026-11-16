@@ -13,4 +13,16 @@ class NetworkLoadBalancersResource(OciListResource):
     LIST_METHOD = "list_network_load_balancers"
     GET_METHOD = "get_network_load_balancer"
     GET_ID_PARAM = "network_load_balancer_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "subnet_id", "ip_addresses", "is_private"]
+    COLUMNS = [
+        "id",
+        "display_name",
+        "lifecycle_state",
+        "time_created",
+        "compartment_id",
+        "subnet_id",
+        "ip_addresses",
+        "is_private",
+        "network_security_group_ids",
+        "backend_sets",
+        "listeners",
+    ]

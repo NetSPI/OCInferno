@@ -55,7 +55,7 @@ class DnsZonesResource(ResourceBase):
 
 class DnsZoneRecordsResource(ResourceBase):
     TABLE_NAME = "dns_zone_records"
-    COLUMNS = ["zone_id", "domain", "rtype", "_rdata_display"]
+    COLUMNS = ["zone_id", "zone_name", "zone_scope", "domain", "rtype", "rdata", "ttl"]
 
     def __init__(self, session, region: Optional[str] = None):
         self.session = session
