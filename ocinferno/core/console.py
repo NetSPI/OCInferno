@@ -287,16 +287,14 @@ class UtilityTools:
                 yield item
             return
 
+        if total and total > 0:
+            print(f"[*] {label}: fetching details ({total} item(s))...", flush=True)
+        else:
+            print(f"[*] {label}: fetching details...", flush=True)
+
         count = 0
         for count, item in enumerate(items, 1):
-            if total and total > 0:
-                print(f"\r[*] {label}: {count}/{total}", end="", flush=True)
-            else:
-                print(f"\r[*] {label}: {count}", end="", flush=True)
             yield item
-
-        if count:
-            print()
 
     # -----------------------------
     # Input helpers
