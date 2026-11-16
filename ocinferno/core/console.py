@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import textwrap
+import threading
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, Iterator, Optional, TypeVar
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -265,7 +266,7 @@ class UtilityTools:
         *,
         label: str = "GET",
         enabled: bool = True,
-        min_items: int = 16,
+        min_items: int = 100,
     ) -> Iterator[T]:
         """
         Yield items while printing in-place progress (e.g., 1/4, 2/4).
@@ -287,14 +288,20 @@ class UtilityTools:
                 yield item
             return
 
-        if total and total > 0:
-            print(f"[*] {label}: fetching details ({total} item(s))...", flush=True)
-        else:
-            print(f"[*] {label}: fetching details...", flush=True)
+        in_worker = threading.current_thread() is not threading.main_thread()
 
-        count = 0
-        for count, item in enumerate(items, 1):
-            yield item
+        if in_worker:
+            # Under --parallel-services each module runs in a worker thread;
+            # \r counters from multiple threads overwrite each other, so print
+            # a single banner line instead.
+            print(f"[*] {label}: fetching details ({total} item(s))...", flush=True)
+            for item in items:
+                yield item
+        else:
+            for count, item in enumerate(items, 1):
+                print(f"\r[*] {label}: {count}/{total}", end="", flush=True)
+                yield item
+            print(flush=True)
 
     # -----------------------------
     # Input helpers

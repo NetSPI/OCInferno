@@ -1770,7 +1770,7 @@ class IdentityResourceSuite(ResourceBase):
                     users_for_memberships = classic_users
                     if not users_for_memberships:
                         users_for_memberships = classic_ops.list_users(compartment_id=compartment_id) or []
-                    for user in users_for_memberships:
+                    for user in UtilityTools.progress_iter(users_for_memberships, label="GET memberships"):
                         user_id = _s(user.get("id"))
                         if not user_id:
                             continue
@@ -1800,7 +1800,7 @@ class IdentityResourceSuite(ResourceBase):
                     users_for_api_keys = classic_users
                     if not users_for_api_keys:
                         users_for_api_keys = classic_ops.list_users(compartment_id=compartment_id) or []
-                    for user in users_for_api_keys:
+                    for user in UtilityTools.progress_iter(users_for_api_keys, label="GET classic api_keys"):
                         user_id = _s(user.get("id"))
                         if not user_id:
                             continue
@@ -2170,7 +2170,7 @@ class IdentityResourceSuite(ResourceBase):
                         UtilityTools.dlog(self.debug, "enum_idd_api_keys: save_idd_api_keys failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
                 return rows
 
-            results = parallel_map(users, _fetch_api_keys, threads=args.threads, show_progress=False)
+            results = parallel_map(users, _fetch_api_keys, threads=args.threads, show_progress=True, progress_label=f"api_keys/{dom_name or dom_id}")
             keys: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
             total += len(keys)
 
@@ -2269,7 +2269,7 @@ class IdentityResourceSuite(ResourceBase):
                     return []
                 return [self._normalize_auth_token_row(r, user_row=user, dom=dom, source="identity_domains:list_auth_tokens") for r in rows]
 
-            results = parallel_map(users, _fetch_auth_tokens, threads=args.threads, show_progress=False)
+            results = parallel_map(users, _fetch_auth_tokens, threads=args.threads, show_progress=True, progress_label=f"auth_tokens/{dom_name or dom_id}")
             tokens: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
             total += len(tokens)
             # Dedupe on stable token_id.
@@ -2388,7 +2388,7 @@ class IdentityResourceSuite(ResourceBase):
                     return []
                 return [self._normalize_customer_secret_key_row(r, user_row=user, dom=dom) for r in rows]
 
-            results = parallel_map(users, _fetch_csks, threads=args.threads, show_progress=False)
+            results = parallel_map(users, _fetch_csks, threads=args.threads, show_progress=True, progress_label=f"customer_secret_keys/{dom_name or dom_id}")
             keys: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
             total += len(keys)
 
@@ -2505,7 +2505,7 @@ class IdentityResourceSuite(ResourceBase):
                     return []
                 return [self._normalize_db_credential_row(r, user_row=user, dom=dom) for r in rows]
 
-            results = parallel_map(users, _fetch_db_creds, threads=args.threads, show_progress=False)
+            results = parallel_map(users, _fetch_db_creds, threads=args.threads, show_progress=True, progress_label=f"db_credentials/{dom_name or dom_id}")
             creds: list[dict[str, Any]] = [r for batch in results if batch for r in batch]
             total += len(creds)
 
