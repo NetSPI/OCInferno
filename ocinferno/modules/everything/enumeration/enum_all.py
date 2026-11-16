@@ -459,10 +459,10 @@ def _parse_args(user_args) -> argparse.Namespace:
 
     # ---- Parallelism + resume ----
     p.add_argument(
-        "--threads", dest="threads", type=int, default=4,
+        "--threads", dest="threads", type=int, default=1,
         help=(
             "Worker threads for per-module inner fan-out (e.g. per-user IDD credential scans). "
-            "Forwarded to every sub-module. Default: 4."
+            "Forwarded to every sub-module. Default: 1 (sequential)."
         ),
     )
     p.add_argument(

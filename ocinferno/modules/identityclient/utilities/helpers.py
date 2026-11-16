@@ -2101,7 +2101,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_api_keys().")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
-        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
+        parser.add_argument("--threads", dest="threads", type=int, default=1, help="Parallel workers for per-user fetch (default: 1 = sequential).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2206,7 +2206,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_auth_tokens().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
-        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
+        parser.add_argument("--threads", dest="threads", type=int, default=1, help="Parallel workers for per-user fetch (default: 1 = sequential).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2336,7 +2336,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_customer_secret_keys().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
-        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
+        parser.add_argument("--threads", dest="threads", type=int, default=1, help="Parallel workers for per-user fetch (default: 1 = sequential).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
@@ -2453,7 +2453,7 @@ class IdentityResourceSuite(ResourceBase):
         parser.add_argument("--attributes", required=False, help="Override SCIM attributes list for list_user_db_credentials().")
         parser.add_argument("--attribute-sets", action="append", default=[], help="SCIM attribute_sets (repeatable/comma-separated).")
         parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
-        parser.add_argument("--threads", dest="threads", type=int, default=4, help="Parallel workers for per-user fetch (default: 4).")
+        parser.add_argument("--threads", dest="threads", type=int, default=1, help="Parallel workers for per-user fetch (default: 1 = sequential).")
         args = self._parse_known(parser, user_args)
 
         compartment_id = getattr(self.session, "compartment_id", None)
