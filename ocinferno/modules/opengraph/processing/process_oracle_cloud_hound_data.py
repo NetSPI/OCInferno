@@ -615,14 +615,26 @@ def _run_build_steps(session, args, debug=False):
         selected_steps = tuple(BUILD_STEP_SPECS.keys())
 
     builder_stats = {}
-    for key in selected_steps:
+    n_steps = len(selected_steps)
+    for step_num, key in enumerate(selected_steps, 1):
         spec = BUILD_STEP_SPECS[key]
+        print(f"[*] [{step_num}/{n_steps}] {spec['help']}...", flush=True)
         try:
             result = spec["runner"](session=session, ctx=ctx, debug=debug, **spec.get("kwargs", {}))
         except Exception as e:
             result = {"ok": False, "error": f"{type(e).__name__}: {e}"}
         builder_stats[key] = result if isinstance(result, dict) else {"ok": True, "result": result}
         _dlog(debug, "opengraph builder stats", step=key, stats=builder_stats[key])
+        if isinstance(result, dict):
+            if result.get("ok") is False:
+                print(f"[X] {key}: {result.get('error', 'failed')}")
+            else:
+                stat_parts = [
+                    f"{k}={v}" for k, v in result.items()
+                    if k not in ("ok", "error") and isinstance(v, (int, float))
+                ]
+                stat_str = "  " + ", ".join(stat_parts) if stat_parts else ""
+                print(f"[+] {key}: ok{stat_str}")
 
     try:
         ctx.commit()
@@ -825,8 +837,10 @@ def run_module(user_args, session):
     if getattr(args, "from_inventory", ""):
         _ingest_inventory_file(session, args.from_inventory, debug=debug)
 
+    print("[*] Loading graph from DB...", flush=True)
     node_rows = session.get_resource_fields("opengraph_nodes", columns=NODE_COLUMNS) or []
     edge_rows = session.get_resource_fields("opengraph_edges", columns=EDGE_COLUMNS) or []
+    print(f"[*] Loaded: {len(node_rows)} nodes, {len(edge_rows)} edges")
     # Compute the incident-node set once; both orphan pruners consume it (was scanned twice).
     incident_node_ids = _edge_incident_node_ids(edge_rows)
     node_rows, pruned_orphan_idd_apps = _prune_orphan_idd_app_nodes(
@@ -836,6 +850,8 @@ def run_module(user_args, session):
         debug=debug,
         incident_node_ids=incident_node_ids,
     )
+    if pruned_orphan_idd_apps:
+        print(f"[*] Pruned {pruned_orphan_idd_apps} orphan OCIIDDApplication node(s)")
     node_rows, pruned_orphan_policy_statements = _prune_orphan_policy_statement_nodes(
         node_rows,
         edge_rows,
@@ -843,6 +859,8 @@ def run_module(user_args, session):
         debug=debug,
         incident_node_ids=incident_node_ids,
     )
+    if pruned_orphan_policy_statements:
+        print(f"[*] Pruned {pruned_orphan_policy_statements} orphan policy statement node(s)")
     # Remove RPST-target nodes whose stolen RPST would grant no access (no outgoing edges).
     # Runs before manage-collapse so the full edge set is visible for the outgoing-edge check.
     node_rows, edge_rows, pruned_rpst_dead_ends = _prune_rpst_dead_end_nodes(
@@ -851,15 +869,25 @@ def run_module(user_args, session):
         enabled=not bool(args.include_all),
         debug=debug,
     )
+    if pruned_rpst_dead_ends:
+        print(f"[*] Pruned {pruned_rpst_dead_ends} RPST dead-end node(s)/edge(s)")
     edge_rows, manage_collapse_stats = _collapse_manage_shadowed_permission_edges(
         edge_rows,
         enabled=True,
         debug=debug,
     )
+    if manage_collapse_stats.get("collapsed_edges"):
+        print(
+            f"[*] Collapsed {manage_collapse_stats['collapsed_edges']} edge(s) into OCI_MANAGE "
+            f"({manage_collapse_stats['pairs_with_manage']} pair(s))"
+        )
     # Post-pass: fill in runnable `module run` examples on configured edge kinds, using
     # each edge's endpoint node data (JSON-driven via data/edge_module_commands.json).
     edge_rows, edge_command_stats = annotate_edge_module_commands(edge_rows, node_rows, debug=debug)
+    if edge_command_stats.get("annotated"):
+        print(f"[*] Annotated {edge_command_stats['annotated']} edge(s) with module commands")
 
+    print(f"[*] Export: {len(node_rows)} nodes, {len(edge_rows)} edges", flush=True)
     out = export_opengraph_json(node_rows, edge_rows, debug=debug)
 
     out_path = session.resolve_output_path(

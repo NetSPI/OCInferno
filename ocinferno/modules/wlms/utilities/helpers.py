@@ -6,6 +6,16 @@ import oci
 from ocinferno.core.resource import OciListResource
 
 
+def _no_retry_list(client, method_name, scope_kwarg, compartment_id, **kwargs):
+    """Paginate with NoneRetryStrategy so an unavailable endpoint fails on the first attempt."""
+    return oci.pagination.list_call_get_all_results(
+        getattr(client, method_name),
+        **{scope_kwarg: compartment_id},
+        retry_strategy=oci.retry.NoneRetryStrategy(),
+        **kwargs,
+    )
+
+
 class WlmsWlsDomainsResource(OciListResource):
     CLIENT_CLS = oci.wlms.WeblogicManagementServiceClient
     SERVICE_NAME = "WebLogic Management"
@@ -25,6 +35,9 @@ class WlmsWlsDomainsResource(OciListResource):
         "lifecycle_details",
     ]
 
+    def _list_items(self, compartment_id, **kwargs):
+        return _no_retry_list(self.client, self.LIST_METHOD, self.LIST_SCOPE_KWARG, compartment_id, **kwargs)
+
 
 class WlmsManagedInstancesResource(OciListResource):
     CLIENT_CLS = oci.wlms.WeblogicManagementServiceClient
@@ -42,3 +55,6 @@ class WlmsManagedInstancesResource(OciListResource):
         "server_count",
         "plugin_status",
     ]
+
+    def _list_items(self, compartment_id, **kwargs):
+        return _no_retry_list(self.client, self.LIST_METHOD, self.LIST_SCOPE_KWARG, compartment_id, **kwargs)

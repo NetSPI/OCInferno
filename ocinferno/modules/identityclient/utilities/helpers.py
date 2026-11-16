@@ -1641,6 +1641,7 @@ class IdentityResourceSuite(ResourceBase):
                 dom_compartment_id = _s(
                     dom_match.get("compartment_id") or dom_match.get("compartmentId") or compartment_id
                 )
+                print(f"[*] Enumerating IDD principals: {dom_name or domain_url}")
 
                 if want_users or want_memberships:
                     try:
@@ -2149,7 +2150,9 @@ class IdentityResourceSuite(ResourceBase):
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
             keys: list[dict[str, Any]] = []
-            for user in users:
+            n_users = len(users)
+            for i, user in enumerate(users, 1):
+                print(f"\r  {dom_name or dom_id}: scanning api keys [{i}/{n_users}]", end="", flush=True)
                 try:
                     rows = [r for r in (ops.list_api_keys(user_ocid=user.get("ocid"), attributes=attrs) or []) if isinstance(r, dict)]
                 except Exception as e:
@@ -2171,6 +2174,8 @@ class IdentityResourceSuite(ResourceBase):
                         ops.save_idd_api_keys(api_keys=rows)
                     except Exception as e:
                         UtilityTools.dlog(self.debug, "enum_idd_api_keys: save_idd_api_keys failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+            if n_users:
+                print()
 
             for key in keys:
                 meta = key.get("meta") if isinstance(key.get("meta"), dict) else {}
@@ -2256,7 +2261,9 @@ class IdentityResourceSuite(ResourceBase):
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
             tokens: list[dict[str, Any]] = []
-            for user in users:
+            n_users = len(users)
+            for i, user in enumerate(users, 1):
+                print(f"\r  {dom_name or dom_id}: scanning auth tokens [{i}/{n_users}]", end="", flush=True)
                 try:
                     rows = [
                         r for r in (
@@ -2281,6 +2288,8 @@ class IdentityResourceSuite(ResourceBase):
                         )
                     )
                 total += len(rows)
+            if n_users:
+                print()
 
             # Dedupe on stable token_id.
             deduped: list[dict[str, Any]] = []
@@ -2387,7 +2396,9 @@ class IdentityResourceSuite(ResourceBase):
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
             keys: list[dict[str, Any]] = []
-            for user in users:
+            n_users = len(users)
+            for i, user in enumerate(users, 1):
+                print(f"\r  {dom_name or dom_id}: scanning customer secret keys [{i}/{n_users}]", end="", flush=True)
                 try:
                     rows = [
                         r for r in (
@@ -2404,6 +2415,8 @@ class IdentityResourceSuite(ResourceBase):
                 for row in rows:
                     keys.append(self._normalize_customer_secret_key_row(row, user_row=user, dom=dom))
                 total += len(rows)
+            if n_users:
+                print()
 
             # Dedupe on stable csk_id.
             deduped: list[dict[str, Any]] = []
@@ -2507,7 +2520,9 @@ class IdentityResourceSuite(ResourceBase):
 
             ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
             creds: list[dict[str, Any]] = []
-            for user in users:
+            n_users = len(users)
+            for i, user in enumerate(users, 1):
+                print(f"\r  {dom_name or dom_id}: scanning db credentials [{i}/{n_users}]", end="", flush=True)
                 try:
                     rows = [
                         r for r in (
@@ -2524,6 +2539,8 @@ class IdentityResourceSuite(ResourceBase):
                 for row in rows:
                     creds.append(self._normalize_db_credential_row(row, user_row=user, dom=dom))
                 total += len(rows)
+            if n_users:
+                print()
 
             # Dedupe on stable dbcred_id.
             deduped: list[dict[str, Any]] = []
