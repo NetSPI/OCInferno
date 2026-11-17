@@ -44,7 +44,7 @@ def _parse_args(user_args):
     def _add_extra_args(parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--object-namespaces", action="append", default=[], help="Namespace scope for buckets/objects (repeatable, CSV supported)")
         parser.add_argument("--object-buckets", action="append", default=[], help="Bucket scope for objects (repeatable, CSV supported)")
-        parser.add_argument("--limit", type=int, default=0, help="Limit matching objects per bucket (0 = no limit)")
+        parser.add_argument("--object-limit", type=int, default=5000, dest="limit", help="Max objects per bucket (default: 5,000 — use 0 for no limit)")
         parser.add_argument("--threads", type=int, default=8, help="Download thread count (reserved)")
         parser.add_argument("--prefix", default="", help="Only include objects whose name starts with this prefix")
         parser.add_argument("--name-regex", default="", help="Only include objects whose name matches this regex")

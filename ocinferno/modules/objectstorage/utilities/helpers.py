@@ -519,11 +519,18 @@ class ObjectStorageObjectsResource:
 
         rows: List[Dict[str, Any]] = []
 
-        for bucket_row in bucket_rows:
+        total_buckets = len(bucket_rows)
+        for bucket_idx, bucket_row in enumerate(bucket_rows, 1):
             namespace = _s(bucket_row.get("namespace"))
             bucket_name = _s(bucket_row.get("name"))
             if not namespace or not bucket_name:
                 continue
+
+            cap_note = f", cap {limit_per_bucket:,}" if limit_per_bucket else ""
+            print(
+                f"[*] objects [{bucket_idx}/{total_buckets}]: scanning '{bucket_name}'{cap_note} ...",
+                flush=True,
+            )
 
             region = _s(bucket_row.get("region")) or _s(getattr(self.session, "config_current_default_region", "")) or _s(getattr(self.session, "region", ""))
             region_client = build_object_storage_client(self.session, region=region)
@@ -605,6 +612,10 @@ class ObjectStorageObjectsResource:
                 start = resp.data.next_start_with
                 if not start:
                     break
+
+            capped = limit_per_bucket and kept >= limit_per_bucket
+            cap_msg = f" (capped at {limit_per_bucket:,} — use --limit 0 to remove cap)" if capped else ""
+            print(f"    {kept:,} objects{cap_msg}")
 
         return rows
 
