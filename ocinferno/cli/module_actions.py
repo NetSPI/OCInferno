@@ -130,6 +130,12 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,
     ),
+    # Process module: reads resource IDs from DB, re-downloads content without listing.
+    "process_download_cached": ModulePolicySpec(
+        exec_mode=ExecMode.ONCE,
+        context_mode=ContextMode.NONE,
+        accepts_cid_flags=False,
+    ),
     # Process module: reads saved subnet/security-list/route-table rows and writes
     # cross-compartment denormalized attached_subnet_ids back onto the target tables.
     "process_core_network": ModulePolicySpec(

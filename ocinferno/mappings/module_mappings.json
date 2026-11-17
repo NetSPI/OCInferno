@@ -26,6 +26,14 @@
       "service": "AllCoverage"
     },
     {
+      "module_name": "process_download_cached",
+      "module_category": "Process",
+      "info_blurb": "Re-download content (objects, API specs, instance-agent commands, RM configs, artifacts, vault secrets) using IDs already in the DB — skips all list/enumeration API calls",
+      "author": "OCInferno",
+      "location": "ocinferno.modules.everything.processing.process_download_cached",
+      "service": "AllCoverage"
+    },
+    {
       "module_name": "enum_apigateway",
       "module_category": "Enumeration",
       "info_blurb": "Enumerate API Gateway resources",

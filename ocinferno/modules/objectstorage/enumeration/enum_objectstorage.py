@@ -54,6 +54,7 @@ def _parse_args(user_args):
         parser.add_argument("--older-than", default="", help="Only include objects created on/before this ISO datetime")
         parser.add_argument("--sse-c-key-b64", default=None, help="Base64-encoded AES-256 key for SSE-C objects")
         parser.add_argument("--download-timeout", type=int, default=0, help="Per-bucket download wall-clock cap in seconds (0 = unlimited)")
+        parser.add_argument("--from-db", action="store_true", default=False, help="Skip enumeration; load objects from the saved DB and go straight to --download")
 
     return parse_wrapper_args(
         user_args=user_args,
@@ -203,41 +204,58 @@ def run_module(user_args, session):
 
     if selected.get("objects", False):
         try:
-            namespaces = parse_csv_args(getattr(args, "object_namespaces", []) or [])
-            buckets = parse_csv_args(getattr(args, "object_buckets", []) or [])
-            bucket_rows = objects_resource.resolve_bucket_rows(
-                compartment_id=compartment_id,
-                namespaces=namespaces,
-                buckets=buckets,
-            )
+            from_db = bool(getattr(args, "from_db", False))
+            if from_db:
+                # Load rows already in the DB — skip the live API call entirely.
+                raw = session.get_resource_fields(
+                    "object_storage_bucket_objects",
+                    where_conditions={"compartment_id": compartment_id},
+                ) or []
+                rows = [r for r in raw if isinstance(r, dict)]
+                # Apply --object-buckets / --object-namespaces filters if supplied.
+                ns_filter = set(parse_csv_args(getattr(args, "object_namespaces", []) or []))
+                bk_filter = set(parse_csv_args(getattr(args, "object_buckets", []) or []))
+                if ns_filter:
+                    rows = [r for r in rows if str(r.get("namespace") or "") in ns_filter]
+                if bk_filter:
+                    rows = [r for r in rows if str(r.get("bucket_name") or "") in bk_filter]
+                print(f"[*] --from-db: loaded {len(rows):,} object rows from DB (compartment {compartment_id})")
+            else:
+                namespaces = parse_csv_args(getattr(args, "object_namespaces", []) or [])
+                buckets = parse_csv_args(getattr(args, "object_buckets", []) or [])
+                bucket_rows = objects_resource.resolve_bucket_rows(
+                    compartment_id=compartment_id,
+                    namespaces=namespaces,
+                    buckets=buckets,
+                )
 
-            rows = objects_resource.list(
-                compartment_id=compartment_id,
-                bucket_rows=bucket_rows,
-                prefix=str(args.prefix or ""),
-                name_regex=str(args.name_regex or ""),
-                min_bytes=max(0, int(args.min_bytes or 0)),
-                max_bytes=max(0, int(args.max_bytes or 0)),
-                newer_than=str(args.newer_than or ""),
-                older_than=str(args.older_than or ""),
-                limit_per_bucket=max(0, int(args.limit or 0)),
-            )
+                rows = objects_resource.list(
+                    compartment_id=compartment_id,
+                    bucket_rows=bucket_rows,
+                    prefix=str(args.prefix or ""),
+                    name_regex=str(args.name_regex or ""),
+                    min_bytes=max(0, int(args.min_bytes or 0)),
+                    max_bytes=max(0, int(args.max_bytes or 0)),
+                    newer_than=str(args.newer_than or ""),
+                    older_than=str(args.older_than or ""),
+                    limit_per_bucket=max(0, int(args.limit or 0)),
+                )
 
-            if args.get:
-                for row in rows:
-                    namespace = row.get("namespace")
-                    bucket_name = row.get("bucket_name")
-                    object_name = row.get("name")
-                    if not namespace or not bucket_name or not object_name:
-                        continue
-                    fill_missing_fields(
-                        row,
-                        objects_resource.get(namespace=namespace, bucket_name=bucket_name, object_name=object_name) or {},
-                    )
+                if args.get:
+                    for row in rows:
+                        namespace = row.get("namespace")
+                        bucket_name = row.get("bucket_name")
+                        object_name = row.get("name")
+                        if not namespace or not bucket_name or not object_name:
+                            continue
+                        fill_missing_fields(
+                            row,
+                            objects_resource.get(namespace=namespace, bucket_name=bucket_name, object_name=object_name) or {},
+                        )
 
-            if rows:
-                UtilityTools.print_limited_table(rows, objects_resource.COLUMNS, title="Object Storage - Objects")
-            objects_resource.save(rows)
+                if rows:
+                    UtilityTools.print_limited_table(rows, objects_resource.COLUMNS, title="Object Storage - Objects")
+                objects_resource.save(rows)
 
             downloaded = 0
             failed = 0
