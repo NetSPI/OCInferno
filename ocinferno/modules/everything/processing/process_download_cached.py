@@ -2,15 +2,15 @@
 """process_download_cached: re-download content using data already in the DB.
 
 Reads enumerated rows from the workspace DB and downloads their content without
-re-running any live enumeration API calls. Covers every service that
-``enum_all --download`` would hit:
+re-running any live list/enumeration API calls. Accepts the same
+``--download`` / ``--not-downloads`` token system as ``enum_all`` — same
+categories, same individual tokens, same composition rules.
 
-  objectstorage    — objects in object_storage_bucket_objects
-  apigateway       — API content blobs + SDK artifacts
-  compute          — instance-agent command/execution merged files (pure DB)
-  resourcemanager  — stack config zips + job config/state/log zips
-  artifactregistry — generic artifacts
-  vault            — secret bundles (re-fetched live by secret ID from DB)
+  --download                   # everything
+  --download content           # heavy byte dumps (objects, vault, artifacts, ...)
+  --download metadata          # light config/history (compute, functions, devops, ...)
+  --download buckets           # single token
+  --download content --not-downloads vault_secrets
 
 Run ``enum_all`` (or the per-service module) first to populate the DB, then use
 this module to recover downloads without re-enumerating.
@@ -18,11 +18,60 @@ this module to recover downloads without re-enumerating.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
+from typing import Callable
 
 from ocinferno.core.console import UtilityTools
 from ocinferno.core.utils.download_budget import DownloadBudget
 from ocinferno.core.utils.module_helpers import safe_path_component
+from ocinferno.modules.everything.enumeration.enum_all import (
+    DOWNLOAD_TOKEN_ALIASES,
+    DOWNLOAD_TOKEN_CATEGORIES,
+    DOWNLOAD_TOKEN_EXCLUSION_EXPANSIONS,
+)
+
+# ---------------------------------------------------------------------------
+# Token resolution (mirrors enum_all logic)
+# ---------------------------------------------------------------------------
+
+_ALL_TOKENS: frozenset[str] = frozenset(
+    t for cats in DOWNLOAD_TOKEN_CATEGORIES.values() for t in cats
+)
+
+
+def _resolve_token_set(raw_values: list[str] | None) -> frozenset[str]:
+    if raw_values is None:
+        return frozenset()
+    tokens: set[str] = set()
+    for item in raw_values:
+        for part in item.replace(",", " ").split():
+            part = part.strip().lower()
+            if not part:
+                continue
+            if part == "all":
+                tokens.update(_ALL_TOKENS)
+            elif part in DOWNLOAD_TOKEN_CATEGORIES:
+                tokens.update(DOWNLOAD_TOKEN_CATEGORIES[part])
+            elif part in DOWNLOAD_TOKEN_ALIASES:
+                tokens.add(DOWNLOAD_TOKEN_ALIASES[part])
+            else:
+                tokens.add(part)
+    return frozenset(tokens)
+
+
+def _active_tokens(download_raw, not_download_raw) -> frozenset[str]:
+    if download_raw is None and not_download_raw is None:
+        return frozenset()
+    wanted = _resolve_token_set(download_raw) if download_raw else _ALL_TOKENS
+
+    excluded: set[str] = set()
+    for tok in _resolve_token_set(not_download_raw):
+        expansion = DOWNLOAD_TOKEN_EXCLUSION_EXPANSIONS.get(tok)
+        excluded.update(expansion if expansion else {tok})
+
+    return frozenset(wanted - excluded)
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -44,11 +93,39 @@ def _all_rows(session, table: str) -> list[dict]:
     return [r for r in rows if isinstance(r, dict)]
 
 
+def _write_field(session, row: dict, *, field: str, service_name: str,
+                 subdir: str, filename: str) -> bool:
+    rid = str(row.get("id") or "").strip()
+    comp_id = str(row.get("compartment_id") or "").strip()
+    if not rid:
+        return False
+    value = row.get(field)
+    if value in (None, "", {}, []):
+        return False
+    out_path = session.get_download_save_path(
+        service_name=service_name,
+        filename=filename,
+        compartment_id=comp_id,
+        subdirs=[subdir, rid],
+    )
+    try:
+        payload = (
+            json.dumps(value, indent=2).encode()
+            if isinstance(value, (dict, list))
+            else str(value).encode()
+        )
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(out_path).write_bytes(payload)
+        return True
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
-# objectstorage
+# Per-token download functions
 # ---------------------------------------------------------------------------
 
-def _download_objectstorage(session, args, debug: bool) -> dict:
+def _do_objectstorage(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.objectstorage.utilities.helpers import (
         ObjectStorageObjectsResource,
         normalize_sse_c_key,
@@ -65,15 +142,15 @@ def _download_objectstorage(session, args, debug: bool) -> dict:
 
     print(f"[*] objectstorage: {len(rows):,} objects in DB")
     if not rows:
-        return {"service": "objectstorage", "ok": True, "downloaded": 0, "failed": 0}
+        return {"service": "objectstorage", "downloaded": 0, "failed": 0}
 
-    sse_c_key_b64 = getattr(args, "sse_c_key_b64", None)
-    if sse_c_key_b64:
+    sse = getattr(args, "sse_c_key_b64", None)
+    if sse:
         try:
-            normalize_sse_c_key(sse_c_key_b64)
+            normalize_sse_c_key(sse)
         except Exception as err:
             print(f"{UtilityTools.RED}[X] invalid --sse-c-key-b64: {err}{UtilityTools.RESET}")
-            return {"service": "objectstorage", "ok": False, "error": str(err)}
+            return {"service": "objectstorage", "downloaded": 0, "failed": len(rows)}
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
     resource = ObjectStorageObjectsResource(session=session)
@@ -82,56 +159,33 @@ def _download_objectstorage(session, args, debug: bool) -> dict:
     total = len(rows)
 
     for idx, row in enumerate(rows, 1):
-        namespace   = str(row.get("namespace")   or "").strip()
-        bucket_name = str(row.get("bucket_name") or "").strip()
-        object_name = str(row.get("name")        or "").strip()
-        region      = str(row.get("region")      or getattr(session, "config_current_default_region", "") or "").strip()
-        if not namespace or not bucket_name or not object_name:
+        ns   = str(row.get("namespace")   or "").strip()
+        bk   = str(row.get("bucket_name") or "").strip()
+        name = str(row.get("name")        or "").strip()
+        reg  = str(row.get("region") or getattr(session, "config_current_default_region", "") or "").strip()
+        if not ns or not bk or not name:
             continue
-
-        bucket_key = (region, namespace, bucket_name)
-        budget = bucket_budgets.get(bucket_key)
-        if budget is None:
-            budget = DownloadBudget(session, label=f"bucket {bucket_name}")
-            bucket_budgets[bucket_key] = budget
+        key = (reg, ns, bk)
+        budget = bucket_budgets.setdefault(key, DownloadBudget(session, label=f"bucket {bk}"))
         if budget.exceeded():
             continue
-
-        parts = [safe_path_component(p) for p in object_name.lstrip("/").split("/") if p]
-        if not parts:
-            parts = ["object.bin"]
-
-        base = _dl_base(session, "objectstorage", namespace, bucket_name)
+        parts = [safe_path_component(p) for p in name.lstrip("/").split("/") if p] or ["object.bin"]
+        base = _dl_base(session, "objectstorage", ns, bk)
         if len(parts) > 1:
             base = base.joinpath(*[safe_path_component(p) for p in parts[:-1]])
         base.mkdir(parents=True, exist_ok=True)
-        out_path = base / parts[-1]
-
         if idx % 100 == 1 or idx == total:
-            print(f"    [{idx}/{total}] {bucket_name}/{object_name}", flush=True)
-
-        ok = resource.download(
-            namespace=namespace,
-            bucket_name=bucket_name,
-            object_name=object_name,
-            out_path=out_path,
-            sse_c_key_b64=sse_c_key_b64,
-            region=region,
-        )
-        if ok:
-            downloaded += 1
-        else:
-            failed += 1
+            print(f"    [{idx}/{total}] {bk}/{name}", flush=True)
+        ok = resource.download(namespace=ns, bucket_name=bk, object_name=name,
+                               out_path=base / parts[-1], sse_c_key_b64=sse, region=reg)
+        if ok: downloaded += 1
+        else:  failed += 1
 
     print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
-    return {"service": "objectstorage", "ok": True, "downloaded": downloaded, "failed": failed}
+    return {"service": "objectstorage", "downloaded": downloaded, "failed": failed}
 
 
-# ---------------------------------------------------------------------------
-# apigateway
-# ---------------------------------------------------------------------------
-
-def _download_apigateway(session, args, debug: bool) -> dict:
+def _do_apigateway(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.apigateway.utilities.helpers import (
         ApiGatewayApisResource,
         ApiGatewaySdksResource,
@@ -139,72 +193,58 @@ def _download_apigateway(session, args, debug: bool) -> dict:
     from ocinferno.core.utils.module_helpers import guess_blob_ext, write_bytes_file
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
-    apis_resource = ApiGatewayApisResource(session=session)
-    sdks_resource = ApiGatewaySdksResource(session=session)
-
-    api_rows = _all_rows(session, "apigw_apis")
-    sdk_rows = _all_rows(session, "apigw_sdks")
-    print(f"[*] apigateway: {len(api_rows):,} APIs, {len(sdk_rows):,} SDKs in DB")
-
+    comp_fallback = str(getattr(session, "compartment_id", "") or "global")
     downloaded = failed = 0
-    comp_fallback = getattr(session, "compartment_id", None) or "global"
 
-    budget = DownloadBudget(session, label="API Gateway API content")
-    for row in api_rows:
-        if budget.exceeded():
-            break
-        rid = row.get("id")
-        if not rid:
-            continue
-        comp_id = row.get("compartment_id") or comp_fallback
-        try:
-            blob = apis_resource.get_api_content(api_id=rid) or b""
-        except Exception:
-            blob = b""
-        if blob:
-            ext = guess_blob_ext(blob, default_ext="bin")
-            out_path = session.get_download_save_path(
-                service_name="api-gateway",
-                filename=f"api_content.{ext}",
-                compartment_id=comp_id,
-                subdirs=["api-content", rid],
-            )
-            if write_bytes_file(out_path, blob):
-                downloaded += 1
+    if tokens & {"api_content", "api_specs"}:
+        resource = ApiGatewayApisResource(session=session)
+        rows = _all_rows(session, "apigw_apis")
+        print(f"[*] apigateway apis: {len(rows):,} in DB")
+        budget = DownloadBudget(session, label="API Gateway API content")
+        for row in rows:
+            if budget.exceeded():
+                break
+            rid = row.get("id")
+            if not rid:
+                continue
+            comp_id = row.get("compartment_id") or comp_fallback
+            try:
+                blob = resource.get_api_content(api_id=rid) or b""
+            except Exception:
+                blob = b""
+            if blob:
+                ext = guess_blob_ext(blob, default_ext="bin")
+                out_path = session.get_download_save_path(
+                    service_name="api-gateway", filename=f"api_content.{ext}",
+                    compartment_id=comp_id, subdirs=["api-content", rid])
+                if write_bytes_file(out_path, blob): downloaded += 1
+                else: failed += 1
             else:
                 failed += 1
-        else:
-            failed += 1
 
-    budget2 = DownloadBudget(session, label="API Gateway SDK artifacts")
-    for row in sdk_rows:
-        if budget2.exceeded():
-            break
-        sid = row.get("id")
-        if not sid:
-            continue
-        comp_id = row.get("compartment_id") or comp_fallback
-        filename = sdks_resource.filename_for_sdk_artifact(row)
-        out_path = session.get_download_save_path(
-            service_name="api-gateway",
-            filename=filename,
-            compartment_id=comp_id,
-            subdirs=["sdks", sid],
-        )
-        if sdks_resource.download(sdk_row=row, out_path=out_path):
-            downloaded += 1
-        else:
-            failed += 1
+    if "sdks" in tokens:
+        resource = ApiGatewaySdksResource(session=session)
+        rows = _all_rows(session, "apigw_sdks")
+        print(f"[*] apigateway sdks: {len(rows):,} in DB")
+        budget = DownloadBudget(session, label="API Gateway SDK artifacts")
+        for row in rows:
+            if budget.exceeded():
+                break
+            sid = row.get("id")
+            if not sid:
+                continue
+            comp_id = row.get("compartment_id") or comp_fallback
+            filename = resource.filename_for_sdk_artifact(row)
+            out_path = session.get_download_save_path(
+                service_name="api-gateway", filename=filename,
+                compartment_id=comp_id, subdirs=["sdks", sid])
+            if resource.download(sdk_row=row, out_path=out_path): downloaded += 1
+            else: failed += 1
 
-    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
-    return {"service": "apigateway", "ok": True, "downloaded": downloaded, "failed": failed}
+    return {"service": "apigateway", "downloaded": downloaded, "failed": failed}
 
 
-# ---------------------------------------------------------------------------
-# compute (instance-agent command merged files — pure DB, no live API)
-# ---------------------------------------------------------------------------
-
-def _download_compute(session, args, debug: bool) -> dict:
+def _do_compute(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.core.utilities.helpers import _write_instance_agent_merged_files
 
     cmd_rows  = _all_rows(session, "compute_instance_agent_commands")
@@ -212,14 +252,13 @@ def _download_compute(session, args, debug: bool) -> dict:
     print(f"[*] compute: {len(cmd_rows):,} commands, {len(exec_rows):,} executions in DB")
 
     if not cmd_rows and not exec_rows:
-        return {"service": "compute", "ok": True, "downloaded": 0, "failed": 0}
+        return {"service": "compute", "downloaded": 0, "failed": 0}
 
-    # Group by compartment_id so merged files land in the right output path.
-    comp_ids: set[str] = set()
-    for r in cmd_rows + exec_rows:
-        cid = str(r.get("compartment_id") or "").strip()
-        if cid:
-            comp_ids.add(cid)
+    comp_ids: set[str] = {
+        str(r.get("compartment_id") or "").strip()
+        for r in cmd_rows + exec_rows
+        if str(r.get("compartment_id") or "").strip()
+    }
     if not comp_ids:
         comp_ids = {str(getattr(session, "compartment_id", "") or "unknown")}
 
@@ -228,185 +267,395 @@ def _download_compute(session, args, debug: bool) -> dict:
         c_cmds  = [r for r in cmd_rows  if str(r.get("compartment_id") or "") == cid]
         c_execs = [r for r in exec_rows if str(r.get("compartment_id") or "") == cid]
         result = _write_instance_agent_merged_files(
-            session,
-            compartment_id=cid,
-            command_rows=c_cmds,
-            execution_rows=c_execs,
-        )
+            session, compartment_id=cid,
+            command_rows=c_cmds, execution_rows=c_execs)
         total_files += int(result.get("files_written") or 0)
 
     print(f"    done: {total_files:,} merged files written")
-    return {"service": "compute", "ok": True, "downloaded": total_files, "failed": 0}
+    return {"service": "compute", "downloaded": total_files, "failed": 0}
 
 
-# ---------------------------------------------------------------------------
-# resourcemanager
-# ---------------------------------------------------------------------------
-
-def _download_resourcemanager(session, args, debug: bool) -> dict:
+def _do_resourcemanager(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.resourcemanager.utilities.helpers import (
         ResourceManagerStacksResource,
         ResourceManagerJobsResource,
     )
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
-    stacks_resource = ResourceManagerStacksResource(session=session)
-    jobs_resource   = ResourceManagerJobsResource(session=session)
-
-    stack_rows = _all_rows(session, "resource_manager_stacks")
-    job_rows   = _all_rows(session, "resource_manager_jobs")
-    print(f"[*] resourcemanager: {len(stack_rows):,} stacks, {len(job_rows):,} jobs in DB")
-
+    stacks_res = ResourceManagerStacksResource(session=session)
+    jobs_res   = ResourceManagerJobsResource(session=session)
     downloaded = failed = 0
     budget = DownloadBudget(session, label="Resource Manager content")
 
-    for row in stack_rows:
-        if budget.exceeded():
-            break
-        stack_id = str(row.get("id") or "").strip()
-        if not stack_id:
-            continue
-        comp_id = str(row.get("compartment_id") or "").strip()
-        out_path = session.get_download_save_path(
-            service_name="resource-manager",
-            filename="config.zip",
-            compartment_id=comp_id,
-            subdirs=["stacks", stack_id],
-        )
-        try:
-            ok = stacks_resource.download(resource_id=stack_id, out_path=out_path)
-        except Exception:
-            ok = False
-        if ok: downloaded += 1
-        else:  failed += 1
-
-    for row in job_rows:
-        if budget.exceeded():
-            break
-        job_id  = str(row.get("id")           or "").strip()
-        comp_id = str(row.get("compartment_id") or "").strip()
-        if not job_id:
-            continue
-        for method, fname in [
-            ("download",             "config.zip"),
-            ("download_tf_state",    "tf.state"),
-            ("download_tf_config",   "tf_config.zip"),
-        ]:
-            fn = getattr(jobs_resource, method, None)
-            if fn is None:
+    if tokens & {"orm_variables", "orm_templates"}:
+        rows = _all_rows(session, "resource_manager_stacks")
+        print(f"[*] resourcemanager stacks: {len(rows):,} in DB")
+        for row in rows:
+            if budget.exceeded():
+                break
+            sid = str(row.get("id") or "").strip()
+            if not sid:
                 continue
             out_path = session.get_download_save_path(
-                service_name="resource-manager",
-                filename=fname,
-                compartment_id=comp_id,
-                subdirs=["jobs", job_id],
-            )
-            try:
-                ok = fn(job_id=job_id, out_path=out_path)
-            except Exception:
-                ok = False
+                service_name="resource-manager", filename="config.zip",
+                compartment_id=str(row.get("compartment_id") or ""),
+                subdirs=["stacks", sid])
+            try: ok = stacks_res.download(resource_id=sid, out_path=out_path)
+            except Exception: ok = False
             if ok: downloaded += 1
             else:  failed += 1
 
-    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
-    return {"service": "resourcemanager", "ok": True, "downloaded": downloaded, "failed": failed}
+    if "orm_jobs" in tokens:
+        rows = _all_rows(session, "resource_manager_jobs")
+        print(f"[*] resourcemanager jobs: {len(rows):,} in DB")
+        for row in rows:
+            if budget.exceeded():
+                break
+            jid = str(row.get("id") or "").strip()
+            cid = str(row.get("compartment_id") or "").strip()
+            if not jid:
+                continue
+            for method, fname in [("download", "config.zip"),
+                                   ("download_tf_state", "tf.state"),
+                                   ("download_tf_config", "tf_config.zip")]:
+                fn = getattr(jobs_res, method, None)
+                if fn is None:
+                    continue
+                out_path = session.get_download_save_path(
+                    service_name="resource-manager", filename=fname,
+                    compartment_id=cid, subdirs=["jobs", jid])
+                try: ok = fn(job_id=jid, out_path=out_path)
+                except Exception: ok = False
+                if ok: downloaded += 1
+                else:  failed += 1
+
+    return {"service": "resourcemanager", "downloaded": downloaded, "failed": failed}
 
 
-# ---------------------------------------------------------------------------
-# artifactregistry
-# ---------------------------------------------------------------------------
-
-def _download_artifactregistry(session, args, debug: bool) -> dict:
+def _do_artifactregistry(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.artifactregistry.utilities.helpers import ArtifactRegistryResource
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
     resource = ArtifactRegistryResource(session=session)
     rows = _all_rows(session, "ar_generic_artifact")
-    print(f"[*] artifactregistry: {len(rows):,} artifacts in DB")
+    print(f"[*] artifactregistry: {len(rows):,} in DB")
     if not rows:
-        return {"service": "artifactregistry", "ok": True, "downloaded": 0, "failed": 0}
+        return {"service": "artifactregistry", "downloaded": 0, "failed": 0}
 
     downloaded = failed = 0
-    budget = DownloadBudget(session, label="Artifact Registry content")
     comp_fallback = str(getattr(session, "compartment_id", "") or "global")
-
+    budget = DownloadBudget(session, label="Artifact Registry content")
     for row in rows:
         if budget.exceeded():
             break
-        artifact_id  = str(row.get("id")            or "").strip()
-        repo_id      = str(row.get("repository_id") or "").strip()
-        display_name = safe_path_component(str(row.get("display_name") or artifact_id))
-        comp_id      = str(row.get("compartment_id") or comp_fallback).strip()
-        if not artifact_id:
+        aid = str(row.get("id") or "").strip()
+        if not aid:
             continue
+        comp_id  = str(row.get("compartment_id") or comp_fallback).strip()
+        repo_id  = str(row.get("repository_id") or "").strip()
+        display  = safe_path_component(str(row.get("display_name") or aid))
         out_path = session.get_download_save_path(
-            service_name="artifact-registry",
-            filename=f"{display_name}.bin",
-            compartment_id=comp_id,
-            subdirs=["artifacts", repo_id or "unknown-repo"],
-        )
-        try:
-            ok = resource.download_by_id(artifact_id=artifact_id, out_file=out_path)
-        except Exception:
-            ok = False
+            service_name="artifact-registry", filename=f"{display}.bin",
+            compartment_id=comp_id, subdirs=["artifacts", repo_id or "unknown-repo"])
+        try: ok = resource.download_by_id(artifact_id=aid, out_file=out_path)
+        except Exception: ok = False
         if ok: downloaded += 1
         else:  failed += 1
 
     print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
-    return {"service": "artifactregistry", "ok": True, "downloaded": downloaded, "failed": failed}
+    return {"service": "artifactregistry", "downloaded": downloaded, "failed": failed}
 
 
-# ---------------------------------------------------------------------------
-# vault (re-fetches secret bundle content live by secret ID from DB)
-# ---------------------------------------------------------------------------
-
-def _download_vault(session, args, debug: bool) -> dict:
+def _do_vault(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.vault.utilities.helpers import VaultSecretsResource
 
     session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
     resource = VaultSecretsResource(session=session)
-
-    secret_rows = _all_rows(session, "vault_secret")
-    print(f"[*] vault: {len(secret_rows):,} secrets in DB")
-    if not secret_rows:
-        return {"service": "vault", "ok": True, "downloaded": 0, "failed": 0}
+    rows = _all_rows(session, "vault_secret")
+    secret_ids = [str(r.get("id") or "").strip() for r in rows if r.get("id")]
+    print(f"[*] vault: {len(secret_ids):,} secrets in DB")
+    if not secret_ids:
+        return {"service": "vault", "downloaded": 0, "failed": 0}
 
     dump_dir = _dl_base(session, "vault", "secrets")
     dump_dir.mkdir(parents=True, exist_ok=True)
-
-    secret_ids = [str(r.get("id") or "").strip() for r in secret_rows if r.get("id")]
-    budget = DownloadBudget(session, label="Vault secret bundles")
-
     try:
-        results = resource.dump(
-            dump_dir=dump_dir,
-            secret_ids=[s for s in secret_ids if s],
-            expand_versions=False,
-        )
-        downloaded = len([r for r in (results or []) if r.get("saved")])
-        failed = len([r for r in (results or []) if not r.get("saved")])
+        results = resource.dump(dump_dir=dump_dir, secret_ids=secret_ids, expand_versions=False) or []
+        downloaded = len([r for r in results if r.get("saved")])
+        failed     = len([r for r in results if not r.get("saved")])
     except Exception as err:
         print(f"{UtilityTools.RED}[X] vault dump error: {err}{UtilityTools.RESET}")
-        return {"service": "vault", "ok": False, "error": str(err)}
+        return {"service": "vault", "downloaded": 0, "failed": len(secret_ids)}
 
     print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
-    return {"service": "vault", "ok": True, "downloaded": downloaded, "failed": failed}
+    return {"service": "vault", "downloaded": downloaded, "failed": failed}
+
+
+def _do_certificates(session, args, tokens: frozenset[str]) -> dict:
+    from ocinferno.modules.certificates.utilities.helpers import CertificatesResource
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+    resource = CertificatesResource(session=session)
+    rows = _all_rows(session, "certificates")
+    print(f"[*] certificates: {len(rows):,} in DB")
+    if not rows:
+        return {"service": "certificates", "downloaded": 0, "failed": 0}
+
+    downloaded = failed = 0
+    budget = DownloadBudget(session, label="Certificate bundles")
+    for row in rows:
+        if budget.exceeded():
+            break
+        rid = str(row.get("id") or "").strip()
+        if not rid:
+            continue
+        comp_id = str(row.get("compartment_id") or "").strip()
+        out_path = session.get_download_save_path(
+            service_name="certificates", filename="bundle.pem",
+            compartment_id=comp_id, subdirs=["certificates", rid])
+        try: ok = resource.download_bundle(resource_id=rid, out_path=out_path)
+        except Exception: ok = False
+        if ok: downloaded += 1
+        else:  failed += 1
+
+    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
+    return {"service": "certificates", "downloaded": downloaded, "failed": failed}
+
+
+def _do_dataflow(session, args, tokens: frozenset[str]) -> dict:
+    from ocinferno.modules.dataflow.utilities.helpers import DataflowApplicationsResource
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+    resource = DataflowApplicationsResource(session=session)
+    rows = _all_rows(session, "dataflow_applications")
+    print(f"[*] dataflow: {len(rows):,} applications in DB")
+    if not rows:
+        return {"service": "dataflow", "downloaded": 0, "failed": 0}
+
+    downloaded = failed = 0
+    budget = DownloadBudget(session, label="Dataflow scripts")
+    for row in rows:
+        if budget.exceeded():
+            break
+        rid = str(row.get("id") or "").strip()
+        if not rid:
+            continue
+        comp_id = str(row.get("compartment_id") or "").strip()
+        out_dir = session.get_download_save_path(
+            service_name="dataflow", filename="scripts",
+            compartment_id=comp_id, subdirs=["applications", rid])
+        try:
+            written = resource.download_script(resource_id=rid, out_path_dir=str(out_dir))
+            if written: downloaded += written
+            else: failed += 1
+        except Exception:
+            failed += 1
+
+    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
+    return {"service": "dataflow", "downloaded": downloaded, "failed": failed}
+
+
+def _do_datascience(session, args, tokens: frozenset[str]) -> dict:
+    from ocinferno.modules.datascience.utilities.helpers import (
+        DataScienceModelsResource,
+        DataScienceJobsResource,
+    )
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+    downloaded = failed = 0
+    budget = DownloadBudget(session, label="Data Science artifacts")
+
+    for resource_cls, table in [
+        (DataScienceModelsResource, "data_science_models"),
+        (DataScienceJobsResource,   "data_science_jobs"),
+    ]:
+        resource = resource_cls(session=session)
+        rows = _all_rows(session, table)
+        print(f"[*] datascience {table}: {len(rows):,} in DB")
+        for row in rows:
+            if budget.exceeded():
+                break
+            rid = str(row.get("id") or "").strip()
+            if not rid:
+                continue
+            comp_id = str(row.get("compartment_id") or "").strip()
+            out_path = session.get_download_save_path(
+                service_name="datascience", filename="artifact.zip",
+                compartment_id=comp_id, subdirs=[table, rid])
+            try: ok = resource.download_artifact(resource_id=rid, out_path=out_path)
+            except Exception: ok = False
+            if ok: downloaded += 1
+            else:  failed += 1
+
+    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
+    return {"service": "datascience", "downloaded": downloaded, "failed": failed}
+
+
+def _do_iot(session, args, tokens: frozenset[str]) -> dict:
+    from ocinferno.modules.iot.utilities.helpers import (
+        IotDigitalTwinModelsResource,
+        IotDigitalTwinInstancesResource,
+    )
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+    downloaded = failed = 0
+    budget = DownloadBudget(session, label="IoT digital twin content")
+
+    specs = []
+    if "iot_models" in tokens:
+        specs.append((IotDigitalTwinModelsResource, "iot_digital_twin_models", "models"))
+    if "iot_instances" in tokens:
+        specs.append((IotDigitalTwinInstancesResource, "iot_digital_twin_instances", "instances"))
+
+    for resource_cls, table, subdir in specs:
+        resource = resource_cls(session=session)
+        rows = _all_rows(session, table)
+        print(f"[*] iot {subdir}: {len(rows):,} in DB")
+        for row in rows:
+            if budget.exceeded():
+                break
+            rid = str(row.get("id") or "").strip()
+            if not rid:
+                continue
+            comp_id = str(row.get("compartment_id") or "").strip()
+            out_path = session.get_download_save_path(
+                service_name="iot", filename="content.bin",
+                compartment_id=comp_id, subdirs=[subdir, rid])
+            try: ok = resource.download(resource_id=rid, out_path=out_path)
+            except Exception: ok = False
+            if ok: downloaded += 1
+            else:  failed += 1
+
+    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
+    return {"service": "iot", "downloaded": downloaded, "failed": failed}
+
+
+def _do_functions(session, args, tokens: frozenset[str]) -> dict:
+    rows_apps = _all_rows(session, "functions_apps")
+    rows_fns  = _all_rows(session, "functions_functions")
+    print(f"[*] functions: {len(rows_apps):,} apps, {len(rows_fns):,} functions in DB")
+
+    downloaded = failed = 0
+    for row in rows_apps:
+        if _write_field(session, row, field="config", service_name="functions",
+                        subdir="application-config", filename="config.json"):
+            downloaded += 1
+        elif row.get("id"):
+            failed += 1
+    for row in rows_fns:
+        if _write_field(session, row, field="config", service_name="functions",
+                        subdir="function-config", filename="config.json"):
+            downloaded += 1
+        elif row.get("id"):
+            failed += 1
+
+    print(f"    done: {downloaded:,} written, {failed:,} empty/failed")
+    return {"service": "functions", "downloaded": downloaded, "failed": failed}
+
+
+def _do_container_env(session, args, tokens: frozenset[str]) -> dict:
+    from ocinferno.modules.containerinstances.utilities.helpers import ContainerInstancesResource
+
+    session.download_time_budget = int(getattr(args, "download_timeout", 0) or 0)
+    resource = ContainerInstancesResource(session=session)
+    rows = _all_rows(session, "container_instances")
+    print(f"[*] containerinstances: {len(rows):,} in DB")
+    if not rows:
+        return {"service": "container_env", "downloaded": 0, "failed": 0}
+
+    downloaded = failed = 0
+    budget = DownloadBudget(session, label="Container instance configs")
+    for row in rows:
+        if budget.exceeded():
+            break
+        rid = str(row.get("id") or "").strip()
+        if not rid:
+            continue
+        comp_id = str(row.get("compartment_id") or "").strip()
+        out_path = session.get_download_save_path(
+            service_name="containerinstances", filename="container_config.json",
+            compartment_id=comp_id, subdirs=["instances", rid])
+        try: ok = resource.download_container_configs(resource_id=rid, out_path=out_path)
+        except Exception: ok = False
+        if ok: downloaded += 1
+        else:  failed += 1
+
+    print(f"    done: {downloaded:,} downloaded, {failed:,} failed")
+    return {"service": "container_env", "downloaded": downloaded, "failed": failed}
+
+
+def _do_devops_pipeline_config(session, args, tokens: frozenset[str]) -> dict:
+    rows_build  = _all_rows(session, "devops_build_pipelines")
+    rows_deploy = _all_rows(session, "devops_deploy_pipelines")
+    print(f"[*] devops: {len(rows_build):,} build pipelines, {len(rows_deploy):,} deploy pipelines in DB")
+
+    downloaded = failed = 0
+    for row in rows_build:
+        if _write_field(session, row, field="build_pipeline_parameters",
+                        service_name="devops", subdir="build-pipeline-params",
+                        filename="parameters.json"):
+            downloaded += 1
+        elif row.get("id"):
+            failed += 1
+    for row in rows_deploy:
+        if _write_field(session, row, field="deploy_pipeline_parameters",
+                        service_name="devops", subdir="deploy-pipeline-params",
+                        filename="parameters.json"):
+            downloaded += 1
+        elif row.get("id"):
+            failed += 1
+
+    print(f"    done: {downloaded:,} written, {failed:,} empty/failed")
+    return {"service": "devops_pipeline_config", "downloaded": downloaded, "failed": failed}
+
+
+def _do_devops_repos(session, args, tokens: frozenset[str]) -> dict:
+    # DevOps repos are git clones — cannot be recovered from DB metadata alone.
+    print("[*] devops_repos: skipped — git clone requires a live API call, not cached DB data")
+    return {"service": "devops_repos", "downloaded": 0, "failed": 0, "skipped": True}
 
 
 # ---------------------------------------------------------------------------
-# Service registry
+# Token → handler mapping
 # ---------------------------------------------------------------------------
 
-_SERVICES: dict[str, tuple[str, object]] = {
-    "objectstorage":    ("Object Storage objects",               _download_objectstorage),
-    "apigateway":       ("API Gateway content + SDK artifacts",  _download_apigateway),
-    "compute":          ("Compute instance-agent command files", _download_compute),
-    "resourcemanager":  ("Resource Manager stack/job files",     _download_resourcemanager),
-    "artifactregistry": ("Artifact Registry generic artifacts",  _download_artifactregistry),
-    "vault":            ("Vault secret bundles",                 _download_vault),
+_TOKEN_HANDLERS: dict[str, Callable] = {
+    # object storage
+    "buckets":                _do_objectstorage,
+    "objects":                _do_objectstorage,
+    "blobs":                  _do_objectstorage,
+    "object_storage":         _do_objectstorage,
+    # API gateway
+    "api_content":            _do_apigateway,
+    "api_specs":              _do_apigateway,
+    "sdks":                   _do_apigateway,
+    # compute
+    "compute":                _do_compute,
+    # resource manager
+    "orm_variables":          _do_resourcemanager,
+    "orm_jobs":               _do_resourcemanager,
+    "orm_templates":          _do_resourcemanager,
+    # artifact registry
+    "artifacts":              _do_artifactregistry,
+    # vault
+    "vault_secrets":          _do_vault,
+    # certificates
+    "certificate_bundles":    _do_certificates,
+    # dataflow
+    "dataflow_scripts":       _do_dataflow,
+    # data science
+    "datascience_artifacts":  _do_datascience,
+    # IoT
+    "iot_models":             _do_iot,
+    "iot_instances":          _do_iot,
+    # functions config (pure DB)
+    "function_config":        _do_functions,
+    # container instance env
+    "container_env":          _do_container_env,
+    # devops
+    "devops_pipeline_config": _do_devops_pipeline_config,
+    "devops_repos":           _do_devops_repos,
 }
-
-ALL_SERVICES = list(_SERVICES.keys())
 
 
 # ---------------------------------------------------------------------------
@@ -414,58 +663,72 @@ ALL_SERVICES = list(_SERVICES.keys())
 # ---------------------------------------------------------------------------
 
 def run_module(user_args, session):
+    all_tokens = sorted(_TOKEN_HANDLERS)
     parser = argparse.ArgumentParser(
         prog="process_download_cached",
         description=(
-            "Re-download content from already-enumerated DB rows — no live enumeration. "
-            f"Services: {', '.join(ALL_SERVICES)}"
+            "Re-download content using already-enumerated DB rows — no live list calls.\n"
+            "Uses the same --download / --not-downloads token system as enum_all."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--download", nargs="*", default=None,
+        help=(
+            "Download categories/tokens (space or comma separated). Same as enum_all.\n"
+            "  --download                # all\n"
+            "  --download content        # heavy: objects, vault, artifacts, certs, ...\n"
+            "  --download metadata       # light: compute, functions, devops, ...\n"
+            "  --download buckets        # single token\n"
+            f"Tokens: {', '.join(all_tokens)}"
         ),
     )
     parser.add_argument(
-        "--services", "-s",
-        default="all",
-        help=f"Comma-separated services, or 'all' (default). Choices: {', '.join(ALL_SERVICES)}",
+        "--not-downloads", dest="not_downloads", nargs="*", default=None,
+        help="Exclude categories/tokens (space or comma separated). Same as enum_all.",
     )
-    # Object storage extras
     parser.add_argument("--object-namespaces", action="append", default=[], dest="object_namespaces",
-                        help="Restrict object storage download to these namespaces (repeatable, CSV)")
+                        help="Restrict object storage to these namespaces (repeatable, CSV)")
     parser.add_argument("--object-buckets", action="append", default=[], dest="object_buckets",
-                        help="Restrict object storage download to these buckets (repeatable, CSV)")
+                        help="Restrict object storage to these buckets (repeatable, CSV)")
     parser.add_argument("--sse-c-key-b64", default=None, dest="sse_c_key_b64",
                         help="Base64 AES-256 key for SSE-C encrypted objects")
     parser.add_argument("--download-timeout", type=int, default=0, dest="download_timeout",
-                        help="Per-type wall-clock cap in seconds (0 = unlimited)")
+                        help="Per-service wall-clock cap in seconds (0 = unlimited)")
     args = parser.parse_args(user_args)
 
-    debug = bool(getattr(session, "individual_run_debug", False) or getattr(session, "debug", False))
-
-    raw_services = str(args.services or "all").strip().lower()
-    if raw_services == "all":
-        selected = ALL_SERVICES
-    else:
-        selected = [s.strip() for s in raw_services.split(",") if s.strip()]
-        unknown = [s for s in selected if s not in _SERVICES]
-        if unknown:
-            print(f"{UtilityTools.RED}[X] Unknown service(s): {', '.join(unknown)}. "
-                  f"Valid: {', '.join(ALL_SERVICES)}{UtilityTools.RESET}")
-            return {"ok": False, "error": f"unknown services: {unknown}"}
+    tokens = _active_tokens(args.download, args.not_downloads)
+    if not tokens:
+        print(
+            f"{UtilityTools.YELLOW}[!] Nothing selected. Pass --download (or --download <token>) "
+            f"to choose what to re-download.\n"
+            f"    Available tokens: {', '.join(all_tokens)}{UtilityTools.RESET}"
+        )
+        return {"ok": True, "components": []}
 
     out_root = _root(session) / session.OUTPUT_DIR_NAMES["downloads"]
     print(f"[*] process_download_cached: writing to {out_root}")
+    print(f"[*] active tokens: {', '.join(sorted(tokens))}")
 
+    seen_handlers: set[int] = set()
     results = []
-    for svc in selected:
-        label, fn = _SERVICES[svc]
-        print(f"\n[*] {label} ...")
+    for tok in sorted(tokens):
+        handler = _TOKEN_HANDLERS.get(tok)
+        if handler is None:
+            print(f"{UtilityTools.YELLOW}[!] no handler for token '{tok}' — skipped{UtilityTools.RESET}")
+            continue
+        hid = id(handler)
+        if hid in seen_handlers:
+            continue
+        seen_handlers.add(hid)
         try:
-            result = fn(session, args, debug)
+            result = handler(session, args, tokens)
         except Exception as err:
-            print(f"{UtilityTools.RED}[X] {svc}: {type(err).__name__}: {err}{UtilityTools.RESET}")
-            result = {"service": svc, "ok": False, "error": str(err)}
+            print(f"{UtilityTools.RED}[X] {tok}: {type(err).__name__}: {err}{UtilityTools.RESET}")
+            result = {"service": tok, "downloaded": 0, "failed": 0, "error": str(err)}
         results.append(result)
 
     total_dl  = sum(r.get("downloaded", 0) for r in results)
     total_err = sum(r.get("failed",     0) for r in results)
-    print(f"\n[*] done — {total_dl:,} files, {total_err:,} failed across {len(selected)} service(s)")
-
+    print(f"\n[*] done — {total_dl:,} files, {total_err:,} failed")
     return {"ok": True, "components": results}
