@@ -16,8 +16,10 @@ Both steps are **Process** (no OCI API calls) — run ``enum_all`` /
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from importlib import resources
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ocinferno.core.console import UtilityTools
@@ -189,6 +191,65 @@ def _print_inventory_report(records, summary) -> None:
           f"{summary.get('private_endpoints', 0)} private{UtilityTools.RESET}")
 
 
+# ── export helpers ─────────────────────────────────────────────────────────────
+
+_EXPORT_COLS = [
+    "kind", "scope", "value", "service", "resource_name", "resource_id",
+    "context", "compartment_id", "source_table", "column_name",
+]
+
+
+def _resolve_out_path(requested: str, session, suffix: str) -> Path:
+    p = session.resolve_output_path(
+        requested_path=requested,
+        service_name="everything",
+        filename=f"network_resources{suffix}",
+        compartment_id=getattr(session, "compartment_id", None),
+        subdirs=["reports"],
+        target="export",
+    )
+    return p
+
+
+def _write_csv(records: List[Dict[str, Any]], requested_path: str, session) -> None:
+    out = _resolve_out_path(requested_path, session, ".csv")
+    try:
+        with open(out, "w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=_EXPORT_COLS, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(records)
+        print(f"[*] Wrote network inventory CSV: {out}")
+    except Exception as e:
+        print(f"{UtilityTools.RED}[X] Failed writing CSV:{UtilityTools.RESET} {type(e).__name__}: {e}")
+
+
+def _write_xlsx(records: List[Dict[str, Any]], requested_path: str, session) -> None:
+    out = _resolve_out_path(requested_path, session, ".xlsx")
+    if out.suffix.lower() not in {".xlsx", ".xlsm"}:
+        out = out.with_suffix(".xlsx")
+    try:
+        import xlsxwriter  # optional [excel] extra
+    except ImportError:
+        print(f"{UtilityTools.RED}[X] xlsxwriter not installed — "
+              f"run: pip install ocinferno[excel]{UtilityTools.RESET}")
+        return
+    try:
+        workbook = xlsxwriter.Workbook(str(out))
+        ws = workbook.add_worksheet("Network Inventory")
+        hdr_fmt = workbook.add_format({"bold": True, "bg_color": "#1F3864", "font_color": "#FFFFFF"})
+        for col_idx, col in enumerate(_EXPORT_COLS):
+            ws.write(0, col_idx, col, hdr_fmt)
+        for row_idx, rec in enumerate(records, start=1):
+            for col_idx, col in enumerate(_EXPORT_COLS):
+                ws.write(row_idx, col_idx, str(rec.get(col) or ""))
+        ws.autofilter(0, 0, len(records), len(_EXPORT_COLS) - 1)
+        ws.freeze_panes(1, 0)
+        workbook.close()
+        print(f"[*] Wrote network inventory XLSX: {out}")
+    except Exception as e:
+        print(f"{UtilityTools.RED}[X] Failed writing XLSX:{UtilityTools.RESET} {type(e).__name__}: {e}")
+
+
 # ── parser ─────────────────────────────────────────────────────────────────────
 
 def _parse_args(user_args) -> argparse.Namespace:
@@ -222,6 +283,11 @@ def _parse_args(user_args) -> argparse.Namespace:
                    help="Inventory: only report values containing this substring.")
     p.add_argument("--json-out", default=None,
                    help="Inventory: write the full inventory JSON to a file path.")
+    p.add_argument("--csv-out", default=None,
+                   help="Inventory: write the full inventory to a CSV file path.")
+    p.add_argument("--xlsx-out", default=None,
+                   help="Inventory: write the full inventory to an Excel (.xlsx) file path "
+                        "(requires the [excel] extra: pip install ocinferno[excel]).")
     p.add_argument("--quiet", action="store_true",
                    help="Inventory: do not print the identifier tables (still persists and reports counts).")
 
@@ -309,6 +375,12 @@ def run_module(user_args, session) -> Dict[str, Any]:
             print(f"[*] Wrote network inventory JSON: {out_path}")
         except Exception as e:
             print(f"{UtilityTools.RED}[X] Failed writing network inventory JSON:{UtilityTools.RESET} {type(e).__name__}: {e}")
+
+        if args.csv_out:
+            _write_csv(records, args.csv_out, session)
+
+        if args.xlsx_out:
+            _write_xlsx(records, args.xlsx_out, session)
 
         result.update({"inventory_records": len(records), "inventory_saved": saved, "inventory_summary": summary})
 
