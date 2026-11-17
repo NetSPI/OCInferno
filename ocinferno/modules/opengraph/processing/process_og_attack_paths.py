@@ -315,7 +315,10 @@ def _idd_compound_paths(
                 for vpath in vpaths:
                     if attacker == victim_id or admin_role_id == victim_id:
                         continue
-                    compound.append([attacker, admin_role_id] + vpath)
+                    full = [attacker, admin_role_id] + vpath
+                    if len(set(full)) < len(full):
+                        continue  # cycle — node appears twice
+                    compound.append(full)
 
     return compound
 
@@ -602,8 +605,11 @@ def run_module(user_args: list[str], session) -> dict:
         if args.debug:
             print(f"[attack_paths] IDD compound paths: {len(compound)} generated", file=sys.stderr)
 
+    # Drop any path where a node appears twice (cycles / trivially redundant chains)
+    paths = [p for p in paths if len(set(p)) == len(p)]
+
     if args.debug:
-        print(f"[attack_paths] Found {len(paths)} paths (incl. compound)", file=sys.stderr)
+        print(f"[attack_paths] Found {len(paths)} paths (incl. compound, post-dedup)", file=sys.stderr)
 
     # Group paths by target
     paths_by_target: dict[str, list[list[str]]] = {}

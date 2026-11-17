@@ -144,12 +144,18 @@ EXEC_EDGE_KINDS = frozenset({
 # Full manage verb
 MANAGE_EDGE_KIND = "OCI_MANAGE"
 
-# Default high-impact priv-esc targets (OCI_MANAGE + IAM-control only).
-# RPST_CREATE_EDGE_KINDS and EXEC_EDGE_KINDS are opt-in via --include-rpst.
-DEFAULT_PRIV_EDGE_KINDS = (
-    frozenset({MANAGE_EDGE_KIND})
-    | IAM_CONTROL_EDGE_KINDS
-)
+# Default high-impact priv-esc terminal destinations.
+# Only OCI_MANAGE (all-resources) + policy create/update.
+# The other IAM_CONTROL_EDGE_KINDS (group/user updates, add-self-to-group,
+# IDD_CREATE_USER, etc.) remain as traversal edges — the BFS goes THROUGH
+# them to reach these high-value destinations — but they are not surfaced
+# as terminal targets themselves by default.
+DEFAULT_PRIV_EDGE_KINDS = frozenset({
+    MANAGE_EDGE_KIND,
+    "OCI_CAN_CREATE_POLICY",
+    "OCI_CREATE_POLICY",
+    "OCI_UPDATE_POLICY",
+})
 
 # IDD admin role edges included in the default target set.
 # Only full Identity Domain Administrator (IDD_IDENTITY_ADMIN_USER).
