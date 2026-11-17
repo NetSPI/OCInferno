@@ -25,6 +25,7 @@ from ocinferno.modules.opengraph.utilities.helpers.pathfinding.model import (
     _JOIN_DG_SUFFIX,
     DEFAULT_PRIV_EDGE_KINDS,
     DG_INJECTION_EDGE_KINDS,
+    FROM_TYPE_ALIASES,
     IAM_CONTROL_EDGE_KINDS,
     MANAGE_EDGE_KIND,
     RPST_CREATE_EDGE_KINDS,
@@ -115,6 +116,14 @@ Examples:
         "--from", metavar="SUBSTR", action="append", default=[], dest="from_filter",
         help="Only start paths at principals whose id/name contains this substring. Repeatable.",
     )
+    p.add_argument(
+        "--from-type", metavar="TYPE", action="append", default=[], dest="from_types",
+        help=(
+            "Only start paths at principals of these kinds. Comma-separated or repeatable. "
+            "Choices: user, group, dg (dynamic_group), any_user, any_group, service. "
+            "Example: --from-type user,group"
+        ),
+    )
 
     # Search options
     sg = p.add_argument_group("Search options")
@@ -175,6 +184,14 @@ Examples:
         help="Write report to this file instead of stdout.",
     )
     og.add_argument(
+        "--target-scope", metavar="SUBSTR", default=None,
+        help=(
+            "Filter computed targets to only nodes whose id contains this substring. "
+            "Useful to narrow results to a specific compartment or tenancy. "
+            "Example: --target-scope ocid1.tenancy (only tenancy-level priv-esc)"
+        ),
+    )
+    og.add_argument(
         "--list-targets", action="store_true", default=False,
         help="List the nodes matched by the target selector, then exit.",
     )
@@ -190,13 +207,125 @@ Examples:
 
 
 # ---------------------------------------------------------------------------
+# IDD compound path generation
+# ---------------------------------------------------------------------------
+
+_IDD_ADMIN_EDGE_KINDS = frozenset({
+    "IDD_IDENTITY_ADMIN_USER",
+    "IDD_USER_ADMIN",
+    "IDD_USER_MANAGER",
+})
+
+
+def _idd_compound_paths(
+    graph: "AttackGraph",
+    primary_targets: set[str],
+    source_filter: set[str] | None,
+    excluded: set[str],
+    max_depth: int = 10,
+) -> list[list[str]]:
+    """Generate compound IDD admin attack chains.
+
+    When an attacker holds an identity-domain admin role (Identity Domain
+    Administrator / User Administrator / User Manager) and a victim user in
+    that domain has their own privilege-escalation paths, the attacker can
+    reset the victim's credentials and exploit those paths.
+
+    Shape: attacker --[APP_ROLE_GRANTED]--> admin_role
+                    --[IDD_*_USER/MANAGER]--> victim
+                    --[victim's PE path]--> target
+
+    This cannot be found by the base BFS because:
+    - In shortest_paths, the attacker's min-dist path is the shorter
+      IDD_CREATE_USER/admin-role-as-target route.
+    - In enumerate_paths, the backward BFS stops at victim (a principal).
+    """
+    # Build admin_role -> victim map from IDD admin edges
+    admin_role_victims: dict[str, set[str]] = {}
+    for e in graph.edges:
+        if e.kind in _IDD_ADMIN_EDGE_KINDS:
+            admin_role_victims.setdefault(e.src, set()).add(e.dst)
+    if not admin_role_victims:
+        return []
+
+    # Collect all victim user IDs (users targeted by IDD admin roles)
+    all_victim_ids: set[str] = set()
+    for victim_ids in admin_role_victims.values():
+        all_victim_ids.update(victim_ids)
+    all_victim_ids -= excluded
+
+    if not all_victim_ids:
+        return []
+
+    # Find PE paths for victim users (run shortest_paths with victims as source filter)
+    victim_paths_list = shortest_paths(
+        graph, primary_targets,
+        max_depth=max_depth,
+        source_filter=all_victim_ids,
+        excluded_nodes=excluded,
+    )
+    if not victim_paths_list:
+        return []
+
+    # Index victim paths by victim user ID
+    victim_base_paths: dict[str, list[list[str]]] = {}
+    for p in victim_paths_list:
+        victim_base_paths.setdefault(p[0], []).append(p)
+
+    compound: list[list[str]] = []
+    for admin_role_id, victim_ids in admin_role_victims.items():
+        if admin_role_id in excluded:
+            continue
+        # Find direct APP_ROLE_GRANTED holders of this admin role
+        attackers: list[str] = []
+        for src, eidx in graph.radj.get(admin_role_id) or []:
+            e = graph.edges[eidx]
+            if e.kind != "APP_ROLE_GRANTED":
+                continue
+            if src in excluded:
+                continue
+            if source_filter is not None and src not in source_filter:
+                continue
+            if not graph.is_principal(src):
+                continue
+            attackers.append(src)
+
+        if not attackers:
+            continue
+
+        for victim_id in victim_ids:
+            if victim_id in excluded:
+                continue
+            vpaths = victim_base_paths.get(victim_id)
+            if not vpaths:
+                continue
+            for attacker in attackers:
+                for vpath in vpaths:
+                    if attacker == victim_id or admin_role_id == victim_id:
+                        continue
+                    compound.append([attacker, admin_role_id] + vpath)
+
+    return compound
+
+
+# ---------------------------------------------------------------------------
 # Target resolution
 # ---------------------------------------------------------------------------
 
 def _resolve_targets(
     graph: AttackGraph,
     args: argparse.Namespace,
-) -> set[str]:
+) -> tuple[set[str], set[str]]:
+    """Return (primary_targets, admin_role_targets).
+
+    primary_targets — priv-esc edge destinations (OCI_MANAGE, IAM-control, etc.)
+    admin_role_targets — IDD admin role SOURCE nodes (targeted by source, not destination).
+
+    Keeping them separate lets the two-pass BFS in run_module find paths that
+    traverse *through* an admin role node toward a downstream priv-esc target
+    (e.g. UserA → AdminRole → UserB → manage tenancy) rather than stopping at
+    the admin role as the terminal target.
+    """
     any_explicit = (
         args.to_manage or args.to_iam or args.to_rpst
         or args.to_kind or args.to_node or args.to_any
@@ -205,7 +334,6 @@ def _resolve_targets(
     target_edge_kinds: frozenset[str] = frozenset()
 
     if args.to_any:
-        # Every capability edge destination, plus DG-injection edges (reaching the DG).
         all_cap = DEFAULT_PRIV_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
             e.kind for e in graph.edges
             if e.kind.endswith(_JOIN_DG_SUFFIX)
@@ -221,36 +349,31 @@ def _resolve_targets(
             combined |= RPST_CREATE_EDGE_KINDS
         target_edge_kinds = frozenset(combined)
     else:
-        # Default: all privilege-escalation edges
         target_edge_kinds = DEFAULT_PRIV_EDGE_KINDS
 
-    # Collect from edges
-    targets: set[str] = set(graph.iter_priv_targets(target_edge_kinds))
+    primary_targets: set[str] = set(graph.iter_priv_targets(target_edge_kinds))
 
-    # Identity-domain admin app-roles are privesc by their SOURCE node (the app-role itself),
-    # not their destination. Include them when targeting IAM-control capabilities (default,
-    # --to-iam) or everything (--to-any) so default analysis surfaces identity-domain admin
-    # escalation (which modern IDD tenancies rely on).
-    if args.to_any or args.to_iam or not any_explicit:
-        targets |= set(graph.iter_admin_role_targets())
-
-    # Add explicitly named nodes
+    # Add explicitly named nodes and kind-matched nodes to primary targets
     for nid in args.to_node:
         if nid in graph.nodes:
-            targets.add(nid)
+            primary_targets.add(nid)
         else:
-            # Try substring match
             for gid in graph.nodes:
                 if nid.lower() in gid.lower():
-                    targets.add(gid)
+                    primary_targets.add(gid)
 
-    # Add nodes by kind
     for kind in args.to_kind:
         for nid, n in graph.nodes.items():
             if kind in (n.get("kinds") or []):
-                targets.add(nid)
+                primary_targets.add(nid)
 
-    return targets
+    # IDD admin role SOURCE nodes — kept separate so the main BFS can traverse
+    # through them as intermediate steps toward downstream priv-esc targets.
+    admin_role_targets: set[str] = set()
+    if args.to_any or args.to_iam or not any_explicit:
+        admin_role_targets = set(graph.iter_admin_role_targets())
+
+    return primary_targets, admin_role_targets
 
 
 # ---------------------------------------------------------------------------
@@ -283,21 +406,31 @@ def run_module(user_args: list[str], session) -> dict:
             print(f"  {cnt:7,}  {ek}")
         return {"ok": True}
 
-    # Resolve targets
-    targets = _resolve_targets(graph, args)
+    # Resolve targets (two separate sets — see docstring)
+    primary_targets, admin_role_targets = _resolve_targets(graph, args)
+    all_targets = primary_targets | admin_role_targets
+
+    # Apply --target-scope filter to narrow results to a specific compartment/tenancy
+    if args.target_scope:
+        scope_lc = args.target_scope.lower()
+        all_targets = {t for t in all_targets if scope_lc in t.lower()}
+        # Keep admin role targets only if still in the filtered set
+        admin_role_targets &= all_targets
+        primary_targets &= all_targets
 
     # List targets mode
     if args.list_targets:
-        print(f"Targets ({len(targets)}):")
-        for tid in sorted(targets):
+        print(f"Targets ({len(all_targets)}) — primary: {len(primary_targets)}, admin-role: {len(admin_role_targets)}:")
+        for tid in sorted(all_targets):
             label = graph.node_display(tid)
             kinds = graph.node_kinds(tid)
-            print(f"  {label}  [{', '.join(kinds)}]")
+            tag = "  [admin-role]" if tid in admin_role_targets else ""
+            print(f"  {label}  [{', '.join(kinds)}]{tag}")
             if label != tid:
                 print(f"    id: {tid}")
         return {"ok": True}
 
-    if not targets:
+    if not all_targets:
         print("[attack_paths] No target nodes matched the selector.", file=sys.stderr)
         return {"ok": False, "error": "no targets"}
 
@@ -308,7 +441,7 @@ def run_module(user_args: list[str], session) -> dict:
             if substr.lower() in nid.lower():
                 excluded.add(nid)
 
-    # Resolve source filter
+    # Resolve source filter — substring match
     source_filter: set[str] | None = None
     if args.from_filter:
         source_filter = set()
@@ -319,37 +452,140 @@ def run_module(user_args: list[str], session) -> dict:
                     if graph.is_principal(nid):
                         source_filter.add(nid)
 
+    # Resolve --from-type kind filter and intersect with substring filter
+    if args.from_types:
+        wanted_kinds: set[str] = set()
+        for raw in args.from_types:
+            for tok in raw.split(","):
+                tok = tok.strip().lower()
+                if tok in FROM_TYPE_ALIASES:
+                    wanted_kinds.add(FROM_TYPE_ALIASES[tok])
+                else:
+                    print(f"[attack_paths] WARNING: unknown --from-type value {tok!r}. Valid: {', '.join(sorted(FROM_TYPE_ALIASES))}", file=sys.stderr)
+        if wanted_kinds:
+            type_matched = {
+                nid for nid, n in graph.nodes.items()
+                if graph.is_principal(nid) and any(k in wanted_kinds for k in (n.get("kinds") or []))
+            }
+            source_filter = type_matched if source_filter is None else (source_filter & type_matched)
+
+    # -----------------------------------------------------------------
+    # Two-pass BFS:
+    #   Pass 1 — primary priv-esc targets only (IDD admin roles are
+    #            intermediate steps, so full chains are found, e.g.
+    #            UserA → AdminRole → UserB → manage tenancy)
+    #   Pass 2 — admin role SOURCE targets only, for principals that
+    #            had no path in pass 1 (catches "has admin role, no
+    #            downstream PE found" cases)
+    # -----------------------------------------------------------------
+
     if args.all_paths:
         max_depth = args.max_depth if args.max_depth is not None else 7
         if args.debug:
-            print(f"[attack_paths] enumerate_paths mode, max_depth={max_depth}, targets={len(targets)}", file=sys.stderr)
-        paths = enumerate_paths(
-            graph, targets,
-            max_depth=max_depth,
-            max_paths=args.max_paths,
-            max_expansions=args.max_expansions,
-            source_filter=source_filter,
-            excluded_nodes=excluded,
-            no_direct=args.no_direct,
-            no_default_admin_group_hop=args.no_default_admin_group_hop,
-        )
+            print(f"[attack_paths] enumerate_paths mode, max_depth={max_depth}", file=sys.stderr)
+
+        paths: list = []
+        if primary_targets:
+            paths = enumerate_paths(
+                graph, primary_targets,
+                max_depth=max_depth,
+                max_paths=args.max_paths,
+                max_expansions=args.max_expansions,
+                source_filter=source_filter,
+                excluded_nodes=excluded,
+                no_direct=args.no_direct,
+                no_default_admin_group_hop=args.no_default_admin_group_hop,
+            )
+
+        # Pass 2: admin role targets for principals not already in pass 1
+        if admin_role_targets and len(paths) < args.max_paths:
+            found_sources = {p[0] for p in paths}
+            if source_filter is not None:
+                pass2_filter = source_filter - found_sources
+            else:
+                pass2_filter = {
+                    nid for nid in graph.nodes
+                    if graph.is_principal(nid) and nid not in found_sources
+                }
+            if pass2_filter:
+                remaining_budget = args.max_paths - len(paths)
+                p2 = enumerate_paths(
+                    graph, admin_role_targets,
+                    max_depth=max_depth,
+                    max_paths=remaining_budget,
+                    max_expansions=args.max_expansions,
+                    source_filter=pass2_filter,
+                    excluded_nodes=excluded,
+                    no_direct=args.no_direct,
+                    no_default_admin_group_hop=args.no_default_admin_group_hop,
+                )
+                paths.extend(p2)
         truncated = len(paths) >= args.max_paths
     else:
         max_depth = args.max_depth if args.max_depth is not None else 10
         if args.debug:
-            print(f"[attack_paths] shortest_paths mode, max_depth={max_depth}, targets={len(targets)}", file=sys.stderr)
-        paths = shortest_paths(
-            graph, targets,
-            max_depth=max_depth,
-            source_filter=source_filter,
-            excluded_nodes=excluded,
-            no_direct=args.no_direct,
-            no_default_admin_group_hop=args.no_default_admin_group_hop,
-        )
+            print(f"[attack_paths] shortest_paths mode, max_depth={max_depth}", file=sys.stderr)
+
+        paths = []
+        if primary_targets:
+            paths = shortest_paths(
+                graph, primary_targets,
+                max_depth=max_depth,
+                source_filter=source_filter,
+                excluded_nodes=excluded,
+                no_direct=args.no_direct,
+                no_default_admin_group_hop=args.no_default_admin_group_hop,
+            )
+
+        # Pass 2: admin role targets for principals without a primary-target path
+        if admin_role_targets:
+            found_sources = {p[0] for p in paths}
+            if source_filter is not None:
+                pass2_filter = source_filter - found_sources
+            else:
+                pass2_filter = {
+                    nid for nid in graph.nodes
+                    if graph.is_principal(nid) and nid not in found_sources
+                }
+            if pass2_filter:
+                p2 = shortest_paths(
+                    graph, admin_role_targets,
+                    max_depth=max_depth,
+                    source_filter=pass2_filter,
+                    excluded_nodes=excluded,
+                    no_direct=args.no_direct,
+                    no_default_admin_group_hop=args.no_default_admin_group_hop,
+                )
+                paths.extend(p2)
         truncated = False
 
+    # -----------------------------------------------------------------
+    # Pass 3: IDD compound paths
+    #   attacker --[APP_ROLE_GRANTED]--> admin_role
+    #            --[IDD_*_USER/MANAGER]--> victim --[victim's PE path]--> target
+    # These cannot be found by the BFS (the victim is an intermediate
+    # principal, so the BFS terminates at the victim, not the attacker).
+    # -----------------------------------------------------------------
+    compound = _idd_compound_paths(
+        graph,
+        primary_targets=primary_targets,
+        source_filter=source_filter,
+        excluded=excluded,
+        max_depth=max_depth,
+    )
+    if compound:
+        # Add only compound paths whose (attacker, target) pair isn't already covered
+        existing_pairs = {(p[0], p[-1]) for p in paths}
+        for cp in compound:
+            pair = (cp[0], cp[-1])
+            if pair not in existing_pairs:
+                paths.append(cp)
+                existing_pairs.add(pair)
+        if args.debug:
+            print(f"[attack_paths] IDD compound paths: {len(compound)} generated", file=sys.stderr)
+
     if args.debug:
-        print(f"[attack_paths] Found {len(paths)} paths", file=sys.stderr)
+        print(f"[attack_paths] Found {len(paths)} paths (incl. compound)", file=sys.stderr)
 
     # Group paths by target
     paths_by_target: dict[str, list[list[str]]] = {}
@@ -359,7 +595,7 @@ def run_module(user_args: list[str], session) -> dict:
 
     # Output
     if args.json:
-        result = paths_to_json(graph, paths_by_target, target_ids=targets, truncated=truncated)
+        result = paths_to_json(graph, paths_by_target, target_ids=all_targets, truncated=truncated)
         output = json.dumps(result, indent=2)
     else:
         output = render_report(
@@ -367,7 +603,7 @@ def run_module(user_args: list[str], session) -> dict:
             paths_by_target,
             expanded=args.expanded,
             summary_only=args.summary,
-            target_ids=targets,
+            target_ids=all_targets,
         )
         if truncated:
             output += f"\n[Truncated: showing first {args.max_paths} paths. Use --max-paths to increase.]\n"
@@ -384,7 +620,7 @@ def run_module(user_args: list[str], session) -> dict:
             {
                 "name": "attack_paths",
                 "count": len(paths),
-                "targets": len(targets),
+                "targets": len(all_targets),
             }
         ],
     }

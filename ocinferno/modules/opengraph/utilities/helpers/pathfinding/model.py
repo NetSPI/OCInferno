@@ -22,6 +22,17 @@ PRINCIPAL_KINDS = frozenset({
     "OCIService",
 })
 
+# Short type names usable with --from-type user,group,dg,...
+FROM_TYPE_ALIASES: dict[str, str] = {
+    "user": "OCIUser",
+    "group": "OCIGroup",
+    "dynamic_group": "OCIDynamicGroup",
+    "dg": "OCIDynamicGroup",
+    "any_user": "OCIAnyUser",
+    "any_group": "OCIAnyGroup",
+    "service": "OCIService",
+}
+
 # Synthetic / intermediary node kinds that are collapsed in path display
 BINDING_KINDS = frozenset({
     "OCIPolicyStatement",

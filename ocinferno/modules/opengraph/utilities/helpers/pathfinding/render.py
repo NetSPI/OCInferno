@@ -100,6 +100,27 @@ def _edge_description(edge_kind: str) -> str | None:
     return _EDGE_FRIENDLY.get(edge_kind)
 
 
+_KIND_BADGE_MAP: dict[str, str] = {
+    "OCIUser": "user",
+    "OCIGroup": "group",
+    "OCIDynamicGroup": "dynamic group",
+    "OCIAnyUser": "any user",
+    "OCIAnyGroup": "any group",
+    "OCIService": "service",
+    "OCIIDDAppRole": "role",
+    "OCIIDDApplication": "app",
+}
+
+
+def _kind_badge(kinds: list[str]) -> str:
+    """Return a short type annotation like ' (user)' for the first recognizable kind."""
+    for k in (kinds or []):
+        label = _KIND_BADGE_MAP.get(k)
+        if label:
+            return f" ({label})"
+    return ""
+
+
 # ---------------------------------------------------------------------------
 # Hop dataclass
 # ---------------------------------------------------------------------------
@@ -257,8 +278,10 @@ def render_path_text(graph: "AttackGraph", path: list[str], *, expanded: bool = 
 
     if expanded:
         # Raw mode: show every node and edge
+        src_kinds = graph.node_kinds(path[0])
         src_label = _node_label(graph, path[0])
-        out.write(f"  {src_label}\n")
+        badge = _kind_badge(src_kinds)
+        out.write(f"  {src_label}{badge}\n")
         for i in range(len(path) - 1):
             kind, props = _edge_between(graph, path[i], path[i + 1])
             dst_label = _node_label(graph, path[i + 1])
@@ -266,9 +289,11 @@ def render_path_text(graph: "AttackGraph", path: list[str], *, expanded: bool = 
             out.write(f"    └─[{kind}]─> {dst_label}{cond}\n")
     else:
         assert hops is not None
+        src_kinds = graph.node_kinds(path[0])
         src_label = _node_label(graph, path[0])
+        badge = _kind_badge(src_kinds)
         hop_n = _hop_count(hops)
-        out.write(f"  [{hop_n} hop{'s' if hop_n != 1 else ''}] {src_label}\n")
+        out.write(f"  [{hop_n} hop{'s' if hop_n != 1 else ''}] {src_label}{badge}\n")
         for hop in hops:
             dst_label = _node_label(graph, hop.dst)
             annotation = _hop_annotation(hop)
