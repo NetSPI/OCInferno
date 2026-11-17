@@ -381,7 +381,7 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
             continue
         rid = _resource_id(row)
         rname = _resource_name(row)
-        comp = str(row.get("compartment_id") or "")
+        comp = str(row.get("compartment_id") or row.get("compartment_ocid") or "")
         # For DNS zone records, derive navigable scope from the zone's own scope field.
         # GLOBAL = internet-reachable (public), PRIVATE = VCN-internal (private).
         dns_scope_override = ""

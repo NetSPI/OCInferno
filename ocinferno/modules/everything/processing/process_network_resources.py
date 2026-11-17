@@ -147,20 +147,23 @@ def _print_inventory_report(records, summary) -> None:
             val = r["value"]
             if len(val) > 80:
                 val = val[:77] + "..."
+            cname = r.get("compartment_name") or ""
+            cid   = r.get("compartment_id") or ""
+            comp_display = cname if cname else UtilityTools.condense_ocid(cid) if cid else "—"
             rows.append({
-                "type":       _KIND_LABEL.get(r["kind"], r["kind"]),
-                "scope":      r.get("scope", "") or "—",
-                "endpoint":   val,
-                "service":    r.get("service", r["source_table"]),
-                "resource":   (r["resource_name"] or r["resource_id"])[:40] or "—",
-                "context":    r.get("context", r["column_name"])[:35],
-                "compartment_id": r["compartment_id"],
+                "type":        _KIND_LABEL.get(r["kind"], r["kind"]),
+                "scope":       r.get("scope", "") or "—",
+                "endpoint":    val,
+                "service":     r.get("service", r["source_table"]),
+                "resource":    (r["resource_name"] or r["resource_id"])[:40] or "—",
+                "context":     r.get("context", r["column_name"])[:35],
+                "compartment": comp_display[:40],
             })
         print(f"\n{UtilityTools.BRIGHT_CYAN}[*] Network Scope — IPs / FQDNs / URLs / CIDRs "
               f"({len(navigable)} rows; {pub} public / {priv} private){UtilityTools.RESET}")
         UtilityTools.print_limited_table(
             rows,
-            ["type", "scope", "endpoint", "service", "resource", "context", "compartment_id"],
+            ["type", "scope", "endpoint", "service", "resource", "context", "compartment"],
             title="Network Inventory",
         )
 
@@ -191,11 +194,49 @@ def _print_inventory_report(records, summary) -> None:
           f"{summary.get('private_endpoints', 0)} private{UtilityTools.RESET}")
 
 
+# ── compartment name enrichment ────────────────────────────────────────────────
+
+def _build_compartment_name_map(session) -> Dict[str, str]:
+    """Return {compartment_id: name} from session cache and resource_compartments table."""
+    name_map: Dict[str, str] = {}
+    # Try in-memory cache first (populated by enum_all / list_compartments)
+    for r in (getattr(session, "global_compartment_list", None) or []):
+        if not isinstance(r, dict):
+            continue
+        cid = str(r.get("compartment_id") or r.get("id") or "").strip()
+        name = str(r.get("name") or r.get("display_name") or "").strip()
+        if cid and name:
+            name_map[cid] = name
+    # Fall back to saved table
+    try:
+        for r in (session.get_resource_fields(
+            "resource_compartments",
+            columns=["compartment_id", "id", "name", "display_name"],
+        ) or []):
+            if not isinstance(r, dict):
+                continue
+            cid = str(r.get("compartment_id") or r.get("id") or "").strip()
+            name = str(r.get("name") or r.get("display_name") or "").strip()
+            if cid and name and cid not in name_map:
+                name_map[cid] = name
+    except Exception:
+        pass
+    return name_map
+
+
+def _enrich_compartment_names(records: List[Dict[str, Any]], session) -> None:
+    """Add compartment_name in-place to every record that has a compartment_id."""
+    name_map = _build_compartment_name_map(session)
+    for rec in records:
+        cid = rec.get("compartment_id") or ""
+        rec["compartment_name"] = name_map.get(cid, "")
+
+
 # ── export helpers ─────────────────────────────────────────────────────────────
 
 _EXPORT_COLS = [
     "kind", "scope", "value", "service", "resource_name", "resource_id",
-    "context", "compartment_id", "source_table", "column_name",
+    "context", "compartment_name", "compartment_id", "source_table", "column_name",
 ]
 
 
@@ -337,6 +378,10 @@ def run_module(user_args, session) -> Dict[str, Any]:
         if args.value_contains:
             needle = str(args.value_contains).lower()
             records = [r for r in records if needle in r["value"].lower()]
+
+        # Enrich each record with a human-readable compartment_name so exports
+        # and filtered views don't require manual OCID lookups.
+        _enrich_compartment_names(records, session)
 
         summary = ni.summarize(records)
 

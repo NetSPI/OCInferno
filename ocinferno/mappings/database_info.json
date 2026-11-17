@@ -4585,7 +4585,8 @@
         "resource_id",
         "resource_name",
         "compartment_id",
-        "column_name"
+        "column_name",
+        "compartment_name"
       ],
       "primary_keys": [
         "kind",
