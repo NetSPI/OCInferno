@@ -144,13 +144,17 @@ EXEC_EDGE_KINDS = frozenset({
 # Full manage verb
 MANAGE_EDGE_KIND = "OCI_MANAGE"
 
-# All "default priv-escalation" target edge kinds
+# Default high-impact priv-esc targets (OCI_MANAGE + IAM-control only).
+# RPST_CREATE_EDGE_KINDS and EXEC_EDGE_KINDS are opt-in via --include-rpst.
 DEFAULT_PRIV_EDGE_KINDS = (
     frozenset({MANAGE_EDGE_KIND})
     | IAM_CONTROL_EDGE_KINDS
-    | RPST_CREATE_EDGE_KINDS
-    | EXEC_EDGE_KINDS
 )
+
+# IDD admin role edges included in the default target set.
+# Only full Identity Domain Administrator (IDD_IDENTITY_ADMIN_USER).
+# Use IDD_ADMIN_ROLE_EDGE_KINDS for all roles (opt-in via --include-idd-all).
+DEFAULT_IDD_ADMIN_EDGE_KINDS = frozenset({"IDD_IDENTITY_ADMIN_USER"})
 
 
 def edge_is_conditional(props: dict) -> bool:
@@ -362,6 +366,22 @@ class AttackGraph:
                 if dst not in seen:
                     seen.add(dst)
                     yield dst
+
+    def iter_secret_read_targets(self) -> Iterator[str]:
+        """Yield destination nodes of OCI_READ edges that relate to vault secrets."""
+        seen: set[str] = set()
+        for e in self.edges:
+            if e.kind != "OCI_READ":
+                continue
+            dst = e.dst
+            if dst in seen:
+                continue
+            n = self.nodes.get(dst, {})
+            props = n.get("properties") or {}
+            node_text = " ".join(str(v) for v in [dst] + list(props.values())).lower()
+            if "secret" in node_text:
+                seen.add(dst)
+                yield dst
 
     def iter_admin_role_targets(
         self, edge_kinds: frozenset[str] = IDD_ADMIN_ROLE_EDGE_KINDS

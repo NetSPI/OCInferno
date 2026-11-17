@@ -23,8 +23,10 @@ from pathlib import Path
 
 from ocinferno.modules.opengraph.utilities.helpers.pathfinding.model import (
     _JOIN_DG_SUFFIX,
+    DEFAULT_IDD_ADMIN_EDGE_KINDS,
     DEFAULT_PRIV_EDGE_KINDS,
     DG_INJECTION_EDGE_KINDS,
+    EXEC_EDGE_KINDS,
     FROM_TYPE_ALIASES,
     IAM_CONTROL_EDGE_KINDS,
     MANAGE_EDGE_KIND,
@@ -51,8 +53,17 @@ def _parse_args(user_args: list[str]) -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Find all priv-esc paths (default: manage + IAM-control + RPST creation)
+  # Find all priv-esc paths (default: manage + IAM-control + IDD identity domain admin)
   --graph-json /path/to/oracle_cloud_hound.json
+
+  # Only users and groups as starting principals
+  --graph-json /path/to/file.json --from-type user,group
+
+  # Only paths whose target is at the tenancy level (skip child-compartment grants)
+  --graph-json /path/to/file.json --to-scope ocid1.tenancy
+
+  # Specific starting user, all paths including IDD admin compound chains
+  --graph-json /path/to/file.json --from someuser --all-paths --max-paths 50
 
   # Find paths to any OCI_MANAGE destination only
   --graph-json /path/to/file.json --to-manage
@@ -81,7 +92,7 @@ Examples:
     )
 
     # Target selection
-    tg = p.add_argument_group("Target selection (default: all OCI_MANAGE + IAM-control + RPST-create targets)")
+    tg = p.add_argument_group("Target selection (default: OCI_MANAGE + IAM-control + IDD identity domain admin)")
     tg.add_argument(
         "--to-priv", action="store_true", default=False,
         help="Target all privilege-escalation edge destinations (default when no other --to-* given).",
@@ -110,7 +121,13 @@ Examples:
         "--to-any", action="store_true", default=False,
         help="Target every capability edge destination (very broad).",
     )
-
+    tg.add_argument(
+        "--include-secret-read", action="store_true", default=False,
+        help=(
+            "Also target OCI_READ destinations that relate to vault secrets. "
+            "Shows all principals that can read secret contents."
+        ),
+    )
     # Source selection
     p.add_argument(
         "--from", metavar="SUBSTR", action="append", default=[], dest="from_filter",
@@ -184,11 +201,12 @@ Examples:
         help="Write report to this file instead of stdout.",
     )
     og.add_argument(
-        "--target-scope", metavar="SUBSTR", default=None,
+        "--to-scope", "--target-scope", metavar="OCID_OR_NAME", default=None, dest="target_scope",
         help=(
-            "Filter computed targets to only nodes whose id contains this substring. "
-            "Useful to narrow results to a specific compartment or tenancy. "
-            "Example: --target-scope ocid1.tenancy (only tenancy-level priv-esc)"
+            "Filter computed targets to only nodes whose id contains this substring — "
+            "limits results to paths that land at exactly this compartment/tenancy scope. "
+            "Example: --to-scope ocid1.tenancy (only tenancy-level priv-esc, skip child compartments). "
+            "Accepts an OCID or a unique name fragment."
         ),
     )
     og.add_argument(
@@ -210,19 +228,13 @@ Examples:
 # IDD compound path generation
 # ---------------------------------------------------------------------------
 
-_IDD_ADMIN_EDGE_KINDS = frozenset({
-    "IDD_IDENTITY_ADMIN_USER",
-    "IDD_USER_ADMIN",
-    "IDD_USER_MANAGER",
-})
-
-
 def _idd_compound_paths(
     graph: "AttackGraph",
     primary_targets: set[str],
     source_filter: set[str] | None,
     excluded: set[str],
     max_depth: int = 10,
+    idd_edge_kinds: frozenset[str] = DEFAULT_IDD_ADMIN_EDGE_KINDS,
 ) -> list[list[str]]:
     """Generate compound IDD admin attack chains.
 
@@ -243,7 +255,7 @@ def _idd_compound_paths(
     # Build admin_role -> victim map from IDD admin edges
     admin_role_victims: dict[str, set[str]] = {}
     for e in graph.edges:
-        if e.kind in _IDD_ADMIN_EDGE_KINDS:
+        if e.kind in idd_edge_kinds:
             admin_role_victims.setdefault(e.src, set()).add(e.dst)
     if not admin_role_victims:
         return []
@@ -334,7 +346,7 @@ def _resolve_targets(
     target_edge_kinds: frozenset[str] = frozenset()
 
     if args.to_any:
-        all_cap = DEFAULT_PRIV_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
+        all_cap = DEFAULT_PRIV_EDGE_KINDS | RPST_CREATE_EDGE_KINDS | EXEC_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
             e.kind for e in graph.edges
             if e.kind.endswith(_JOIN_DG_SUFFIX)
         })
@@ -346,12 +358,16 @@ def _resolve_targets(
         if args.to_iam:
             combined |= IAM_CONTROL_EDGE_KINDS
         if args.to_rpst:
-            combined |= RPST_CREATE_EDGE_KINDS
+            combined |= RPST_CREATE_EDGE_KINDS | EXEC_EDGE_KINDS
         target_edge_kinds = frozenset(combined)
     else:
         target_edge_kinds = DEFAULT_PRIV_EDGE_KINDS
 
     primary_targets: set[str] = set(graph.iter_priv_targets(target_edge_kinds))
+
+    # Secret-read targets (opt-in)
+    if args.include_secret_read:
+        primary_targets.update(graph.iter_secret_read_targets())
 
     # Add explicitly named nodes and kind-matched nodes to primary targets
     for nid in args.to_node:
@@ -369,9 +385,11 @@ def _resolve_targets(
 
     # IDD admin role SOURCE nodes — kept separate so the main BFS can traverse
     # through them as intermediate steps toward downstream priv-esc targets.
+    # Default: only full Identity Domain Administrator (IDD_IDENTITY_ADMIN_USER).
+    # --include-idd-all: also User Administrator, User Manager, etc.
     admin_role_targets: set[str] = set()
     if args.to_any or args.to_iam or not any_explicit:
-        admin_role_targets = set(graph.iter_admin_role_targets())
+        admin_role_targets = set(graph.iter_admin_role_targets(DEFAULT_IDD_ADMIN_EDGE_KINDS))
 
     return primary_targets, admin_role_targets
 
