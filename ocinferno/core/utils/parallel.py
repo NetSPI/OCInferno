@@ -125,7 +125,12 @@ def parallel_map(
         request_cancel()
         raise
     finally:
-        # cancel_futures drops still-queued items; on the cancel path we wait for the
-        # <=worker_count in-flight calls so nothing prints after control returns.
-        executor.shutdown(wait=cancel_requested(), cancel_futures=True)
+        # Always wait=True: ensures every in-flight worker has released the DB RLock
+        # before this function returns.  On the normal path all futures were already
+        # processed by as_completed so shutdown returns instantly.  On the cancel path
+        # (wait was previously conditional) we still wait — correct, and already the
+        # behaviour the comment described.  wait=False was a latent race: inner
+        # parallel_map calls (e.g. per-user IDD scans) could return with workers still
+        # running, causing the caller's next DB acquire to block unexpectedly.
+        executor.shutdown(wait=True, cancel_futures=True)
     return results

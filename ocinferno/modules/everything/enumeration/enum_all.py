@@ -1420,7 +1420,7 @@ def _run_once_modules(
 
     if run_network_resources:
         UtilityTools._log_action("module", "START get_network_resources", "N/A")
-        _run_other_module(session, _module_args(args, "ocinferno.modules.everything.processing.get_network_resources"), "ocinferno.modules.everything.processing.get_network_resources")
+        _run_other_module(session, _module_args(args, "ocinferno.modules.everything.processing.process_network_resources"), "ocinferno.modules.everything.processing.process_network_resources")
         UtilityTools._log_action("module", "END get_network_resources", "N/A")
 
 
