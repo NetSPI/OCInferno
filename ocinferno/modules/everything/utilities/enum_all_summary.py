@@ -290,10 +290,8 @@ def summarize_resources_by_compartment(session, target_cids: List[str]) -> dict:
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
     tables = [r[0] for r in cur.fetchall() if isinstance(r[0], str) and r[0] not in _NON_RESOURCE_TABLES]
 
-    # A big scan (thousands of rows per table x up to ~280 tables) can take a real while
-    # here with a GROUP BY aggregation per table -- in-place progress so this doesn't
-    # read as a hang the way a fully silent sweep did.
-    for table_name in UtilityTools.progress_iter(tables, label="enum_all summary: tables swept", min_items=20):
+    total_tables = len(tables)
+    for t_idx, table_name in enumerate(tables, 1):
         try:
             cur.execute(f'PRAGMA table_info("{table_name}")')
             cols = {str(r[1]) for r in cur.fetchall() if len(r) > 1}
@@ -318,6 +316,18 @@ def summarize_resources_by_compartment(session, target_cids: List[str]) -> dict:
                     detailed[cid][resource_type] = detailed[cid].get(resource_type, 0) + int(cnt or 0)
         except Exception:
             continue
+
+        # Print a running-total line every 50 tables (and on the last one) so the
+        # sweep doesn't look frozen.  Uses \r to overwrite the previous update.
+        if t_idx == 1 or t_idx % 50 == 0 or t_idx == total_tables:
+            total_resources = sum(counts.values())
+            print(
+                f"\r[*] enum_all summary: {t_idx}/{total_tables} tables swept, "
+                f"{total_resources} resources found across {len(target_set)} compartment(s)...",
+                end="",
+                flush=True,
+            )
+    print(flush=True)  # newline after the final \r update
 
     name_map: Dict[str, str] = {}
     try:
