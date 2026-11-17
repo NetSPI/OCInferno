@@ -145,17 +145,20 @@ EXEC_EDGE_KINDS = frozenset({
 MANAGE_EDGE_KIND = "OCI_MANAGE"
 
 # Default high-impact priv-esc terminal destinations.
-# Only OCI_MANAGE (all-resources) + policy create/update.
-# The other IAM_CONTROL_EDGE_KINDS (group/user updates, add-self-to-group,
-# IDD_CREATE_USER, etc.) remain as traversal edges — the BFS goes THROUGH
-# them to reach these high-value destinations — but they are not surfaced
-# as terminal targets themselves by default.
+# OCI_MANAGE is filtered to OCIAllResources nodes only (all-resources@scope) —
+# family-specific OCI_MANAGE targets (groups@, users@, etc.) are excluded by
+# default but still traversed as intermediate hops.
+# Policy edges (OCI_CAN_CREATE_POLICY/OCI_CREATE_POLICY/OCI_UPDATE_POLICY) target
+# all destinations — NEW_POLICY (create-only) and policies@ (manage, broader).
 DEFAULT_PRIV_EDGE_KINDS = frozenset({
-    MANAGE_EDGE_KIND,
     "OCI_CAN_CREATE_POLICY",
     "OCI_CREATE_POLICY",
     "OCI_UPDATE_POLICY",
 })
+
+# OCI_MANAGE destinations are only included as targets when the destination node
+# has one of these kinds (default: all-resources only, not family-specific).
+DEFAULT_MANAGE_TARGET_KINDS = frozenset({"OCIAllResources"})
 
 # IDD admin role edges included in the default target set.
 # Only full Identity Domain Administrator (IDD_IDENTITY_ADMIN_USER).
@@ -358,20 +361,30 @@ class AttackGraph:
         from collections import Counter
         return dict(Counter(e.kind for e in self.edges).most_common())
 
-    def iter_priv_targets(self, edge_kinds: frozenset[str] | None = None) -> Iterator[str]:
-        """Yield all destination node IDs that are reached by privilege-escalation edges."""
+    def iter_priv_targets(
+        self,
+        edge_kinds: frozenset[str] | None = None,
+        *,
+        node_kind_filter: frozenset[str] | None = None,
+    ) -> Iterator[str]:
+        """Yield destination node IDs reached by privilege-escalation edges.
+
+        node_kind_filter: when set, only yield destinations whose kinds
+        intersect this set (used to restrict OCI_MANAGE to OCIAllResources only).
+        """
         wanted = edge_kinds if edge_kinds is not None else DEFAULT_PRIV_EDGE_KINDS
         seen: set[str] = set()
         for e in self.edges:
-            if e.kind in wanted or (e.kind.endswith(_JOIN_DG_SUFFIX) and MANAGE_EDGE_KIND not in wanted):
-                # CAN_JOIN_DG edges are always traversable membership edges; don't treat
-                # them as priv-esc targets unless explicitly requested
-                pass
             if e.kind in wanted:
                 dst = e.dst
-                if dst not in seen:
-                    seen.add(dst)
-                    yield dst
+                if dst in seen:
+                    continue
+                if node_kind_filter is not None:
+                    n = self.nodes.get(dst, {})
+                    if not any(k in node_kind_filter for k in (n.get("kinds") or [])):
+                        continue
+                seen.add(dst)
+                yield dst
 
     def iter_secret_read_targets(self) -> Iterator[str]:
         """Yield destination nodes of OCI_READ edges that relate to vault secrets."""

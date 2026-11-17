@@ -24,6 +24,7 @@ from pathlib import Path
 from ocinferno.modules.opengraph.utilities.helpers.pathfinding.model import (
     _JOIN_DG_SUFFIX,
     DEFAULT_IDD_ADMIN_EDGE_KINDS,
+    DEFAULT_MANAGE_TARGET_KINDS,
     DEFAULT_PRIV_EDGE_KINDS,
     DG_INJECTION_EDGE_KINDS,
     EXEC_EDGE_KINDS,
@@ -349,11 +350,11 @@ def _resolve_targets(
     target_edge_kinds: frozenset[str] = frozenset()
 
     if args.to_any:
-        all_cap = DEFAULT_PRIV_EDGE_KINDS | RPST_CREATE_EDGE_KINDS | EXEC_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
+        all_cap = DEFAULT_PRIV_EDGE_KINDS | frozenset({MANAGE_EDGE_KIND}) | RPST_CREATE_EDGE_KINDS | EXEC_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
             e.kind for e in graph.edges
             if e.kind.endswith(_JOIN_DG_SUFFIX)
         })
-        target_edge_kinds = all_cap
+        primary_targets = set(graph.iter_priv_targets(all_cap))
     elif any_explicit:
         combined: set[str] = set()
         if args.to_manage:
@@ -362,11 +363,15 @@ def _resolve_targets(
             combined |= IAM_CONTROL_EDGE_KINDS
         if args.to_rpst:
             combined |= RPST_CREATE_EDGE_KINDS | EXEC_EDGE_KINDS
-        target_edge_kinds = frozenset(combined)
+        primary_targets = set(graph.iter_priv_targets(frozenset(combined)))
     else:
-        target_edge_kinds = DEFAULT_PRIV_EDGE_KINDS
-
-    primary_targets: set[str] = set(graph.iter_priv_targets(target_edge_kinds))
+        # Default: policy-creation targets (all scopes) + OCI_MANAGE filtered to
+        # all-resources nodes only (not family-specific groups@/users@/etc.)
+        primary_targets = set(graph.iter_priv_targets(DEFAULT_PRIV_EDGE_KINDS))
+        primary_targets.update(graph.iter_priv_targets(
+            frozenset({MANAGE_EDGE_KIND}),
+            node_kind_filter=DEFAULT_MANAGE_TARGET_KINDS,
+        ))
 
     # Secret-read targets (opt-in)
     if args.include_secret_read:
