@@ -347,6 +347,26 @@ class AttackGraph:
             return name
         return nid
 
+    def policy_display(self, policy_id: str) -> str:
+        """Human-readable label for a policy node, including its compartment.
+
+        Returns e.g. 'Tenant Admin Policy @ root' or just 'Tenant Admin Policy'
+        when no compartment info is available.
+        """
+        pname = self.node_display(policy_id)
+        n = self.nodes.get(policy_id)
+        if not n:
+            return pname
+        props = n.get("properties") or {}
+        comp_id = str(props.get("compartment_id") or props.get("compartment_ocid") or "").strip()
+        if not comp_id:
+            return pname
+        comp_label = self.node_display(comp_id)
+        # If node_display fell back to the raw OCID, shorten it for readability.
+        if comp_label == comp_id and comp_id.startswith("ocid1."):
+            comp_label = comp_id.split(".")[-1] if "." in comp_id else comp_id
+        return f"{pname} @ {comp_label}"
+
     def node_kinds(self, nid: str) -> list[str]:
         n = self.nodes.get(nid)
         return list(n.get("kinds") or []) if n else []

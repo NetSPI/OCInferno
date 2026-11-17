@@ -125,7 +125,7 @@ MODULE_POLICY_REGISTRY: Dict[str, ModulePolicySpec] = {
         accepts_cid_flags=False,
     ),
     # Process module: sweeps the whole workspace DB once, not per-compartment.
-    "get_network_resources": ModulePolicySpec(
+    "process_network_resources": ModulePolicySpec(
         exec_mode=ExecMode.ONCE,
         context_mode=ContextMode.NONE,
         accepts_cid_flags=False,

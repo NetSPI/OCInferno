@@ -137,6 +137,7 @@ class Hop:
     is_priv_escalation: bool = False
     conditional: bool = False
     policy_ids: list[str] = field(default_factory=list)
+    policy_statements: list[str] = field(default_factory=list)
 
 
 def _edge_between(graph: "AttackGraph", src: str, dst: str) -> tuple[str, dict]:
@@ -156,10 +157,14 @@ def _extract_edge_meta(props: dict) -> dict:
             inner = json.loads(inner)
         except Exception:
             inner = {}
+    # resolved_statements / resolved_policy live at the top level on capability edges
+    stmts = list(props.get("resolved_statements") or inner.get("resolved_statements") or [])
+    pids = list(props.get("resolved_policy") or inner.get("resolved_policy") or [])
     return {
         "is_priv_escalation": bool(inner.get("is_priv_escalation") or props.get("is_priv_escalation")),
         "conditional": edge_is_conditional(props),
-        "policy_ids": list(inner.get("resolved_policy") or []),
+        "policy_ids": pids,
+        "policy_statements": stmts,
         "verb": str(inner.get("verb") or "").strip() or None,
         "resource_tokens": str(inner.get("resource_tokens") or "").strip() or None,
         "scope": str(inner.get("scope_display") or inner.get("scope") or "").strip() or None,
@@ -193,11 +198,13 @@ def collapse_path(graph: "AttackGraph", path: list[str]) -> list[Hop]:
             cap_kind, cap_props = _edge_between(graph, dst, next_dst)
             cap_meta = _extract_edge_meta(cap_props)
 
-            # Merge metadata from both edges
+            # Merge metadata from both edges; prefer capability edge for policy stmts
+            stmts = cap_meta["policy_statements"] or meta["policy_statements"] or []
             merged_meta = {
                 "is_priv_escalation": meta["is_priv_escalation"] or cap_meta["is_priv_escalation"],
                 "conditional": meta["conditional"] or cap_meta["conditional"],
                 "policy_ids": (meta["policy_ids"] or []) + (cap_meta["policy_ids"] or []),
+                "policy_statements": stmts,
                 "verb": cap_meta["verb"] or meta["verb"],
                 "resource_tokens": cap_meta["resource_tokens"] or meta["resource_tokens"],
                 "scope": cap_meta["scope"] or meta["scope"],
@@ -212,6 +219,7 @@ def collapse_path(graph: "AttackGraph", path: list[str]) -> list[Hop]:
                 is_priv_escalation=merged_meta["is_priv_escalation"],
                 conditional=merged_meta["conditional"],
                 policy_ids=merged_meta["policy_ids"],
+                policy_statements=merged_meta["policy_statements"],
             ))
             i += 2  # consumed src, binding_node, next_dst
         else:
@@ -225,6 +233,7 @@ def collapse_path(graph: "AttackGraph", path: list[str]) -> list[Hop]:
                 is_priv_escalation=meta["is_priv_escalation"],
                 conditional=meta["conditional"],
                 policy_ids=meta["policy_ids"],
+                policy_statements=meta["policy_statements"],
             ))
             i += 1
 
@@ -298,6 +307,20 @@ def render_path_text(graph: "AttackGraph", path: list[str], *, expanded: bool = 
             dst_label = _node_label(graph, hop.dst)
             annotation = _hop_annotation(hop)
             out.write(f"      └─[{hop.edge_kind}]─> {dst_label}{annotation}\n")
+            stmts = hop.policy_statements or []
+            pids = hop.policy_ids or []
+            if stmts:
+                # Try to pair each statement with a policy name; fall back to
+                # listing policy names once if counts don't match.
+                if len(pids) == len(stmts):
+                    for pid, stmt in zip(pids, stmts):
+                        pname = graph.policy_display(pid)
+                        out.write(f"          policy [{pname}]: {stmt}\n")
+                else:
+                    pnames = ", ".join(graph.policy_display(p) for p in pids) if pids else ""
+                    prefix = f"policy [{pnames}]: " if pnames else "policy: "
+                    for stmt in stmts:
+                        out.write(f"          {prefix}{stmt}\n")
 
     return out.getvalue()
 
