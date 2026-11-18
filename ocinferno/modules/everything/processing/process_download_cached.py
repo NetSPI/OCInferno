@@ -259,15 +259,18 @@ def _do_apigateway(session, args, tokens: frozenset[str]) -> dict:
 
 # ---------------------------------------------------------------------------
 # compute  (token: compute)
-# Covers: instance metadata/user-data (pure DB), execution payload files (pure DB),
-# merged per-instance command files (pure DB).
+# DB → OCIDs → live GET for each instance, command, and execution so the
+# downloaded content is always fresh (not stale DB field values).
 # ---------------------------------------------------------------------------
 
 def _do_compute(session, args, tokens: frozenset[str]) -> dict:
     from ocinferno.modules.core.utilities.helpers import (
+        ComputeInstancesResource,
+        ComputeInstanceAgentResourceClient,
         _download_instance_metadata_payload,
         _download_instance_agent_execution_payload,
         _write_instance_agent_merged_files,
+        _extract_command_id,
     )
 
     inst_rows = _all_rows(session, "compute_instances")
@@ -276,22 +279,64 @@ def _do_compute(session, args, tokens: frozenset[str]) -> dict:
     print(f"[*] compute: {len(inst_rows):,} instances, {len(cmd_rows):,} commands, "
           f"{len(exec_rows):,} executions in DB")
 
-    total_files = 0
+    instances_res = ComputeInstancesResource(session=session)
+    agent_client  = ComputeInstanceAgentResourceClient(session=session)
+    total_files   = 0
 
-    # Instance user-data / additional metadata — fields already in DB row (no live call)
+    # 1. Live GET each instance → extract user-data / metadata and write to disk
     for row in inst_rows:
+        iid = str(row.get("id") or "").strip()
         cid = str(row.get("compartment_id") or "").strip()
-        if not cid:
+        if not iid or not cid:
             continue
         try:
+            live = instances_res.get(resource_id=iid) or {}
+            if not live.get("compartment_id"):
+                live["compartment_id"] = cid
             result = _download_instance_metadata_payload(
-                session, compartment_id=cid, instance_row=row)
+                session, compartment_id=cid, instance_row=live)
             total_files += int(result.get("files_written") or 0)
         except Exception:
             pass
 
-    # Per-execution payload files — fields already in DB row (no live call)
+    # 2. Live GET each command (refreshes command text / source content)
+    live_cmd_rows: list[dict] = []
+    for row in cmd_rows:
+        cmd_id = str(row.get("id") or "").strip()
+        cid    = str(row.get("compartment_id") or "").strip()
+        if not cmd_id:
+            live_cmd_rows.append(row)
+            continue
+        try:
+            live = agent_client.get_instance_agent_command(
+                instance_agent_command_id=cmd_id) or {}
+            if cid and not live.get("compartment_id"):
+                live["compartment_id"] = cid
+            live_cmd_rows.append(live)
+        except Exception:
+            live_cmd_rows.append(row)
+
+    # 3. Live GET each execution (refreshes output text / exit code)
+    live_exec_rows: list[dict] = []
     for row in exec_rows:
+        cmd_id  = str(_extract_command_id(row) or "").strip()
+        inst_id = str(row.get("instance_id") or "").strip()
+        cid     = str(row.get("compartment_id") or "").strip()
+        if not cmd_id or not inst_id:
+            live_exec_rows.append(row)
+            continue
+        try:
+            live = agent_client.get_instance_agent_command_execution(
+                instance_agent_command_id=cmd_id,
+                instance_id=inst_id) or {}
+            if cid and not live.get("compartment_id"):
+                live["compartment_id"] = cid
+            live_exec_rows.append(live)
+        except Exception:
+            live_exec_rows.append(row)
+
+    # 4. Per-execution payload files (details JSON + output text)
+    for row in live_exec_rows:
         cid = str(row.get("compartment_id") or "").strip()
         if not cid:
             continue
@@ -301,15 +346,15 @@ def _do_compute(session, args, tokens: frozenset[str]) -> dict:
         except Exception:
             pass
 
-    # Merged per-instance command files — pure DB
+    # 5. Merged per-instance command files
     comp_ids: set[str] = {
         str(r.get("compartment_id") or "").strip()
-        for r in cmd_rows + exec_rows
+        for r in live_cmd_rows + live_exec_rows
         if str(r.get("compartment_id") or "").strip()
     }
     for cid in sorted(comp_ids):
-        c_cmds  = [r for r in cmd_rows  if str(r.get("compartment_id") or "") == cid]
-        c_execs = [r for r in exec_rows if str(r.get("compartment_id") or "") == cid]
+        c_cmds  = [r for r in live_cmd_rows  if str(r.get("compartment_id") or "") == cid]
+        c_execs = [r for r in live_exec_rows if str(r.get("compartment_id") or "") == cid]
         result = _write_instance_agent_merged_files(
             session, compartment_id=cid,
             command_rows=c_cmds, execution_rows=c_execs)

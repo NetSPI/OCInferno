@@ -331,13 +331,16 @@ def _idd_compound_paths(
 def _resolve_targets(
     graph: AttackGraph,
     args: argparse.Namespace,
-) -> tuple[set[str], set[str]]:
-    """Return (primary_targets, admin_role_targets).
+) -> tuple[set[str], set[str], set[str]]:
+    """Return (primary_targets, admin_role_targets, manage_only_targets).
 
     primary_targets — priv-esc edge destinations (OCI_MANAGE, IAM-control, etc.)
     admin_role_targets — IDD admin role SOURCE nodes (targeted by source, not destination).
+    manage_only_targets — subset of primary_targets that are OCIAllResources nodes reached
+        via OCI_MANAGE in the default mode.  Paths terminating at these nodes are filtered
+        to only those whose final hop is an OCI_MANAGE edge (not OCI_READ/OCI_USE/etc.).
 
-    Keeping them separate lets the two-pass BFS in run_module find paths that
+    Keeping admin_role_targets separate lets the two-pass BFS in run_module find paths that
     traverse *through* an admin role node toward a downstream priv-esc target
     (e.g. UserA → AdminRole → UserB → manage tenancy) rather than stopping at
     the admin role as the terminal target.
@@ -348,6 +351,7 @@ def _resolve_targets(
     )
 
     target_edge_kinds: frozenset[str] = frozenset()
+    manage_only_targets: set[str] = set()
 
     if args.to_any:
         all_cap = DEFAULT_PRIV_EDGE_KINDS | frozenset({MANAGE_EDGE_KIND}) | RPST_CREATE_EDGE_KINDS | EXEC_EDGE_KINDS | DG_INJECTION_EDGE_KINDS | frozenset({
@@ -368,10 +372,14 @@ def _resolve_targets(
         # Default: policy-creation targets (all scopes) + OCI_MANAGE filtered to
         # all-resources nodes only (not family-specific groups@/users@/etc.)
         primary_targets = set(graph.iter_priv_targets(DEFAULT_PRIV_EDGE_KINDS))
-        primary_targets.update(graph.iter_priv_targets(
+        manage_targets = set(graph.iter_priv_targets(
             frozenset({MANAGE_EDGE_KIND}),
             node_kind_filter=DEFAULT_MANAGE_TARGET_KINDS,
         ))
+        primary_targets.update(manage_targets)
+        # Track these separately: BFS finds all paths TO these nodes, including via
+        # OCI_READ/OCI_USE/OCI_INSPECT.  Post-filter keeps only OCI_MANAGE final hops.
+        manage_only_targets = manage_targets
 
     # Secret-read targets (opt-in)
     if args.include_secret_read:
@@ -399,7 +407,7 @@ def _resolve_targets(
     if args.to_any or args.to_iam or not any_explicit:
         admin_role_targets = set(graph.iter_admin_role_targets(DEFAULT_IDD_ADMIN_EDGE_KINDS))
 
-    return primary_targets, admin_role_targets
+    return primary_targets, admin_role_targets, manage_only_targets
 
 
 # ---------------------------------------------------------------------------
@@ -432,8 +440,8 @@ def run_module(user_args: list[str], session) -> dict:
             print(f"  {cnt:7,}  {ek}")
         return {"ok": True}
 
-    # Resolve targets (two separate sets — see docstring)
-    primary_targets, admin_role_targets = _resolve_targets(graph, args)
+    # Resolve targets (three separate sets — see docstring)
+    primary_targets, admin_role_targets, manage_only_targets = _resolve_targets(graph, args)
     all_targets = primary_targets | admin_role_targets
 
     # Apply --target-scope filter to narrow results to a specific compartment/tenancy
@@ -612,6 +620,21 @@ def run_module(user_args: list[str], session) -> dict:
 
     # Drop any path where a node appears twice (cycles / trivially redundant chains)
     paths = [p for p in paths if len(set(p)) == len(p)]
+
+    # For OCIAllResources targets added via OCI_MANAGE, drop paths whose final
+    # edge is not OCI_MANAGE (e.g. OCI_READ/OCI_USE/OCI_INSPECT to same node).
+    # The BFS targets those nodes correctly, but it traverses ALL edges into them.
+    if manage_only_targets:
+        def _final_edge_is_manage(path: list[str]) -> bool:
+            if path[-1] not in manage_only_targets:
+                return True
+            if len(path) < 2:
+                return True
+            for dst, eidx in graph.adj.get(path[-2], []):
+                if dst == path[-1] and graph.edges[eidx].kind == MANAGE_EDGE_KIND:
+                    return True
+            return False
+        paths = [p for p in paths if _final_edge_is_manage(p)]
 
     if args.debug:
         print(f"[attack_paths] Found {len(paths)} paths (incl. compound, post-dedup)", file=sys.stderr)
