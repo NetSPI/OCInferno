@@ -712,7 +712,7 @@ def export_sqlite_dbs_to_excel_blob(
 
     exported_rows = 0
     try:
-        with pd.ExcelWriter(str(out_file), engine="xlsxwriter") as writer:
+        with pd.ExcelWriter(str(out_file), engine="xlsxwriter", engine_kwargs={"options": {"strings_to_urls": False}}) as writer:
             if condensed and single_sheet:
                 records: List[Dict[str, Any]] = []
                 for db in db_infos:

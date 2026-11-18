@@ -468,11 +468,13 @@ def run_module(user_args: list[str], session) -> dict:
         print("[attack_paths] No target nodes matched the selector.", file=sys.stderr)
         return {"ok": False, "error": "no targets"}
 
-    # Resolve excluded nodes
+    # Resolve excluded nodes — match against id OR display name (same logic as --from)
     excluded: set[str] = set()
     for substr in (args.exclude_node or []):
+        sl = substr.lower()
         for nid in graph.nodes:
-            if substr.lower() in nid.lower():
+            label = graph.node_display(nid)
+            if sl in nid.lower() or sl in label.lower():
                 excluded.add(nid)
 
     # Resolve source filter — substring match

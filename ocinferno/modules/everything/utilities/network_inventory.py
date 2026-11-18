@@ -25,6 +25,15 @@ _IPV4_RE = re.compile(r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])")
 _CIDR_RE = re.compile(r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}(?![\w/])")
 _IPV6_RE = re.compile(r"(?<![\w:])(?:[0-9A-Fa-f]{1,4}:){2,7}[0-9A-Fa-f]{1,4}(?![\w:])")
 
+# Identity-domain per-resource SCIM API URLs (meta.location / $ref fields).
+# Pattern: https://<idcs-host>.identity.oraclecloud.com/admin/v1/<ResourceType>/<id>
+# These are internal API pointers, not reachable endpoints — always filtered out.
+# Base domain URLs (no path) are kept.
+_IDCS_RESOURCE_URL_RE = re.compile(
+    r"https?://[^/]*\.identity\.oraclecloud\.com/admin/v1/[A-Za-z]+/",
+    re.I,
+)
+
 # http/https plus common connection-string schemes that hold navigable hostnames
 _URL_RE = re.compile(
     r"\b(?:https?|tcp|udp|postgres(?:ql)?|mysql|redis(?:s)?|mongodb(?:\+srv)?|amqps?|jdbc:[a-z]+|ldaps?|ftps?|ssh)"
@@ -287,6 +296,13 @@ def extract_from_value(column: str, value: Any) -> List[Dict[str, str]]:
             return
         if kind == KIND_CIDR and _is_noise_cidr(val):
             return
+        # Drop identity-domain per-resource SCIM API URLs (users, groups, dgs, …).
+        # These are internal meta.location / $ref pointers, not reachable endpoints.
+        if kind == KIND_URL and _IDCS_RESOURCE_URL_RE.search(val):
+            return
+        # Drop reverse-DNS arpa names — PTR lookup labels, not reachable hostnames.
+        if kind == KIND_FQDN and (val.lower().endswith(".in-addr.arpa") or val.lower().endswith(".ip6.arpa")):
+            return
         seen.add((kind, val))
         scope = ""
         if kind == KIND_IP:
@@ -391,6 +407,9 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                 dns_scope_override = "public"
             elif zs == "PRIVATE":
                 dns_scope_override = "private"
+
+        # Collect all hits from this row first so we can cross-reference IPs ↔ FQDNs.
+        row_hits: List[Dict[str, str]] = []
         for column, value in row.items():
             if column in ("workspace_id",):
                 continue
@@ -400,9 +419,8 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                 sub_pairs = _expand_config_dict(column, value)
                 for sub_col, sub_val, sub_ctx in sub_pairs:
                     for hit in extract_from_value(sub_col, sub_val):
-                        # Override context if _expand_config_dict gave a richer one
                         ctx = sub_ctx or hit.get("context", column)
-                        records.append({
+                        row_hits.append({
                             "kind": hit["kind"],
                             "value": hit["value"],
                             "context": ctx,
@@ -413,19 +431,17 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                             "resource_name": rname,
                             "compartment_id": comp,
                             "column_name": column,
+                            "points_to": "",
                         })
             else:
                 is_backend_col = bool(_BACKEND_COL_RE.match(column))
                 use_dns_scope = is_dns_records and column in _DNS_SCOPE_COLS and dns_scope_override
                 for hit in extract_from_value(column, value):
-                    # IPs/FQDNs from backend_sets columns are LB backend targets,
-                    # not the LB's own public address — flag them distinctly.
                     kind = hit["kind"]
                     if is_backend_col and kind in (KIND_IP, KIND_FQDN, KIND_CIDR):
                         kind = KIND_BACKEND
-                    # DNS records: override scope from zone_scope (GLOBAL=public, PRIVATE=private).
                     scope = dns_scope_override if use_dns_scope else hit.get("scope", "")
-                    records.append({
+                    row_hits.append({
                         "kind": kind,
                         "value": hit["value"],
                         "context": hit.get("context", column),
@@ -436,7 +452,25 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                         "resource_name": rname,
                         "compartment_id": comp,
                         "column_name": column,
+                        "points_to": "",
                     })
+
+        # Cross-reference within the row: IPs ↔ FQDNs from the same resource.
+        # e.g. a compute instance row with both hostname="scott.com" and public_ip="1.2.3.4"
+        # → "scott.com" points_to "1.2.3.4" and vice versa.
+        row_ips = sorted({h["value"] for h in row_hits if h["kind"] == KIND_IP})
+        row_fqdns = sorted({h["value"] for h in row_hits if h["kind"] == KIND_FQDN})
+        if row_ips or row_fqdns:
+            for h in row_hits:
+                k = h["kind"]
+                if k == KIND_IP and row_fqdns:
+                    h["points_to"] = "; ".join(f for f in row_fqdns if f != h["value"])
+                elif k == KIND_FQDN and row_ips:
+                    h["points_to"] = "; ".join(row_ips)
+                elif k == KIND_URL and row_ips:
+                    h["points_to"] = "; ".join(row_ips)
+
+        records.extend(row_hits)
     return records
 
 

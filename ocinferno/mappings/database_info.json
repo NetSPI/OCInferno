@@ -4586,7 +4586,8 @@
         "resource_name",
         "compartment_id",
         "column_name",
-        "compartment_name"
+        "compartment_name",
+        "points_to"
       ],
       "primary_keys": [
         "kind",

@@ -150,10 +150,12 @@ def _print_inventory_report(records, summary) -> None:
             cname = r.get("compartment_name") or ""
             cid   = r.get("compartment_id") or ""
             comp_display = cname if cname else UtilityTools.condense_ocid(cid) if cid else "—"
+            pts = str(r.get("points_to") or "").strip()
             rows.append({
                 "type":        _KIND_LABEL.get(r["kind"], r["kind"]),
                 "scope":       r.get("scope", "") or "—",
                 "endpoint":    val,
+                "points_to":   pts[:60] if pts else "—",
                 "service":     r.get("service", r["source_table"]),
                 "resource":    (r["resource_name"] or r["resource_id"])[:40] or "—",
                 "context":     r.get("context", r["column_name"])[:35],
@@ -163,7 +165,7 @@ def _print_inventory_report(records, summary) -> None:
               f"({len(navigable)} rows; {pub} public / {priv} private){UtilityTools.RESET}")
         UtilityTools.print_limited_table(
             rows,
-            ["type", "scope", "endpoint", "service", "resource", "context", "compartment"],
+            ["type", "scope", "endpoint", "points_to", "service", "resource", "context", "compartment"],
             title="Network Inventory",
         )
 
@@ -235,7 +237,7 @@ def _enrich_compartment_names(records: List[Dict[str, Any]], session) -> None:
 # ── export helpers ─────────────────────────────────────────────────────────────
 
 _EXPORT_COLS = [
-    "kind", "scope", "value", "service", "resource_name", "resource_id",
+    "kind", "scope", "value", "points_to", "service", "resource_name", "resource_id",
     "context", "compartment_name", "compartment_id", "source_table", "column_name",
 ]
 
@@ -275,7 +277,7 @@ def _write_xlsx(records: List[Dict[str, Any]], requested_path: str, session) -> 
               f"run: pip install ocinferno[excel]{UtilityTools.RESET}")
         return
     try:
-        workbook = xlsxwriter.Workbook(str(out))
+        workbook = xlsxwriter.Workbook(str(out), {"strings_to_urls": False})
         ws = workbook.add_worksheet("Network Inventory")
         hdr_fmt = workbook.add_format({"bold": True, "bg_color": "#1F3864", "font_color": "#FFFFFF"})
         for col_idx, col in enumerate(_EXPORT_COLS):
@@ -316,6 +318,9 @@ def _parse_args(user_args) -> argparse.Namespace:
                    help="Inventory: also include net_ref rows (subnet/VCN/NSG OCIDs). Off by default — "
                         "these are pivot pointers, not reachable endpoints; the subnet→security-list "
                         "mapping is already produced by step 2.")
+    p.add_argument("--cidrs", dest="cidrs", action="store_true", default=False,
+                   help="Inventory: also include CIDR rows (e.g. ingress/egress security rule ranges). "
+                        "Off by default — CIDRs describe allowed traffic ranges, not reachable endpoints.")
     p.add_argument("--scope", default=None, choices=["public", "private"],
                    help="Inventory: only report endpoints with this reachability scope (public = externally interactable).")
     p.add_argument("--table", default=None,
@@ -355,7 +360,9 @@ def run_module(user_args, session) -> Dict[str, Any]:
             kinds = {k.strip().lower() for k in str(args.kinds).split(",") if k.strip()}
 
         tables = [args.table] if args.table else _all_service_tables()
+        print(f"[*] Scanning {len(tables)} table(s) for network identifiers ...")
         records = []
+        found_tables = 0
         for table_name in tables:
             try:
                 rows = session.get_resource_fields(table_name) or []
@@ -365,12 +372,20 @@ def run_module(user_args, session) -> Dict[str, Any]:
                 continue
             if not rows:
                 continue
+            before = len(records)
             records.extend(ni.extract_from_rows(table_name, rows))
+            added = len(records) - before
+            if added:
+                found_tables += 1
+                print(f"  {table_name}: {len(rows)} row(s) → {added} identifier(s)")
 
+        print(f"[*] Scan complete: {found_tables} table(s) with identifiers, {len(records)} raw record(s) before dedup")
         records = ni.dedupe(records)
-        # net_ref rows (OCID pivot pointers) are excluded by default — opt in with --net-refs.
+        # net_ref and cidr rows are excluded by default — opt in with --net-refs / --cidrs.
         if not args.net_refs and not (kinds and ni.KIND_NET_REF in kinds):
             records = [r for r in records if r["kind"] != ni.KIND_NET_REF]
+        if not args.cidrs and not (kinds and ni.KIND_CIDR in kinds):
+            records = [r for r in records if r["kind"] != ni.KIND_CIDR]
         if kinds:
             records = [r for r in records if r["kind"] in kinds]
         if args.scope:
