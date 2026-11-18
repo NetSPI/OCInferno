@@ -327,15 +327,11 @@ def extract_from_value(column: str, value: Any) -> List[Dict[str, str]]:
         if _valid_ipv6(m):
             _add(KIND_IP, m, ctx)
 
-    # URLs everywhere (http/https + common connection-string schemes); also mine host.
+    # URLs everywhere (http/https + common connection-string schemes).
+    # The hostname is already embedded in the URL — don't also emit it as a
+    # separate FQDN row, which creates duplicates for every URL.
     for u in _URL_RE.findall(text):
         _add(KIND_URL, u, ctx)
-        # Strip scheme and extract host for FQDN
-        host = re.sub(r"^[a-z][a-z0-9+.-]*://", "", u, flags=re.I)
-        # Strip userinfo (user:pass@host) and port
-        host = host.split("/")[0].split("@")[-1].split(":")[0]
-        if _FQDN_RE.fullmatch(host) and not _looks_like_ocid(host):
-            _add(KIND_FQDN, host, ctx)
 
     # FQDNs only from host-ish columns.
     if _HOST_COL_RE.search(column):
@@ -386,11 +382,54 @@ def _expand_config_dict(column: str, value: Any) -> List[Tuple[str, Any, str]]:
 _DNS_RECORD_TABLES = frozenset({"dns_zone_records"})
 _DNS_SCOPE_COLS = frozenset({"rdata", "domain"})
 
+# Tables that are identity-domain *sub-resources* (users, groups, memberships, etc.).
+# Their meta.location/$ref columns all carry the IDCS base URL, creating one duplicate
+# row per resource.  Only the parent identity_domains table should contribute URLs/FQDNs.
+_IDCS_SUBRESOURCE_TABLES = frozenset({
+    "identity_auth_tokens",
+    "identity_domain_app_roles",
+    "identity_domain_apps",
+    "identity_domain_authentication_factor_settings",
+    "identity_domain_dynamic_groups",
+    "identity_domain_grants",
+    "identity_domain_groups",
+    "identity_domain_identity_propagation_trusts",
+    "identity_domain_identity_providers",
+    "identity_domain_lockout_policies",
+    "identity_domain_password_policies",
+    "identity_domain_policies",
+    "identity_domain_sign_on_policies",
+    "identity_domain_user_api_keys",
+    "identity_domain_user_auth_tokens",
+    "identity_domain_user_customer_secret_keys",
+    "identity_domain_user_db_credentials",
+    "identity_domain_user_group_memberships",
+    "identity_domain_users",
+    "identity_domain_user_smtp_credentials",
+    "identity_dynamic_groups",
+    "identity_groups",
+    "identity_policies",
+    "identity_user_api_keys",
+    "identity_user_group_memberships",
+    "identity_users",
+    "identity_user_ui_password_resets",
+})
+
+# Tables excluded from network inventory entirely (OCIDs or other non-navigable values
+# extracted from these tables create noise with no attack-surface value).
+_EXCLUDED_TABLES = frozenset({
+    "notification_topics",
+    "notification_subscriptions",
+})
+
 
 def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     """Extract all network identifiers from one table's rows."""
+    if table_name in _EXCLUDED_TABLES:
+        return []
     service = _service_label(table_name)
     is_dns_records = table_name in _DNS_RECORD_TABLES
+    suppress_url_fqdn = table_name in _IDCS_SUBRESOURCE_TABLES
     records: List[Dict[str, str]] = []
     for row in rows or []:
         if not isinstance(row, dict):
@@ -419,6 +458,8 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                 sub_pairs = _expand_config_dict(column, value)
                 for sub_col, sub_val, sub_ctx in sub_pairs:
                     for hit in extract_from_value(sub_col, sub_val):
+                        if suppress_url_fqdn and hit["kind"] in (KIND_URL, KIND_FQDN):
+                            continue
                         ctx = sub_ctx or hit.get("context", column)
                         row_hits.append({
                             "kind": hit["kind"],
@@ -438,6 +479,8 @@ def extract_from_rows(table_name: str, rows: List[Dict[str, Any]]) -> List[Dict[
                 use_dns_scope = is_dns_records and column in _DNS_SCOPE_COLS and dns_scope_override
                 for hit in extract_from_value(column, value):
                     kind = hit["kind"]
+                    if suppress_url_fqdn and kind in (KIND_URL, KIND_FQDN):
+                        continue
                     if is_backend_col and kind in (KIND_IP, KIND_FQDN, KIND_CIDR):
                         kind = KIND_BACKEND
                     scope = dns_scope_override if use_dns_scope else hit.get("scope", "")
