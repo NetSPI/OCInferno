@@ -231,6 +231,7 @@
         "app_role_ids"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -252,6 +253,7 @@
         "app_role_ids"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -273,6 +275,7 @@
         "tenancy_ocid"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -300,6 +303,7 @@
         "source"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -334,6 +338,7 @@
         "unique_name"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -459,6 +464,7 @@
         "user_roles"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -516,6 +522,7 @@
         "tenancy_ocid"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -607,6 +614,7 @@
         "created"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -647,6 +655,7 @@
         "created"
       ],
       "primary_keys": [
+        "domain_ocid",
         "token_id"
       ]
     },
@@ -3977,6 +3986,7 @@
         "user_name_disallowed"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -4011,6 +4021,7 @@
         "yubico_otp_enabled"
       ],
       "primary_keys": [
+        "domain_ocid",
         "id"
       ]
     },
@@ -6234,6 +6245,7 @@
         "source"
       ],
       "primary_keys": [
+        "domain_ocid",
         "csk_id"
       ]
     },
