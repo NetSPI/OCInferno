@@ -350,7 +350,6 @@ def _resolve_targets(
         or args.to_kind or args.to_node or args.to_any
     )
 
-    target_edge_kinds: frozenset[str] = frozenset()
     manage_only_targets: set[str] = set()
 
     if args.to_any:

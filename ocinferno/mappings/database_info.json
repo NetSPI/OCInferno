@@ -1869,6 +1869,184 @@
       ]
     },
     {
+      "table_name": "db_databases",
+      "columns": [
+        "character_set", "compartment_id", "connection_strings", "database_management_config",
+        "db_backup_config", "db_home_id", "db_name", "db_system_id", "db_unique_name",
+        "db_workload", "defined_tags", "freeform_tags", "id", "is_cdb", "key_store_id",
+        "key_store_wallet_name", "kms_key_id", "kms_key_version_id", "last_backup_duration_in_seconds",
+        "last_backup_timestamp", "last_failed_backup_timestamp", "lifecycle_details",
+        "lifecycle_state", "ncharacter_set", "pdb_name", "sid_prefix", "source_database_point_in_time_recovery_timestamp",
+        "time_created", "vault_id", "vm_cluster_id"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_pluggable_databases",
+      "columns": [
+        "compartment_id", "connection_strings", "container_database_id",
+        "container_database_admin_password", "db_system_id", "defined_tags",
+        "freeform_tags", "id", "is_restricted", "lifecycle_details", "lifecycle_state",
+        "open_mode", "pdb_name", "pdb_node_level_details", "pluggable_database_management_config",
+        "refreshable_clone_config", "time_created"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_autonomous_container_databases",
+      "columns": [
+        "autonomous_exadata_infrastructure_id", "autonomous_vm_cluster_id",
+        "availability_domain", "backup_config", "cloud_autonomous_vm_cluster_id",
+        "compartment_id", "compute_model", "db_name", "db_unique_name", "db_version",
+        "defined_tags", "display_name", "freeform_tags", "id", "infrastructure_type",
+        "key_history_entry", "key_store_id", "kms_key_id", "largest_provisionable_autonomous_database_in_cpus",
+        "last_maintenance_run_id", "lifecycle_details", "lifecycle_state",
+        "maintenance_window", "memory_per_oracle_compute_unit_in_gbs", "next_maintenance_run_id",
+        "patch_model", "provisionable_cpus", "provisioned_cpus", "reclaimable_cpus",
+        "reserved_cpus", "role", "rotating_key_status", "service_level_agreement_type",
+        "standby_maintenance_buffer_in_days", "time_created", "time_snapshot_standby_revert",
+        "total_cpus", "vault_id", "version_preference"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_cloud_exadata_infrastructures",
+      "columns": [
+        "activated_storage_count", "additional_storage_count", "availability_domain",
+        "available_storage_size_in_gbs", "compartment_id", "compute_count",
+        "cpu_count", "customer_contacts", "data_storage_size_in_tbs", "db_node_storage_size_in_gbs",
+        "db_server_version", "defined_tags", "display_name", "freeform_tags", "id",
+        "last_maintenance_run_id", "lifecycle_details", "lifecycle_state",
+        "maintenance_window", "max_cpu_count", "max_data_storage_in_tbs",
+        "max_db_node_storage_in_gbs", "max_memory_in_gbs", "memory_size_in_gbs",
+        "monthly_db_server_version", "monthly_storage_server_version",
+        "next_maintenance_run_id", "shape", "storage_count",
+        "storage_server_version", "subscription_id", "time_created", "total_storage_size_in_gbs"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_cloud_vm_clusters",
+      "columns": [
+        "availability_domain", "backup_network_nsg_ids", "backup_subnet_id",
+        "cloud_exadata_infrastructure_id", "cluster_name", "compartment_id",
+        "cpu_core_count", "data_collection_options", "data_storage_percentage",
+        "data_storage_size_in_tbs", "db_node_storage_size_in_gbs", "db_servers",
+        "defined_tags", "disk_redundancy", "display_name", "domain", "freeform_tags",
+        "gi_version", "hostname", "id", "is_local_backup_enabled", "is_sparse_diskgroup_enabled",
+        "last_update_history_entry_id", "license_model", "lifecycle_details", "lifecycle_state",
+        "listener_port", "memory_size_in_gbs", "node_count", "nsg_ids", "ocpu_count",
+        "scan_dns_name", "scan_dns_record_id", "scan_ip_ids", "scan_ipv6_ids",
+        "shape", "ssh_public_keys", "subnet_id", "subscription_id",
+        "system_version", "time_created", "time_zone", "vip_ids", "zone_id"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_exadata_infrastructures",
+      "columns": [
+        "activated_storage_count", "additional_storage_count", "admin_network_cidr",
+        "cloud_control_plane_server1", "cloud_control_plane_server2", "compartment_id",
+        "compute_count", "contacts", "corporate_proxy", "cpus_enabled",
+        "csi_number", "data_storage_size_in_tbs", "db_node_storage_size_in_gbs",
+        "db_server_version", "defined_tags", "display_name", "dns_server",
+        "freeform_tags", "gateway", "id", "infini_band_network_cidr",
+        "is_cps_offline_report_enabled", "is_multi_rack_deployment",
+        "last_maintenance_run_id", "lifecycle_details", "lifecycle_state",
+        "maintenance_slo_status", "maintenance_window", "max_cpu_count",
+        "max_data_storage_in_tbs", "max_db_node_storage_in_gbs", "max_memory_in_gbs",
+        "memory_size_in_gbs", "monthly_db_server_version",
+        "netmask", "next_maintenance_run_id", "ntp_server", "shape",
+        "storage_count", "storage_server_version", "subscription_id",
+        "time_created", "time_zone", "total_storage_size_in_gbs"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_vm_clusters",
+      "columns": [
+        "availability_domain", "compartment_id", "cpus_enabled", "data_collection_options",
+        "data_storage_size_in_tbs", "db_node_storage_size_in_gbs", "db_servers",
+        "defined_tags", "display_name", "exadata_infrastructure_id", "freeform_tags",
+        "gi_version", "id", "is_local_backup_enabled", "is_sparse_diskgroup_enabled",
+        "last_patch_history_entry_id", "license_model", "lifecycle_details",
+        "lifecycle_state", "memory_size_in_gbs", "ocpus_enabled", "shape",
+        "ssh_public_keys", "system_version", "time_created", "time_zone",
+        "vm_cluster_network_id"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_autonomous_vm_clusters",
+      "columns": [
+        "available_autonomous_data_storage_size_in_tbs", "available_container_databases",
+        "available_cpus", "available_data_storage_size_in_tbs", "compartment_id",
+        "compute_model", "cpu_core_count_per_node", "data_storage_size_in_tbs",
+        "db_node_storage_size_in_gbs", "defined_tags", "display_name",
+        "exadata_infrastructure_id", "freeform_tags", "id", "is_local_backup_enabled",
+        "is_mtls_enabled_vm_cluster", "last_maintenance_run_id", "license_model",
+        "lifecycle_details", "lifecycle_state", "maintenance_window",
+        "memory_per_oracle_compute_unit_in_gbs", "memory_size_in_gbs",
+        "next_maintenance_run_id", "node_count", "ocpus_enabled", "reclaimable_cpus",
+        "reserved_cpus", "time_created", "time_zone", "total_autonomous_data_storage_in_tbs",
+        "total_container_databases", "vm_cluster_network_id"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_cloud_autonomous_vm_clusters",
+      "columns": [
+        "availability_domain", "available_autonomous_data_storage_size_in_tbs",
+        "available_container_databases", "available_cpus", "cloud_exadata_infrastructure_id",
+        "cluster_time_zone", "compartment_id", "compute_model", "cpu_core_count",
+        "cpu_core_count_per_node", "data_storage_size_in_gbs", "data_storage_size_in_tbs",
+        "db_node_storage_size_in_gbs", "defined_tags", "description", "display_name",
+        "domain", "freeform_tags", "hostname", "id", "is_mtls_enabled_vm_cluster",
+        "last_maintenance_run_id", "last_update_history_entry_id", "license_model",
+        "lifecycle_details", "lifecycle_state", "maintenance_window",
+        "memory_per_oracle_compute_unit_in_gbs", "memory_size_in_gbs",
+        "next_maintenance_run_id", "node_count", "nsg_ids", "ocpu_count",
+        "reclaimable_cpus", "reserved_cpus", "scan_listener_port_non_tls",
+        "scan_listener_port_tls", "shape", "subnet_id", "subscription_id",
+        "time_created", "time_updated", "total_autonomous_data_storage_in_tbs",
+        "total_container_databases"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_external_container_databases",
+      "columns": [
+        "character_set", "compartment_id", "database_configuration", "database_edition",
+        "database_management_config", "database_version", "db_id", "db_packs",
+        "db_unique_name", "defined_tags", "display_name", "freeform_tags", "id",
+        "lifecycle_details", "lifecycle_state", "ncharacter_set",
+        "stack_monitoring_config", "time_created", "time_zone"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_external_non_container_databases",
+      "columns": [
+        "character_set", "compartment_id", "database_configuration", "database_edition",
+        "database_management_config", "database_version", "db_id", "db_packs",
+        "db_unique_name", "defined_tags", "display_name", "freeform_tags", "id",
+        "lifecycle_details", "lifecycle_state", "ncharacter_set", "operations_insights_config",
+        "stack_monitoring_config", "time_created", "time_zone"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
+      "table_name": "db_external_pluggable_databases",
+      "columns": [
+        "compartment_id", "database_management_config", "db_unique_name",
+        "defined_tags", "display_name", "external_container_database_id",
+        "freeform_tags", "id", "lifecycle_details", "lifecycle_state",
+        "operations_insights_config", "source_id", "stack_monitoring_config",
+        "time_created"
+      ],
+      "primary_keys": ["id"]
+    },
+    {
       "table_name": "cr_repositories",
       "columns": [
         "billable_size_in_gbs",
@@ -3872,16 +4050,64 @@
         "compartment_ocid",
         "tenancy_ocid",
         "id",
-        "display_name",
+        "name",
         "description",
         "active",
         "schemas",
         "meta",
         "tags",
         "rules_json",
-        "conditions_json",
-        "network_perimeter_enabled",
-        "session_duration_minutes",
+        "additional_properties_json"
+      ],
+      "primary_keys": [
+        "domain_ocid",
+        "id"
+      ]
+    },
+    {
+      "table_name": "identity_domain_rules",
+      "columns": [
+        "domain_ocid",
+        "identity_domain_id",
+        "identity_domain_name",
+        "identity_domain_url",
+        "compartment_ocid",
+        "tenancy_ocid",
+        "id",
+        "name",
+        "description",
+        "active",
+        "locked",
+        "policy_type_value",
+        "condition",
+        "condition_group_json",
+        "return_json",
+        "rule_groovy",
+        "schemas",
+        "meta",
+        "additional_properties_json"
+      ],
+      "primary_keys": [
+        "domain_ocid",
+        "id"
+      ]
+    },
+    {
+      "table_name": "identity_domain_network_perimeters",
+      "columns": [
+        "domain_ocid",
+        "identity_domain_id",
+        "identity_domain_name",
+        "identity_domain_url",
+        "compartment_ocid",
+        "tenancy_ocid",
+        "id",
+        "name",
+        "description",
+        "active",
+        "ip_addresses_json",
+        "schemas",
+        "meta",
         "additional_properties_json"
       ],
       "primary_keys": [

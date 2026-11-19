@@ -20,7 +20,10 @@ from ocinferno.modules.identityclient.utilities.helpers import (
     IdentityIddIdentityPropagationTrustsResource,
     IdentityIddGrantsResource,
     IdentityIddMfaSettingsResource,
+    IdentityIddNetworkPerimetersResource,
     IdentityIddPasswordPoliciesResource,
+    IdentityIddRulesResource,
+    IdentityIddSignOnPoliciesResource,
     IdentityPrincipalsResource,
 )
 
@@ -40,6 +43,9 @@ COMPONENTS = [
     ("idd_grants", "idd_grants", "Enumerate identity domain grants"),
     ("idd_password_policies", "idd_password_policies", "Enumerate identity domain password policies"),
     ("idd_mfa_settings", "idd_mfa_settings", "Enumerate identity domain MFA / authentication factor settings"),
+    ("idd_sign_on_policies", "idd_sign_on_policies", "Enumerate identity domain sign-on policies"),
+    ("idd_rules", "idd_rules", "Enumerate identity domain policy rules (conditions and actions)"),
+    ("idd_network_perimeters", "idd_network_perimeters", "Enumerate identity domain network perimeters (IP allowlists)"),
 ]
 
 
@@ -59,6 +65,9 @@ CACHE_TABLES = {
     "idd_grants": ("identity_domain_grants", None),
     "idd_password_policies": ("identity_domain_password_policies", None),
     "idd_mfa_settings": ("identity_domain_authentication_factor_settings", None),
+    "idd_sign_on_policies": ("identity_domain_sign_on_policies", None),
+    "idd_rules": ("identity_domain_rules", None),
+    "idd_network_perimeters": ("identity_domain_network_perimeters", None),
 }
 
 
@@ -121,6 +130,9 @@ def run_module(user_args, session):
         "idd_grants": IdentityIddGrantsResource(session=session),
         "idd_password_policies": IdentityIddPasswordPoliciesResource(session=session),
         "idd_mfa_settings": IdentityIddMfaSettingsResource(session=session),
+        "idd_sign_on_policies": IdentityIddSignOnPoliciesResource(session=session),
+        "idd_rules": IdentityIddRulesResource(session=session),
+        "idd_network_perimeters": IdentityIddNetworkPerimetersResource(session=session),
     }
 
     # Persist manually-supplied domain URLs to the DB so future runs find them automatically.

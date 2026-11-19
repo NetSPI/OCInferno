@@ -139,6 +139,8 @@ SERVICE_GROUP_SPECS = [
     {"service": "bastion", "modules": ["ocinferno.modules.bastion.enumeration.enum_bastion"]},
     {"service": "os_management_hub", "modules": ["ocinferno.modules.os_management_hub.enumeration.enum_os_management_hub"]},
     {"service": "service_connector", "modules": ["ocinferno.modules.service_connector.enumeration.enum_service_connector"]},
+    {"service": "batch", "modules": ["ocinferno.modules.batch.enumeration.enum_batch"]},
+    {"service": "resource_search", "modules": ["ocinferno.modules.resource_search.enumeration.enum_resource_search"]},
 ]
 
 # Service groups that are GLOBAL (tenancy-wide, not regional): they live in the HOME
@@ -838,6 +840,7 @@ _MODULE_ALIASES: Dict[str, str] = {
     "gguard": "cloud_guard", "guard": "cloud_guard",
     "ar": "artifact_registry", "cr": "container_registry", "ci": "container_instances",
     "db": "databases", "adb": "databases",
+    "search": "resource_search", "inventory": "resource_search",
     "rm": "resource_manager", "orm": "resource_manager",
     "kafka": "managed_kafka", "genai": "generative_ai",
     "logs": "logging", "vss": "vulnerability_scanning", "comp": "compartments",

@@ -334,8 +334,10 @@ def extract_from_value(column: str, value: Any) -> List[Dict[str, str]]:
         _add(KIND_URL, u, ctx)
 
     # FQDNs only from host-ish columns.
+    # Strip URL matches first so the URL hostname isn't also saved as a bare FQDN.
     if _HOST_COL_RE.search(column):
-        for f in _FQDN_RE.findall(text):
+        fqdn_text = _URL_RE.sub(" ", text)
+        for f in _FQDN_RE.findall(fqdn_text):
             if not _looks_like_ocid(f) and not _valid_ipv4(f):
                 _add(KIND_FQDN, f, ctx)
 

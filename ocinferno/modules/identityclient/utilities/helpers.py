@@ -54,6 +54,8 @@ TABLE_IDD_LOCKOUT_POLICIES = "identity_domain_lockout_policies"
 TABLE_IDD_IDENTITY_PROVIDERS = "identity_domain_identity_providers"
 TABLE_IDD_SIGN_ON_POLICIES = "identity_domain_sign_on_policies"
 TABLE_IDD_MFA_SETTINGS = "identity_domain_authentication_factor_settings"  # AuthenticationFactorSetting
+TABLE_IDD_RULES = "identity_domain_rules"
+TABLE_IDD_NETWORK_PERIMETERS = "identity_domain_network_perimeters"
 
 # Identity Domain "credential-ish" artifacts (for enum_identity --list-domains)
 TABLE_IDD_USER_DB_CREDENTIALS = "identity_domain_user_db_credentials"
@@ -591,6 +593,91 @@ class IdentityDomainResourceClient:
         saved = self.session.save_resources(trusts or [], TABLE_IDD_IDENTITY_PROPAGATION_TRUSTS)
         return {"saved": saved, "table": TABLE_IDD_IDENTITY_PROPAGATION_TRUSTS}
 
+    # -------------------------------------------------------------------------
+    # Sign-On Policies (SCIM Policies with policyType=SignOn)
+    # -------------------------------------------------------------------------
+    def list_sign_on_policies(self, *, attributes: str | None = None) -> list[dict[str, Any]]:
+        """Returns SCIM Policy resources filtered to policyType.value eq "SignOn"."""
+        kwargs: dict[str, Any] = {"filter": 'policyType.value eq "SignOn"'}
+        if attributes is not None:
+            kwargs["attributes"] = attributes
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_policies(
+                **kwargs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
+
+    def save_idd_sign_on_policies(self, *, policies: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+        saved = self.session.save_resources(policies or [], TABLE_IDD_SIGN_ON_POLICIES)
+        return {"saved": saved, "table": TABLE_IDD_SIGN_ON_POLICIES}
+
+    # -------------------------------------------------------------------------
+    # Rules (SCIM Rules — condition + return action for all policy types)
+    # -------------------------------------------------------------------------
+    def list_rules(self, *, policy_type_filter: str | None = None, attributes: str | None = None) -> list[dict[str, Any]]:
+        """Returns SCIM Rule resources, optionally filtered by policyType.value."""
+        kwargs: dict[str, Any] = {}
+        if policy_type_filter:
+            kwargs["filter"] = f'policyType.value eq "{policy_type_filter}"'
+        if attributes is not None:
+            kwargs["attributes"] = attributes
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_rules(
+                **kwargs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
+
+    def save_idd_rules(self, *, rules: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+        saved = self.session.save_resources(rules or [], TABLE_IDD_RULES)
+        return {"saved": saved, "table": TABLE_IDD_RULES}
+
+    # -------------------------------------------------------------------------
+    # Network Perimeters (IP allowlists referenced by sign-on policy rules)
+    # -------------------------------------------------------------------------
+    def list_network_perimeters(self, *, attributes: str | None = None) -> list[dict[str, Any]]:
+        """Returns SCIM NetworkPerimeter resources."""
+        kwargs: dict[str, Any] = {}
+        if attributes is not None:
+            kwargs["attributes"] = attributes
+        all_resources: list[dict[str, Any]] = []
+        start = 1
+        page_size = 100
+        while True:
+            rows = self.identity_domain_client.list_network_perimeters(
+                **kwargs, count=page_size, start_index=start
+            )
+            data = oci.util.to_dict(rows.data)
+            resources = data.get("resources") or []
+            all_resources.extend(resources)
+            total = data.get("total_results") or data.get("totalResults") or 0
+            if len(all_resources) >= total or not resources:
+                break
+            start += len(resources)
+        return all_resources
+
+    def save_idd_network_perimeters(self, *, perimeters: list[dict[str, Any]], compartment_id: str) -> dict[str, Any]:
+        saved = self.session.save_resources(perimeters or [], TABLE_IDD_NETWORK_PERIMETERS)
+        return {"saved": saved, "table": TABLE_IDD_NETWORK_PERIMETERS}
 
     # -------------------------------------------------------------------------
     # DB-save helpers (normalized rows) used by enum_iam / enum_idd_grants
@@ -2915,6 +3002,276 @@ class IdentityResourceSuite(ResourceBase):
         return {"ok": True, "password_policies": int(total), "saved": True}
 
     # -------------------------------------------------------------------------
+    # Identity Domain sign-on policies
+    # -------------------------------------------------------------------------
+    def _run_idd_sign_on_policies(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain Sign-On Policies (SCIM Policies, policyType=SignOn).",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--attributes", required=False, help="Override SCIM attributes list.")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; use --all-saved-domains or select a compartment.{UtilityTools.RESET}")
+            return {"ok": False, "sign_on_policies": 0}
+
+        _comp, domains, domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "sign_on_policies": 0}
+
+        print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(dom.get("compartment_id") or dom.get("compartmentId") or compartment_id)
+            if not dom_url:
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            # Always request rules so rule references are populated
+            attrs = args.attributes or "id,name,active,description,schemas,meta,domainOcid,compartmentOcid,tenancyOcid,policyType,rules"
+            try:
+                rows = [r for r in (ops.list_sign_on_policies(attributes=attrs) or []) if isinstance(r, dict)]
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_sign_on_policies: list failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                continue
+
+            if not rows:
+                continue
+
+            total += len(rows)
+            for row in rows:
+                ops.apply_domain_context(
+                    row,
+                    domain_id=dom_id,
+                    domain_name=dom_name,
+                    domain_url=dom_url,
+                    compartment_id=dom_compartment_id,
+                )
+                rules = row.get("rules")
+                row["rules_json"] = _s(json.dumps(rules)) if isinstance(rules, list) else ""
+
+            try:
+                ops.save_idd_sign_on_policies(policies=rows, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_sign_on_policies: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] Sign-On Policies for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                rows,
+                ["id", "name", "active", "description"],
+                sort_key="name",
+                title="Identityclient - Idd Sign-On Policies",
+            )
+
+        print(f"\n[*] enum_idd_sign_on_policies complete. Domains: {len(domains)} | SignOnPolicies: {total}")
+        return {"ok": True, "sign_on_policies": int(total), "saved": True}
+
+    # -------------------------------------------------------------------------
+    # Identity Domain Rules (condition + return action for each policy rule)
+    # -------------------------------------------------------------------------
+    def _run_idd_rules(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain Rules (SCIM Rules — conditions and actions for sign-on and other policies).",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--policy-type", dest="policy_type", default=None, help="Filter rules by policyType.value (e.g. SignOn). Default: all rules.")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; use --all-saved-domains or select a compartment.{UtilityTools.RESET}")
+            return {"ok": False, "rules": 0}
+
+        _comp, domains, domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "rules": 0}
+
+        print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(dom.get("compartment_id") or dom.get("compartmentId") or compartment_id)
+            if not dom_url:
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            try:
+                rows = [r for r in (ops.list_rules(policy_type_filter=getattr(args, "policy_type", None)) or []) if isinstance(r, dict)]
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_rules: list failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                continue
+
+            if not rows:
+                continue
+
+            total += len(rows)
+            for row in rows:
+                ops.apply_domain_context(
+                    row,
+                    domain_id=dom_id,
+                    domain_name=dom_name,
+                    domain_url=dom_url,
+                    compartment_id=dom_compartment_id,
+                )
+                pt = row.get("policy_type") or {}
+                row["policy_type_value"] = _s(pt.get("value") if isinstance(pt, dict) else str(pt))
+                cg = row.get("condition_group")
+                row["condition_group_json"] = _s(json.dumps(cg)) if cg else ""
+                # _return is the reserved-word-safe key the SDK uses for 'return'
+                ret = row.get("_return") or row.get("return")
+                row["return_json"] = _s(json.dumps(ret)) if ret else ""
+
+            try:
+                ops.save_idd_rules(rules=rows, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_rules: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] Rules for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                rows,
+                ["id", "name", "policy_type_value", "active", "condition"],
+                sort_key="policy_type_value",
+                title="Identityclient - Idd Rules",
+            )
+
+        print(f"\n[*] enum_idd_rules complete. Domains: {len(domains)} | Rules: {total}")
+        return {"ok": True, "rules": int(total), "saved": True}
+
+    # -------------------------------------------------------------------------
+    # Identity Domain Network Perimeters (IP allowlists for sign-on policies)
+    # -------------------------------------------------------------------------
+    def _run_idd_network_perimeters(self, user_args):
+        parser = argparse.ArgumentParser(
+            description="Enumerate Identity Domain Network Perimeters (IP allowlists referenced by sign-on policy rules).",
+            allow_abbrev=False,
+        )
+        parser.add_argument("--domain", required=False, help="Filter domains by substring.")
+        parser.add_argument("--domain-urls", dest="domain_urls", nargs="+", default=[], help="One or more Identity Domain endpoints; used when no domains are cached.")
+        parser.add_argument("--all-saved-domains", action="store_true", help="Use all saved domains.")
+        args = self._parse_known(parser, user_args)
+
+        compartment_id = getattr(self.session, "compartment_id", None)
+        if not args.all_saved_domains and (not isinstance(compartment_id, str) or not compartment_id):
+            print(f"{UtilityTools.RED}[X] session.compartment_id is not set; use --all-saved-domains or select a compartment.{UtilityTools.RESET}")
+            return {"ok": False, "network_perimeters": 0}
+
+        _comp, domains, domain_source = self._load_domains_from_cache(
+            all_saved_domains=bool(args.all_saved_domains),
+            domain_filter=args.domain or "",
+        )
+        if not domains:
+            explicit_urls = [_s(u) for u in (getattr(args, "domain_urls", None) or []) if _s(u)]
+            if explicit_urls:
+                domains = [{"id": "", "url": u, "display_name": u, "compartment_id": compartment_id or ""} for u in explicit_urls]
+                domain_source = "manual"
+            else:
+                print(
+                    f"{UtilityTools.YELLOW}[*] No identity domains cached; skipping "
+                    f"(run 'modules run enum_identity --list-domains' first).{UtilityTools.RESET}"
+                )
+                return {"ok": False, "network_perimeters": 0}
+
+        print(f"\n[*] Identity Domains ({'from current run' if domain_source == 'current_run' else 'from DB cache'})")
+        UtilityTools.print_limited_table(
+            domains, ["id", "display_name", "url", "home_region"],
+            title="Identityclient - Identity Domains",
+        )
+
+        total = 0
+        for dom in domains:
+            dom_id = _s(dom.get("id"))
+            dom_name = _s(dom.get("display_name"))
+            dom_url = _s(dom.get("url"))
+            dom_compartment_id = _s(dom.get("compartment_id") or dom.get("compartmentId") or compartment_id)
+            if not dom_url:
+                continue
+
+            ops = IdentityDomainResourceClient(session=self.session, service_endpoint=dom_url)
+            try:
+                rows = [r for r in (ops.list_network_perimeters() or []) if isinstance(r, dict)]
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_network_perimeters: list failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+                continue
+
+            if not rows:
+                continue
+
+            total += len(rows)
+            for row in rows:
+                ops.apply_domain_context(
+                    row,
+                    domain_id=dom_id,
+                    domain_name=dom_name,
+                    domain_url=dom_url,
+                    compartment_id=dom_compartment_id,
+                )
+                ips = row.get("ip_addresses")
+                row["ip_addresses_json"] = _s(json.dumps(ips)) if isinstance(ips, list) else ""
+
+            try:
+                ops.save_idd_network_perimeters(perimeters=rows, compartment_id=dom_compartment_id)
+            except Exception as e:
+                UtilityTools.dlog(self.debug, "enum_idd_network_perimeters: save failed", domain_id=dom_id, err=f"{type(e).__name__}: {e}")
+
+            print(f"\n[*] Network Perimeters for Domain: {dom_name or dom_id}")
+            UtilityTools.print_limited_table(
+                rows,
+                ["id", "name", "active", "ip_addresses_json"],
+                sort_key="name",
+                title="Identityclient - Idd Network Perimeters",
+            )
+
+        print(f"\n[*] enum_idd_network_perimeters complete. Domains: {len(domains)} | NetworkPerimeters: {total}")
+        return {"ok": True, "network_perimeters": int(total), "saved": True}
+
+    # -------------------------------------------------------------------------
     # Identity Domain external Identity Providers (inbound SAML/OIDC federation)
     # -------------------------------------------------------------------------
     def _run_idd_identity_providers(self, user_args):
@@ -3354,6 +3711,44 @@ class IdentityIddMfaSettingsResource(IdentityResourceSuite):
         _ = rows
         return None
 
+
+class IdentityIddSignOnPoliciesResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_sign_on_policies(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddRulesResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_rules(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
+
+
+class IdentityIddNetworkPerimetersResource(IdentityResourceSuite):
+    def list(self, *, user_args):
+        return self._run_idd_network_perimeters(user_args)
+
+    def get(self, *, resource_id: str):
+        _ = resource_id
+        return {}
+
+    def save(self, rows):
+        _ = rows
+        return None
 
 
 # =============================================================================

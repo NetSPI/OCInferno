@@ -24,12 +24,20 @@ def _session(saved=None):
 
 
 # ---------------------------------------------------------------------------
-# enum_databases — only autonomous_databases and db_systems remain
+# enum_databases — full database resource coverage
 # ---------------------------------------------------------------------------
 
 def test_enum_databases_component_keys():
     from ocinferno.modules.databases.enumeration.enum_databases import COMPONENTS
-    assert [c.key for c in COMPONENTS] == ["autonomous_databases", "db_systems"]
+    assert [c.key for c in COMPONENTS] == [
+        "autonomous_databases", "autonomous_container_databases",
+        "db_systems", "databases", "pluggable_databases",
+        "cloud_exadata_infrastructures", "cloud_vm_clusters",
+        "exadata_infrastructures", "vm_clusters",
+        "autonomous_vm_clusters", "cloud_autonomous_vm_clusters",
+        "external_container_databases", "external_non_container_databases",
+        "external_pluggable_databases",
+    ]
 
 
 # ---------------------------------------------------------------------------

@@ -28,7 +28,8 @@ def test_extracts_ips_cidrs_urls_fqdns_from_nested_json():
     # CIDR base must NOT also be counted as a bare IP
     assert "203.0.113.0" not in k.get(ni.KIND_IP, set())
     assert "app.example.com" in k[ni.KIND_FQDN]
-    assert "adb.us-phoenix-1.oraclecloud.com" in k[ni.KIND_FQDN]  # mined from URL host
+    # URL host is NOT duplicated as a bare FQDN (dedup: URL already captured)
+    assert "adb.us-phoenix-1.oraclecloud.com" not in k.get(ni.KIND_FQDN, set())
     assert any(u.startswith("https://adb") for u in k[ni.KIND_URL])
     assert "ocid1.subnet.oc1..s1" in k[ni.KIND_NET_REF]
 
