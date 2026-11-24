@@ -33,6 +33,9 @@ def resource_type_label(table_name: str) -> str:
         "virtual_network_drgs": "drgs",
         "virtual_network_drg_attachments": "drg_attachments",
         "virtual_network_dhcp_options": "dhcp_options",
+        "virtual_network_local_peering_gateways": "local_peering_gateways",
+        "virtual_network_vnic_attachments": "vnic_attachments",
+        "virtual_network_vnics": "vnics",
         "container_registry_repositories": "container_repositories",
         "container_registry_images": "container_images",
         "ar_repositories": "artifact_repositories",
@@ -140,6 +143,9 @@ def resource_type_area(resource_type: str) -> str:
         "drgs": "Network",
         "drg_attachments": "Network",
         "dhcp_options": "Network",
+        "local_peering_gateways": "Network",
+        "vnic_attachments": "Network",
+        "vnics": "Network",
         # resource_type_label() shortens these (stripping the "compute_"/"desktops_"
         # prefix the fallback rules below key off), so the short form needs its own
         # entry here -- otherwise callers that go through resource_type_label() first

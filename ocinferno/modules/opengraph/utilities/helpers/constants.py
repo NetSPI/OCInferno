@@ -11,6 +11,8 @@ NODE_TYPE_OCI_USER = "OCIUser"
 NODE_TYPE_OCI_GROUP = "OCIGroup"
 NODE_TYPE_OCI_DYNAMIC_GROUP = "OCIDynamicGroup"
 NODE_TYPE_OCI_GENERIC_RESOURCE = "OCIGenericResource"
+# External tenancy admitted via cross-tenancy ADMIT policy (source of cross-tenant access)
+NODE_TYPE_OCI_EXTERNAL_TENANCY = "OCIExternalTenancy"
 # A Management Agent install key: a portable bearer credential that lets its holder
 # register a NEW management agent (from ANY host) as a principal in the key's
 # compartment. If a dynamic group matches resource.type='managementagent' there, that
@@ -19,6 +21,12 @@ NODE_TYPE_OCI_MANAGEMENT_AGENT_INSTALL_KEY = "OCIManagementAgentInstallKey"
 
 EDGE_TYPE_OCI_GROUP_MEMBER = "OCI_GROUP_MEMBER"
 EDGE_TYPE_OCI_DYNAMIC_GROUP_MEMBER = "OCI_DYNAMIC_GROUP_MEMBER"
+# Cross-tenancy ADMIT: an external tenancy (or any-tenancy) is admitted to access
+# resources in this tenancy. Source tenancy must ALSO have a matching ENDORSE for access to be granted.
+EDGE_TYPE_CROSS_TENANT_ADMITS = "CROSS_TENANT_ADMITS"
+# Cross-tenancy ENDORSE: a local group is endorsed to access resources in an external tenancy.
+# Source side of the cross-tenancy pair; must be matched by ADMIT in the destination.
+EDGE_TYPE_HAS_ENDORSE = "HAS_ENDORSE"
 # A usable install key can enroll a rogue managementagent into a matching dynamic
 # group (mirrors INSTANCE_CAN_JOIN_DG for a launchable instance).
 EDGE_TYPE_OCI_INSTALL_KEY_CAN_JOIN_DG = "INSTALL_KEY_CAN_JOIN_DG"

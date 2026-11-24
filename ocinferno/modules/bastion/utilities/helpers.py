@@ -16,7 +16,9 @@ class BastionBastionsResource(OciListResource):
     LIST_METHOD = "list_bastions"
     GET_METHOD = "get_bastion"
     GET_ID_PARAM = "bastion_id"
-    COLUMNS = ["id", "name", "bastion_type", "lifecycle_state", "target_vcn_id", "target_subnet_id", "time_created"]
+    COLUMNS = ["id", "name", "bastion_type", "lifecycle_state", "target_vcn_id", "target_subnet_id", "time_created",
+               "client_cidr_block_allow_list", "private_endpoint_ip_address"]
+    DISPLAY_COLUMNS = ["name", "bastion_type", "lifecycle_state", "target_subnet_id"]
 
 
 class BastionSessionsResource(OciListResource):

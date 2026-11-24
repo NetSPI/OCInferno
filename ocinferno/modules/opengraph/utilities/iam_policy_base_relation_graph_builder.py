@@ -66,7 +66,10 @@ from ocinferno.modules.opengraph.utilities.helpers import (
 )
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     DEFAULT_ALLOW_EDGE_RULES,
+    EDGE_TYPE_CROSS_TENANT_ADMITS,
+    EDGE_TYPE_HAS_ENDORSE,
     NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_EXTERNAL_TENANCY,
     NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_GROUP,
     NODE_TYPE_OCI_USER,
@@ -2095,6 +2098,284 @@ def _emit_scope_fallback(
                 )
 
 
+def _handle_endorse_statement(ctx, og, policy, st, statement_index, stats):
+    """
+    Model cross-tenancy ENDORSE statements as graph edges.
+
+    ENDORSE is the source-tenancy side of a cross-tenancy pair. Combined with a
+    matching ADMIT in the destination tenancy, it grants the endorsed group access
+    to the destination tenancy's resources. Both sides are required (confirmed live).
+
+    Lexer output (define_subs=True does NOT resolve compartment_name targets):
+      kind: endorse
+      subject: {type: group, values: [{label: group_name}]}
+      target: {type: compartment_name | tenancy, values: [...], tenancy: alias_or_ocid}
+      actions: {type: verbs, values: [...]}
+      resources: {type: specific | all, values: [...]}
+
+    Emits:
+      OCIGroup node  --HAS_ENDORSE-->  OCIExternalTenancy node
+    """
+    _s = str
+
+    # Build define map from the pre-computed map attached during dispatch setup,
+    # or fall back to the parsed_statements list if present.
+    define_map: dict[str, str] = dict(policy.get("_define_map") or {})
+
+    # Resolve destination tenancy OCID from target.tenancy (alias) or target.values
+    target = st.get("target", {})
+    tenancy_ref = target.get("tenancy", "")
+    if tenancy_ref:
+        dst_tenancy_ocid = define_map.get(tenancy_ref, tenancy_ref)
+    else:
+        raw_vals = target.get("values", [])
+        dst_tenancy_ocid = define_map.get(raw_vals[0], raw_vals[0]) if raw_vals else ""
+
+    # Must start with tenancy OCID prefix to be meaningful
+    if not dst_tenancy_ocid.startswith("ocid1.tenancy."):
+        stats["skipped_other_kinds"] = stats.get("skipped_other_kinds", 0) + 1
+        return
+
+    subject = st.get("subject", {})
+    subj_type = subject.get("type", "")
+    subj_values = subject.get("values", [])
+
+    actions = st.get("actions", {})
+    verbs = [_s(v) for v in (actions.get("values") or [])]
+    resources_st = st.get("resources", {})
+    res_values = [_s(v) for v in (resources_st.get("values") or [])] or ["all-resources"]
+
+    policy_id = _s(policy.get("id", ""))
+    policy_name = _s(policy.get("name", ""))
+    tenant_id = _s(getattr(ctx, "tenancy_ocid", "") or policy.get("compartment_id", ""))
+
+    existing_nodes = og["existing_nodes_set"]
+    existing_edges = og["existing_edges_set"]
+
+    # The ENDORSE edge destination is `external_tenancy(source_tenancy)` — the same node
+    # that CROSS_TENANT_ADMITS sources from. This creates a connected graph path:
+    #   group G --HAS_ENDORSE--> external_tenancy(A) --CROSS_TENANT_ADMITS--> policy_stmt
+    # The destination tenancy (B) is captured in edge properties.
+    # source_tenancy is the tenancy where this ENDORSE policy lives (tenancy A).
+    source_tenancy_ocid = _s(policy.get("_tenant_id") or tenant_id)
+    ext_node_id = f"external_tenancy:{source_tenancy_ocid}"
+    if ext_node_id not in existing_nodes:
+        ctx.upsert_node(
+            node_id=ext_node_id,
+            node_type=NODE_TYPE_OCI_EXTERNAL_TENANCY,
+            node_properties={
+                "tenancy_id": source_tenancy_ocid,
+                "external_tenancy_ocid": source_tenancy_ocid,
+                "is_source": True,
+            },
+            commit=False,
+        )
+        existing_nodes.add(ext_node_id)
+
+    # Resolve subject group(s) to OCID(s)
+    if subj_type == "group":
+        group_names = [_s(v.get("label", "")) for v in subj_values if v.get("label")]
+    elif subj_type == "any-group":
+        group_names = ["any-group"]
+    else:
+        group_names = []
+
+    for group_name in group_names:
+        if group_name == "any-group":
+            src_node_id = f"synthetic::any-group@{source_tenancy_ocid}"
+            src_node_type = NODE_TYPE_OCI_GROUP
+        else:
+            # Look up OCID by name
+            group_ocid = (
+                (getattr(ctx, "classic_group_by_name", {}) or {}).get(group_name)
+                or (getattr(ctx, "idd_group_by_domain_and_name", {}) or {}).get(
+                    (getattr(ctx, "default_domain_ocid", "") or "", group_name)
+                )
+                or f"synthetic::group:{group_name}@{source_tenancy_ocid}"
+            )
+            src_node_id = _s(group_ocid)
+            src_node_type = NODE_TYPE_OCI_GROUP
+
+        edge_key = (src_node_id, EDGE_TYPE_HAS_ENDORSE, ext_node_id)
+        if edge_key not in existing_edges:
+            edge_props = _build_edge_properties(
+                edge_category=EDGE_CATEGORY_PERMISSION,
+                description=(
+                    f"Cross-tenancy ENDORSE: group '{group_name}' endorsed to "
+                    f"{','.join(verbs)} {','.join(res_values)} in destination tenancy "
+                    f"{dst_tenancy_ocid}. Destination must also have a matching ADMIT for access to be granted."
+                ),
+                verbs=verbs,
+                resource_family=res_values,
+                group_name=group_name,
+                source_tenancy_ocid=source_tenancy_ocid,
+                destination_tenancy_ocid=dst_tenancy_ocid,
+                policy_id=policy_id,
+                policy_name=policy_name,
+            )
+            _emit_edge_shared(
+                ctx,
+                src_id=src_node_id,
+                src_type=src_node_type,
+                dst_id=ext_node_id,
+                dst_type=NODE_TYPE_OCI_EXTERNAL_TENANCY,
+                edge_type=EDGE_TYPE_HAS_ENDORSE,
+                edge_properties=edge_props,
+                commit=False,
+                on_conflict="update",
+                dedupe=True,
+            )
+            existing_edges.add(edge_key)
+            stats["endorse_edges_written"] = stats.get("endorse_edges_written", 0) + 1
+
+    stats["statements_kept"] += 1
+
+
+def _handle_admit_statement(ctx, og, policy, st, statement_index, stats):
+    """
+    Model cross-tenancy ADMIT statements as graph edges.
+
+    OCI ADMIT (confirmed live): requires a matching ENDORSE in the source tenancy
+    for access to be granted. Both sides of the cross-tenancy pair are required.
+
+    Supported patterns (after define_subs=True resolution):
+      Admit any-group  of tenancy_id <ocid>  to VERB RESOURCE in tenancy
+      Admit any-group  of any-tenancy         to VERB RESOURCE in tenancy
+      Admit group-id   <ocid> of tenancy_id <ocid>  to VERB RESOURCE in tenancy
+
+    Emits:
+      OCIExternalTenancy node  --CROSS_TENANT_ADMITS-->  OCIPolicyStatement node
+    The statement node is then linked to resources the same way ALLOW statements are,
+    so attack paths work through the same chain: external → stmt → resource.
+    """
+    source = st.get("source") or {}
+    subject = st.get("subject") or {}
+    actions = st.get("actions") or {}
+    resources = st.get("resources") or {}
+    location = st.get("location") or {}
+
+    source_type = _s(source.get("type") or "")
+    source_values = source.get("values") or []
+
+    # Determine source tenancy OCID / label
+    if source_type == "any-tenancy":
+        src_tenancy_ocid = "any-tenancy"
+        src_label = "any-tenancy (all external tenancies)"
+        is_any = True
+    elif source_type == "tenancy_id" and source_values:
+        src_tenancy_ocid = _s(source_values[0])
+        src_label = _short_ocid(src_tenancy_ocid) or src_tenancy_ocid
+        is_any = False
+    elif source_type == "tenancy" and source_values:
+        # define_subs=False path: alias not resolved; use as-is
+        src_tenancy_ocid = _s(source_values[0])
+        src_label = src_tenancy_ocid
+        is_any = False
+    else:
+        stats["skipped_other_kinds"] += 1
+        return
+
+    if not src_tenancy_ocid:
+        stats["skipped_other_kinds"] += 1
+        return
+
+    # Build external tenancy node ID
+    existing_nodes = og["existing_nodes_set"]
+    ext_node_id = f"external_tenancy:{src_tenancy_ocid}"
+    if ext_node_id not in existing_nodes:
+        ctx.upsert_node(
+            node_id=ext_node_id,
+            node_type=NODE_TYPE_OCI_EXTERNAL_TENANCY,
+            node_properties={
+                "name": src_label,
+                "tenancy_ocid": src_tenancy_ocid,
+                "is_any_tenancy": is_any,
+            },
+            commit=False,
+        )
+        existing_nodes.add(ext_node_id)
+
+    # Collect edge metadata
+    verbs = actions.get("values") or []
+    res_values = resources.get("values") or []
+    loc_type = _s(location.get("type") or "")
+    policy_id = _s(policy.get("id") or "")
+    policy_name = _s(policy.get("name") or "")
+    policy_comp_id = _s(policy.get("compartment_id") or "")
+    tenant_id = _s(policy.get("_tenant_id") or "")
+
+    subject_type = _s(subject.get("type") or "")
+    subject_values = subject.get("values") or []
+    # For group-id subjects, also note the specific group OCID
+    group_ocid = ""
+    if subject_type == "group-id" and subject_values:
+        group_ocid = _s((subject_values[0] or {}).get("label") or "")
+
+    stmt_node_id = _policy_statement_node_id(policy_id, statement_index)
+    raw_stmt = ""
+    policy_stmts = _json_list(policy.get("statements"))
+    if 0 <= statement_index < len(policy_stmts):
+        raw_stmt = _s(policy_stmts[statement_index])
+
+    # Ensure the policy statement node exists
+    if stmt_node_id not in existing_nodes:
+        ctx.upsert_node(
+            node_id=stmt_node_id,
+            node_type=POLICY_STATEMENT_NODE,
+            node_properties={
+                "name": _policy_statement_display(ctx, policy_name, policy_id, statement_index, policy_comp_id),
+                "compartment_id": policy_comp_id,
+                "tenant_id": tenant_id,
+                "policy_id": policy_id,
+                "policy_name": policy_name,
+                "statement_index": int(statement_index),
+                "statement_number": int(statement_index) + 1,
+                "raw_statement": raw_stmt,
+            },
+            commit=False,
+        )
+        existing_nodes.add(stmt_node_id)
+
+    edge_props = _build_edge_properties(
+        edge_category=EDGE_CATEGORY_PERMISSION,
+        description=(
+            f"Cross-tenancy ADMIT: {'any external tenancy' if is_any else src_tenancy_ocid} "
+            f"admitted to {','.join(verbs)} {','.join(res_values)} "
+            f"({'any-group' if subject_type == 'any-group' else ('group ' + group_ocid)}). "
+            "Source tenancy must also have a matching ENDORSE statement for access to be granted."
+        ),
+        verbs=verbs,
+        resource_family=res_values,
+        location_type=loc_type,
+        subject_type=subject_type,
+        group_ocid=group_ocid,
+        source_tenancy_ocid=src_tenancy_ocid,
+        is_any_tenancy=is_any,
+        policy_id=policy_id,
+        policy_name=policy_name,
+    )
+
+    existing_edges = og["existing_edges_set"]
+    edge_key = (ext_node_id, EDGE_TYPE_CROSS_TENANT_ADMITS, stmt_node_id)
+    if edge_key not in existing_edges:
+        _emit_edge_shared(
+            ctx,
+            src_id=ext_node_id,
+            src_type=NODE_TYPE_OCI_EXTERNAL_TENANCY,
+            dst_id=stmt_node_id,
+            dst_type=POLICY_STATEMENT_NODE,
+            edge_type=EDGE_TYPE_CROSS_TENANT_ADMITS,
+            edge_properties=edge_props,
+            commit=False,
+            on_conflict="update",
+            dedupe=True,
+        )
+        existing_edges.add(edge_key)
+        stats["admit_edges_written"] = stats.get("admit_edges_written", 0) + 1
+
+    stats["statements_kept"] += 1
+
+
 def _handle_allow_statement(
     ctx,
     og_state,
@@ -2335,6 +2616,17 @@ def build_iam_policy_base_relation_edges_offline(*, session, ctx, debug=True, au
             parsed = []
             continue
 
+        # Build define map (alias → OCID) for this policy so handlers can resolve
+        # symbolic names used in ENDORSE target.tenancy and target.values.
+        define_map: dict[str, str] = {}
+        for _dst in (parsed or []):
+            if _dst.get("kind") == "define":
+                _sym = _dst.get("symbol", {})
+                _defn = _dst.get("def", {})
+                if _defn.get("type") == "ocid":
+                    define_map[_sym.get("name", "")] = _defn.get("value", "")
+        p["_define_map"] = define_map
+
         # ---------------------------------------------------------------------
         # Phase 3: Dispatch statement handlers
         # ---------------------------------------------------------------------
@@ -2353,6 +2645,28 @@ def build_iam_policy_base_relation_edges_offline(*, session, ctx, debug=True, au
                     cond_engine=cond_engine,
                     stats=stats,
                     debug=debug,
+                )
+
+            elif st_kind(st) == "admit":
+
+                _handle_admit_statement(
+                    ctx,
+                    og,
+                    policy=p,
+                    st=st,
+                    statement_index=idx,
+                    stats=stats,
+                )
+
+            elif st_kind(st) == "endorse":
+
+                _handle_endorse_statement(
+                    ctx,
+                    og,
+                    policy=p,
+                    st=st,
+                    statement_index=idx,
+                    stats=stats,
                 )
 
             else:

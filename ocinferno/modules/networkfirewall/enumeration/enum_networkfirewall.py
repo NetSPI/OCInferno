@@ -14,6 +14,7 @@ from ocinferno.core.utils.service_runtime import (
 from ocinferno.modules.networkfirewall.utilities.helpers import (
     NetworkFirewallFirewallsResource,
     NetworkFirewallPoliciesResource,
+    NetworkFirewallPolicyObjectsResource,
     NetworkFirewallSecurityRulesResource,
 )
 
@@ -21,6 +22,9 @@ COMPONENTS = [
     ("firewalls", "firewalls", "Enumerate network firewalls"),
     ("policies", "policies", "Enumerate network firewall policies"),
     ("security_rules", "security_rules", "Enumerate network firewall security rules"),
+    ("address_lists", "address_lists", "Enumerate policy address lists (with their addresses)"),
+    ("services", "services", "Enumerate policy services (with their port ranges)"),
+    ("service_lists", "service_lists", "Enumerate policy service lists (with their members)"),
 ]
 
 
@@ -28,6 +32,9 @@ CACHE_TABLES = {
     "firewalls": ("network_firewall_firewalls", "compartment_id"),
     "policies": ("network_firewall_policies", "compartment_id"),
     "security_rules": ("network_firewall_security_rules", "compartment_id"),
+    "address_lists": ("network_firewall_address_lists", "compartment_id"),
+    "services": ("network_firewall_services", "compartment_id"),
+    "service_lists": ("network_firewall_service_lists", "compartment_id"),
 }
 
 
@@ -122,6 +129,15 @@ def run_module(user_args, session):
                     module_name="enum_networkfirewall",
                     require_compartment=False,
                 ))
+            elif key in NetworkFirewallPolicyObjectsResource.KINDS:
+                compartment_id = getattr(session, "compartment_id", None)
+                pids = NetworkFirewallSecurityRulesResource(session=session).resolve_policy_ids(compartment_id, args)
+                obj = NetworkFirewallPolicyObjectsResource(session, key)
+                rows = obj.list(policy_ids=pids, compartment_id=compartment_id)
+                if rows:
+                    UtilityTools.print_limited_table(rows, ["network_firewall_policy_id", "name", "type"], title=f"Networkfirewall - {key}")
+                    obj.save(rows)
+                results.append({"ok": True, key: len(rows), "policy_ids": pids, "saved": bool(rows)})
             elif key == "security_rules":
                 security_rules_resource = resource_map[key]
                 compartment_id = getattr(session, "compartment_id", None)

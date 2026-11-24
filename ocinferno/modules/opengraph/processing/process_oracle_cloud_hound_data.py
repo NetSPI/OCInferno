@@ -31,6 +31,7 @@ from ocinferno.modules.opengraph.utilities.edge_command_annotator import annotat
 from ocinferno.modules.opengraph.utilities.group_membership_graph_builder import build_group_membership_edges_offline
 from ocinferno.modules.opengraph.utilities.helpers.constants import (
     NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_EXTERNAL_TENANCY,
     NODE_TYPE_OCI_GENERIC_RESOURCE,
     NODE_TYPE_OCI_GROUP,
     NODE_TYPE_OCI_USER,
@@ -99,6 +100,7 @@ PRINCIPAL_KINDS = {
     "OCIAnyGroup",
     "OCIAnyUser",
     NODE_TYPE_OCI_DYNAMIC_GROUP,
+    NODE_TYPE_OCI_EXTERNAL_TENANCY,
     NODE_TYPE_OCI_GROUP,
     "OCIService",
     NODE_TYPE_OCI_USER,

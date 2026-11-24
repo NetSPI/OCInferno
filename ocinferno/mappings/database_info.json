@@ -2833,7 +2833,9 @@
         "freeform_tags",
         "id",
         "lifecycle_state",
-        "time_created"
+        "time_created",
+        "ipv6_cidr_blocks",
+        "ipv6_private_cidr_blocks"
       ],
       "primary_keys": [
         "id"
@@ -2856,7 +2858,9 @@
         "route_table_id",
         "security_list_ids",
         "time_created",
-        "vcn_id"
+        "vcn_id",
+        "ipv6_cidr_block",
+        "ipv6_cidr_blocks"
       ],
       "primary_keys": [
         "id"
@@ -2943,7 +2947,9 @@
         "id",
         "lifecycle_state",
         "time_created",
-        "vcn_id"
+        "vcn_id",
+        "nat_ip",
+        "public_ip_id"
       ],
       "primary_keys": [
         "id"
@@ -2994,10 +3000,70 @@
         "lifecycle_state",
         "time_created",
         "vcn_id",
-        "network_details"
+        "network_details",
+        "drg_route_table_id",
+        "export_drg_route_distribution_id"
       ],
       "primary_keys": [
         "id"
+      ]
+    },
+    {
+      "table_name": "virtual_network_drg_route_tables",
+      "columns": [
+        "id",
+        "display_name",
+        "drg_id",
+        "compartment_id",
+        "lifecycle_state",
+        "import_drg_route_distribution_id",
+        "is_ecmp_enabled",
+        "route_rules"
+      ],
+      "primary_keys": [
+        "id"
+      ]
+    },
+    {
+      "table_name": "network_firewall_address_lists",
+      "columns": [
+        "network_firewall_policy_id",
+        "compartment_id",
+        "name",
+        "type",
+        "addresses",
+        "total_addresses"
+      ],
+      "primary_keys": [
+        "network_firewall_policy_id",
+        "name"
+      ]
+    },
+    {
+      "table_name": "network_firewall_services",
+      "columns": [
+        "network_firewall_policy_id",
+        "compartment_id",
+        "name",
+        "type",
+        "port_ranges"
+      ],
+      "primary_keys": [
+        "network_firewall_policy_id",
+        "name"
+      ]
+    },
+    {
+      "table_name": "network_firewall_service_lists",
+      "columns": [
+        "network_firewall_policy_id",
+        "compartment_id",
+        "name",
+        "services"
+      ],
+      "primary_keys": [
+        "network_firewall_policy_id",
+        "name"
       ]
     },
     {
@@ -3655,6 +3721,8 @@
         "max_session_ttl_in_seconds",
         "max_sessions_allowed",
         "cidr_block_allow_list",
+        "client_cidr_block_allow_list",
+        "private_endpoint_ip_address",
         "time_created",
         "time_updated",
         "freeform_tags",
@@ -4401,7 +4469,9 @@
         "backend_sets",
         "certificates",
         "hostnames",
-        "routing_policies"
+        "routing_policies",
+        "rule_sets",
+        "path_route_sets"
       ],
       "primary_keys": [
         "id"
@@ -4804,7 +4874,8 @@
         "actions",
         "request_access_control",
         "response_access_control",
-        "request_rate_limiting"
+        "request_rate_limiting",
+        "request_protection"
       ],
       "primary_keys": [
         "id"
@@ -6375,6 +6446,77 @@
       "primary_keys": [
         "id",
         "network_security_group_id"
+      ]
+    },
+    {
+      "table_name": "virtual_network_local_peering_gateways",
+      "columns": [
+        "compartment_id",
+        "defined_tags",
+        "display_name",
+        "freeform_tags",
+        "id",
+        "is_cross_tenancy_peering",
+        "lifecycle_state",
+        "peer_advertised_cidr",
+        "peer_advertised_cidr_details",
+        "peer_id",
+        "peering_status",
+        "peering_status_details",
+        "route_table_id",
+        "time_created",
+        "vcn_id"
+      ],
+      "primary_keys": [
+        "id"
+      ]
+    },
+    {
+      "table_name": "virtual_network_vnic_attachments",
+      "columns": [
+        "availability_domain",
+        "compartment_id",
+        "display_name",
+        "id",
+        "instance_id",
+        "lifecycle_state",
+        "nic_index",
+        "subnet_id",
+        "time_created",
+        "vlan_id",
+        "vlan_tag",
+        "vnic_id"
+      ],
+      "primary_keys": [
+        "id"
+      ]
+    },
+    {
+      "table_name": "virtual_network_vnics",
+      "columns": [
+        "availability_domain",
+        "compartment_id",
+        "defined_tags",
+        "display_name",
+        "freeform_tags",
+        "hostname_label",
+        "id",
+        "instance_id",
+        "ipv6_addresses",
+        "is_primary",
+        "lifecycle_state",
+        "mac_address",
+        "nsg_ids",
+        "private_ip",
+        "public_ip",
+        "route_table_id",
+        "skip_source_dest_check",
+        "subnet_id",
+        "time_created",
+        "vlan_id"
+      ],
+      "primary_keys": [
+        "id"
       ]
     }
   ]

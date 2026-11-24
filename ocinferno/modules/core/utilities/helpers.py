@@ -254,7 +254,8 @@ class NatGatewaysResource(_OptionalScopeKwargMixin, OciListResource):
     LIST_METHOD = "list_nat_gateways"
     GET_METHOD = "get_nat_gateway"
     GET_ID_PARAM = "nat_gateway_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "vcn_id", "block_traffic"]
+    COLUMNS = ["id", "display_name", "lifecycle_state", "vcn_id", "block_traffic", "nat_ip", "public_ip_id"]
+    DISPLAY_COLUMNS = ["display_name", "lifecycle_state", "nat_ip", "vcn_id"]
     SECTION_TITLE = "NAT Gateways"
 
 
@@ -289,8 +290,119 @@ class DrgAttachmentsResource(_OptionalScopeKwargMixin, OciListResource):
     LIST_METHOD = "list_drg_attachments"
     GET_METHOD = "get_drg_attachment"
     GET_ID_PARAM = "drg_attachment_id"
-    COLUMNS = ["id", "display_name", "lifecycle_state", "drg_id", "network_details"]
+    COLUMNS = ["id", "display_name", "lifecycle_state", "drg_id", "drg_route_table_id", "network_details"]
     SECTION_TITLE = "DRG Attachments"
+
+
+class DrgRouteTablesResource(OciListResource):
+    """DRG route tables with their EFFECTIVE rules (static + imported/dynamic), listed per DRG.
+
+    The effective rules answer "where does this DRG send 10.72.x for traffic arriving on attachment A" directly,
+    so the reachability engine doesn't have to re-implement import distributions.
+    """
+    CLIENT_CLS = oci.core.VirtualNetworkClient
+    SERVICE_NAME = "Virtual Network"
+    TABLE_NAME = "virtual_network_drg_route_tables"
+    LIST_METHOD = "list_drg_route_tables"
+    LIST_SCOPE_KWARG = "drg_id"
+    GET_METHOD = "get_drg_route_table"
+    GET_ID_PARAM = "drg_route_table_id"
+    COLUMNS = ["id", "display_name", "drg_id", "import_drg_route_distribution_id"]
+    SECTION_TITLE = "DRG Route Tables"
+
+    def list(self, *, compartment_id: str, drg_ids=None, **_kwargs):
+        rows = []
+        for drg_id in drg_ids or []:
+            try:
+                tables = oci.util.to_dict(oci.pagination.list_call_get_all_results(self.client.list_drg_route_tables, drg_id=drg_id).data) or []
+            except oci.exceptions.ServiceError:
+                continue
+            for t in tables:
+                try:
+                    rules = oci.util.to_dict(oci.pagination.list_call_get_all_results(self.client.list_drg_route_rules,
+                                                                                      drg_route_table_id=t["id"]).data) or []
+                except oci.exceptions.ServiceError:
+                    rules = []
+                t["route_rules"] = [{k: r.get(k) for k in ("id", "destination", "destination_type", "next_hop_drg_attachment_id",
+                                                           "route_type", "route_provenance", "is_conflict", "is_blackhole")}
+                                    for r in rules]
+                rows.append(t)
+        return rows
+
+
+class LocalPeeringGatewaysResource(_OptionalScopeKwargMixin, OciListResource):
+    SCOPE_KWARG_NAME = "vcn_id"
+    CLIENT_CLS = oci.core.VirtualNetworkClient
+    SERVICE_NAME = "Virtual Network"
+    TABLE_NAME = "virtual_network_local_peering_gateways"
+    LIST_METHOD = "list_local_peering_gateways"
+    GET_METHOD = "get_local_peering_gateway"
+    GET_ID_PARAM = "local_peering_gateway_id"
+    COLUMNS = [
+        "id", "display_name", "lifecycle_state", "vcn_id", "compartment_id", "peer_id",
+        "peering_status", "peering_status_details", "peer_advertised_cidr",
+        "peer_advertised_cidr_details", "is_cross_tenancy_peering", "route_table_id",
+        "time_created", "freeform_tags", "defined_tags",
+    ]
+    DISPLAY_COLUMNS = ["display_name", "peering_status", "peer_advertised_cidr", "vcn_id"]
+    SECTION_TITLE = "Local Peering Gateways (LPGs)"
+
+
+class VnicAttachmentsResource(OciListResource):
+    """Instance ↔ VNIC links (the only API that ties a compute instance to its VNICs)."""
+
+    CLIENT_CLS = oci.core.ComputeClient
+    SERVICE_NAME = "Compute"
+    TABLE_NAME = "virtual_network_vnic_attachments"
+    LIST_METHOD = "list_vnic_attachments"
+    GET_METHOD = "get_vnic_attachment"
+    GET_ID_PARAM = "vnic_attachment_id"
+    COLUMNS = [
+        "id", "instance_id", "vnic_id", "subnet_id", "display_name", "lifecycle_state",
+        "nic_index", "vlan_id", "vlan_tag", "availability_domain", "compartment_id", "time_created",
+    ]
+    DISPLAY_COLUMNS = ["instance_id", "vnic_id", "subnet_id", "lifecycle_state"]
+    SECTION_TITLE = "VNIC Attachments"
+
+
+class VnicsResource(OciListResource):
+    """VNICs behind instance VNIC attachments (carries NSG ids, hostname, public IP).
+
+    There is no compartment-wide ListVnics, so this fans out GetVnic over the
+    compartment's ATTACHED VNIC attachments.
+    """
+
+    CLIENT_CLS = oci.core.VirtualNetworkClient
+    SERVICE_NAME = "Virtual Network"
+    TABLE_NAME = "virtual_network_vnics"
+    GET_METHOD = "get_vnic"
+    GET_ID_PARAM = "vnic_id"
+    COLUMNS = [
+        "id", "display_name", "hostname_label", "private_ip", "public_ip", "subnet_id",
+        "nsg_ids", "is_primary", "skip_source_dest_check", "mac_address", "lifecycle_state",
+        "availability_domain", "compartment_id", "vlan_id", "ipv6_addresses", "route_table_id",
+        "time_created", "instance_id", "freeform_tags", "defined_tags",
+    ]
+    DISPLAY_COLUMNS = ["display_name", "private_ip", "public_ip", "nsg_ids"]
+    SECTION_TITLE = "VNICs"
+
+    def list(self, *, compartment_id: str, attachments: Optional[List[Dict[str, Any]]] = None, debug: bool = False) -> List[Dict[str, Any]]:
+        if attachments is None:
+            attachments = VnicAttachmentsResource(self.session, region=self.region).list(compartment_id=compartment_id)
+        rows: List[Dict[str, Any]] = []
+        for att in attachments or []:
+            if str(att.get("lifecycle_state") or "").upper() != "ATTACHED" or not att.get("vnic_id"):
+                continue
+            try:
+                row = self.get(resource_id=att["vnic_id"])
+            except Exception as e:
+                UtilityTools.dlog(debug, "get_vnic failed (non-fatal)", vnic_id=att.get("vnic_id"), err=f"{type(e).__name__}: {e}")
+                continue
+            if row:
+                row["instance_id"] = att.get("instance_id")
+                row.setdefault("compartment_id", compartment_id)
+                rows.append(row)
+        return rows
 
 
 class DhcpOptionsResource(_OptionalScopeKwargMixin, OciListResource):

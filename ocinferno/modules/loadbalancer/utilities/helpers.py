@@ -29,4 +29,6 @@ class LoadBalancersResource(OciListResource):
         "certificates",
         "hostnames",
         "routing_policies",
+        "rule_sets",
+        "path_route_sets",
     ]

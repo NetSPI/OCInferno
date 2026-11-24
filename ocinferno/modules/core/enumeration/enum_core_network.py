@@ -12,8 +12,10 @@ from ocinferno.core.utils.service_runtime import resolve_selected_components
 from ocinferno.modules.core.utilities.helpers import (
     DhcpOptionsResource,
     DrgAttachmentsResource,
+    DrgRouteTablesResource,
     DrgsResource,
     InternetGatewaysResource,
+    LocalPeeringGatewaysResource,
     NatGatewaysResource,
     NetworkSecurityGroupsResource,
     NetworkSecurityGroupSecurityRulesResource,
@@ -24,6 +26,8 @@ from ocinferno.modules.core.utilities.helpers import (
     ServiceGatewaysResource,
     SubnetsResource,
     VcnsResource,
+    VnicAttachmentsResource,
+    VnicsResource,
     print_section_table,
 )
 
@@ -40,11 +44,16 @@ def _parse_args(user_args: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--internet-gateways", dest="internet_gateways", action="store_true", help="Enumerate internet gateways")
     parser.add_argument("--nat-gateways", dest="nat_gateways", action="store_true", help="Enumerate NAT gateways")
     parser.add_argument("--service-gateways", dest="service_gateways", action="store_true", help="Enumerate service gateways")
+    parser.add_argument("--local-peering-gateways", "--lpgs", dest="local_peering_gateways", action="store_true", help="Enumerate local peering gateways (VCN peering)")
     parser.add_argument("--drgs", action="store_true", help="Enumerate DRGs")
     parser.add_argument("--drg-attachments", dest="drg_attachments", action="store_true", help="Enumerate DRG attachments")
+    parser.add_argument("--drg-route-tables", dest="drg_route_tables", action="store_true",
+                        help="Enumerate DRG route tables with their effective (static + imported) rules")
     parser.add_argument("--dhcp-options", dest="dhcp_options", action="store_true", help="Enumerate DHCP options")
     parser.add_argument("--private-ips", dest="private_ips", action="store_true", help="Enumerate private IPs (fans out over subnets)")
     parser.add_argument("--public-ips", dest="public_ips", action="store_true", help="Enumerate public IPs (reserved + ephemeral)")
+    parser.add_argument("--vnic-attachments", dest="vnic_attachments", action="store_true", help="Enumerate instance VNIC attachments")
+    parser.add_argument("--vnics", action="store_true", help="Enumerate instance VNICs (NSGs, hostname, public IP) via GetVnic")
 
     parser.add_argument("--vcn-id", default="", help="Filter by VCN OCID (used by VCN-scoped resources)")
     parser.add_argument("--drg-id", default="", help="Filter by DRG OCID (used by DRG attachments)")
@@ -77,11 +86,15 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "internet_gateways",
             "nat_gateways",
             "service_gateways",
+            "local_peering_gateways",
             "drgs",
             "drg_attachments",
+            "drg_route_tables",
             "dhcp_options",
             "private_ips",
             "public_ips",
+            "vnic_attachments",
+            "vnics",
         ],
     )
     summary: Dict[str, int] = {}
@@ -119,6 +132,12 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "cache_table": "virtual_network_service_gateways",
             "list_kwargs": {"vcn_id": vcn_id},
         },
+        {
+            "key": "local_peering_gateways",
+            "resource": LocalPeeringGatewaysResource(session),
+            "cache_table": "virtual_network_local_peering_gateways",
+            "list_kwargs": {"vcn_id": vcn_id},
+        },
         {"key": "drgs", "resource": DrgsResource(session), "cache_table": "virtual_network_drgs", "list_kwargs": {}},
         {
             "key": "drg_attachments",
@@ -126,10 +145,15 @@ def run_module(user_args, session) -> Dict[str, Any]:
             "cache_table": "virtual_network_drg_attachments",
             "list_kwargs": {"drg_id": drg_id},
         },
+        {"key": "drg_route_tables", "resource": DrgRouteTablesResource(session), "cache_table": "virtual_network_drg_route_tables",
+         "list_kwargs": {}},
         {"key": "dhcp_options", "resource": DhcpOptionsResource(session), "cache_table": "virtual_network_dhcp_options", "list_kwargs": {"vcn_id": vcn_id}},
         {"key": "private_ips", "resource": PrivateIpsResource(session), "cache_table": "virtual_network_private_ips", "list_kwargs": {"debug": debug}},
         {"key": "public_ips", "resource": PublicIpsResource(session), "cache_table": "virtual_network_public_ips", "list_kwargs": {"debug": debug}},
+        {"key": "vnic_attachments", "resource": VnicAttachmentsResource(session), "cache_table": "virtual_network_vnic_attachments", "list_kwargs": {}},
+        {"key": "vnics", "resource": VnicsResource(session), "cache_table": "virtual_network_vnics", "list_kwargs": {"debug": debug}},
     ]
+    listed: Dict[str, list] = {}
 
     # Resource loop: network components (VCNs, subnets, gateways, DRGs, ACL objects).
     for spec in component_specs:
@@ -137,6 +161,11 @@ def run_module(user_args, session) -> Dict[str, Any]:
         resource = spec["resource"]
         cache_table = spec["cache_table"]
         list_kwargs = dict(spec["list_kwargs"])
+        if key == "vnics" and "vnic_attachments" in listed:
+            list_kwargs["attachments"] = listed["vnic_attachments"]
+        if key == "drg_route_tables":  # per DRG: this run's DRGs, else the ones already saved
+            list_kwargs["drg_ids"] = [r.get("id") for r in listed.get("drgs") or []] or [
+                r.get("id") for r in (session.get_resource_fields("virtual_network_drgs") or []) if r.get("id")]
 
         if not flags.get(key, False):
             summary[key] = cached_table_count(
@@ -155,6 +184,8 @@ def run_module(user_args, session) -> Dict[str, Any]:
         except Exception as e:
             UtilityTools.dlog(True, f"list_{key} failed", err=f"{type(e).__name__}: {e}")
             rows = []
+
+        listed[key] = rows
 
         if rows and args.get:
             for row in UtilityTools.progress_iter(rows, label=f"GET {key}"):

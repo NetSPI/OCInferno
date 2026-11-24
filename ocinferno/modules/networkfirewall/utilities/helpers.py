@@ -85,4 +85,41 @@ class NetworkFirewallSecurityRulesResource(OciListResource):
 
     # No binary download endpoint for rule rows.
 
+class NetworkFirewallPolicyObjectsResource:
+    """Address lists, services and service lists of a firewall policy, with their CONTENTS (the list calls only return
+    names), so the reachability engine can evaluate security-rule conditions."""
+    KINDS = {
+        "address_lists": ("network_firewall_address_lists", "list_address_lists", "get_address_list", "address_list_name"),
+        "services": ("network_firewall_services", "list_services", "get_service", "service_name"),
+        "service_lists": ("network_firewall_service_lists", "list_service_lists", "get_service_list", "service_list_name"),
+    }
+
+    def __init__(self, session, kind: str):
+        self.session, self.kind = session, kind
+        self.TABLE_NAME, self._list, self._get, self._key = self.KINDS[kind]
+        self.client = NetworkFirewallPoliciesResource(session=session).client
+
+    def list(self, *, policy_ids: List[str], compartment_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        rows = []
+        for pid in policy_ids:
+            try:
+                items = oci.util.to_dict(oci.pagination.list_call_get_all_results(getattr(self.client, self._list),
+                                                                                  network_firewall_policy_id=pid).data) or []
+            except oci.exceptions.ServiceError:
+                continue
+            for it in items:
+                try:
+                    full = oci.util.to_dict(getattr(self.client, self._get)(network_firewall_policy_id=pid, **{self._key: it["name"]}).data) or it
+                except oci.exceptions.ServiceError:
+                    full = it
+                full["network_firewall_policy_id"] = pid
+                if compartment_id:
+                    full.setdefault("compartment_id", compartment_id)
+                rows.append(full)
+        return rows
+
+    def save(self, rows: List[Dict[str, Any]]) -> None:
+        save_rows(self.session, self.TABLE_NAME, rows)
+
+
 db_ids = ids_from_db
